@@ -1,0 +1,21 @@
+# Configuration du service PowerSync (copie SQLite locale <-> PostgreSQL).
+replication:
+  connections:
+    - type: postgresql
+      uri: postgresql://postgres:postgres@postgres:5432/afridev
+      sslmode: disable
+
+storage:
+  type: postgresql
+  uri: postgresql://postgres:postgres@postgres:5432/powersync_storage
+  sslmode: disable
+
+port: 8080
+
+sync_rules:
+  path: sync-rules.yaml
+
+# Les jetons sont émis par Django (features/sync) et vérifiés via sa clé publique.
+client_auth:
+  jwks_uri: http://host.docker.internal:8000/api/sync/jwks/
+  audience: ["powersync"]

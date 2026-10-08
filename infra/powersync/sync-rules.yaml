@@ -1,0 +1,18 @@
+# Ce que chaque appareil reçoit dans sa copie locale.
+# Les noms de sortie (AS ...) correspondent aux tables de packages/sync-schema.
+bucket_definitions:
+  # Contenu public : le fil, l'entraide, les projets.
+  public:
+    data:
+      - SELECT id, author_id, kind, body, poll_options, media_id, hub_id, created_at, updated_at FROM feed_post AS posts WHERE deleted_at IS NULL
+      - SELECT id, post_id, author_id, body, created_at FROM discussions_comment AS comments WHERE deleted_at IS NULL
+      - SELECT id, author_id, title, body, tags, ai_answer, hub_id, created_at, updated_at FROM qa_question AS questions WHERE deleted_at IS NULL
+      - SELECT id, question_id, author_id, body, is_accepted, created_at FROM qa_answer AS answers WHERE deleted_at IS NULL
+      - SELECT id, owner_id, name, description, repo_url, tags, updated_at FROM projects_project AS projects WHERE deleted_at IS NULL
+      - SELECT id, username, display_name, bio, avatar_url, stack, updated_at FROM profiles_profile AS profiles
+
+  # Données privées de l'utilisateur connecté : son coffre-fort de snippets.
+  user_snippets:
+    parameters: SELECT request.user_id() AS user_id
+    data:
+      - SELECT id, owner_id, title, language, content, tags, is_public, hub_id, created_at, updated_at FROM snippets_snippet AS snippets WHERE owner_id = bucket.user_id AND deleted_at IS NULL

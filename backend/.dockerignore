@@ -1,0 +1,14 @@
+__pycache__
+*.py[cod]
+*$py.class
+.venv
+.pytest_cache
+.ruff_cache
+.import_linter_cache
+*.sqlite3
+*.log
+.powersync_dev_key.pem
+.test-powersync-key.pem
+.test-media/
+media/
+staticfiles/

@@ -1,0 +1,1 @@
+export { NewsScreen } from './NewsScreen';

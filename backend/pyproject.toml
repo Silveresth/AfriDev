@@ -1,0 +1,90 @@
+[project]
+name = "afridev-backend"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "django>=5.2,<6",
+    "djangorestframework>=3.16",
+    "djangorestframework-simplejwt>=5.5",
+    "drf-spectacular>=0.28",
+    "django-environ>=0.12",
+    "django-cors-headers>=4.7",
+    "psycopg[binary]>=3.2",
+    "pgvector>=0.4",
+    "celery[redis]>=5.5",
+    "redis>=5.2",
+    "channels>=4.3",
+    "channels-redis>=4.2",
+    "daphne>=4.2",
+    "meilisearch>=0.36",
+    "groq>=0.30",
+    "httpx>=0.28",
+    "PyJWT[crypto]>=2.10",
+    "Pillow>=11",
+    "segno>=1.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.4",
+    "pytest-django>=4.11",
+    "ruff>=0.13",
+    "import-linter>=2.3",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["test_*.py"]
+addopts = "-p no:cacheprovider"
+testpaths = ["features", "core", "integrations", "tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["**/migrations/**"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "DJ"]
+
+# ── Frontières de l'architecture feature-first (lint-imports) ──
+[tool.importlinter]
+root_packages = ["config", "core", "integrations", "features"]
+
+[[tool.importlinter.contracts]]
+name = "Le socle (core, integrations) n'importe jamais le métier"
+type = "forbidden"
+source_modules = ["core", "integrations"]
+forbidden_modules = ["features", "config"]
+
+[[tool.importlinter.contracts]]
+name = "Une feature n'importe une autre que par ses services, selectors ou events"
+type = "independence"
+modules = [
+    "features.accounts",
+    "features.profiles",
+    "features.feed",
+    "features.discussions",
+    "features.translation",
+    "features.qa",
+    "features.snippets",
+    "features.knowledge",
+    "features.projects",
+    "features.matchmaking",
+    "features.onboarding_agent",
+    "features.sync",
+    "features.media",
+    "features.notifications",
+    "features.moderation",
+    "features.backoffice",
+    "features.hubs",
+    "features.bookmarks",
+    "features.jobs_events",
+]
+ignore_imports = [
+    "features.** -> features.*.services",
+    "features.** -> features.*.selectors",
+    "features.** -> features.*.events",
+]

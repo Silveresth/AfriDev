@@ -1,0 +1,23 @@
+{
+  "name": "afridev-exchange",
+  "private": true,
+  "packageManager": "pnpm@10.18.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "mobile": "pnpm --filter mobile start",
+    "mobile:tunnel": "pnpm --filter mobile tunnel",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:backend": "cd backend && pytest",
+    "generate:api": "pnpm --filter @afridev/api-client generate"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "typescript": "^5.9.0"
+  }
+}

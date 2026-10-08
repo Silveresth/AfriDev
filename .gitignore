@@ -1,0 +1,50 @@
+# Node
+node_modules/
+.turbo/
+.pnpm-store/
+dist/
+*.tsbuildinfo
+
+# Next.js
+web/.next/
+web/out/
+web/public/sw.js
+web/public/sw.js.map
+web/public/swe-worker-*.js
+
+# Expo
+mobile/.expo/
+mobile/ios/
+mobile/android/
+mobile/dist/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+backend/staticfiles/
+backend/media/
+backend/openapi.yaml
+# Clés RSA PowerSync générées automatiquement en dev / tests (jamais en production).
+backend/.powersync_dev_key.pem
+backend/.test-powersync-key.pem
+backend/.test-media/
+# Base SQLite du mode léger (DJANGO_LITE=1) et sauvegardes.
+backend/db.sqlite3*
+*.bak*
+
+# Tests
+web/test-results/
+web/playwright-report/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/

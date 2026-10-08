@@ -1,0 +1,31 @@
+from .client import (
+    GitHubError,
+    OAuthIdentity,
+    exchange_github_code,
+    exchange_gitlab_code,
+    get_file,
+    get_latest_commit_sha,
+    get_readme,
+    get_repo,
+    get_tree,
+    get_user_overview,
+    list_good_first_issues,
+    list_user_repos,
+    parse_repo_url,
+)
+
+__all__ = [
+    "GitHubError",
+    "OAuthIdentity",
+    "exchange_github_code",
+    "exchange_gitlab_code",
+    "get_file",
+    "get_latest_commit_sha",
+    "get_readme",
+    "get_repo",
+    "get_tree",
+    "get_user_overview",
+    "list_good_first_issues",
+    "list_user_repos",
+    "parse_repo_url",
+]

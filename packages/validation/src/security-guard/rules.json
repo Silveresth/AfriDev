@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "private-key",
+      "description": "Clé privée (PEM)",
+      "pattern": "-----BEGIN [A-Z ]*PRIVATE KEY-----"
+    },
+    {
+      "id": "aws-access-key",
+      "description": "Clé d'accès AWS",
+      "pattern": "\\b(?:AKIA|ASIA)[0-9A-Z]{16}\\b"
+    },
+    {
+      "id": "github-token",
+      "description": "Jeton GitHub",
+      "pattern": "\\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{50,})\\b"
+    },
+    {
+      "id": "gitlab-token",
+      "description": "Jeton GitLab",
+      "pattern": "\\bglpat-[A-Za-z0-9_-]{20,}\\b"
+    },
+    {
+      "id": "anthropic-api-key",
+      "description": "Clé d'API Anthropic",
+      "pattern": "\\bsk-ant-[A-Za-z0-9_-]{20,}"
+    },
+    {
+      "id": "groq-api-key",
+      "description": "Clé d'API Groq",
+      "pattern": "\\bgsk_[A-Za-z0-9]{40,}\\b"
+    },
+    {
+      "id": "openai-api-key",
+      "description": "Clé d'API OpenAI",
+      "pattern": "\\bsk-(?:proj-)?[A-Za-z0-9]{20,}"
+    },
+    {
+      "id": "stripe-key",
+      "description": "Clé Stripe",
+      "pattern": "\\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{20,}"
+    },
+    {
+      "id": "google-api-key",
+      "description": "Clé d'API Google",
+      "pattern": "\\bAIza[0-9A-Za-z_-]{35}\\b"
+    },
+    {
+      "id": "slack-token",
+      "description": "Jeton Slack",
+      "pattern": "\\bxox[baprs]-[A-Za-z0-9-]{10,}"
+    },
+    {
+      "id": "jwt",
+      "description": "Jeton JWT",
+      "pattern": "\\beyJ[A-Za-z0-9_-]{10,}\\.eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}"
+    },
+    {
+      "id": "generic-secret-assignment",
+      "description": "Secret affecté en dur (api_key, secret, token, password)",
+      "pattern": "(?:api[_-]?key|secret(?:[_-]?key)?|token|passw(?:or)?d)\\s*[:=]\\s*['\"][^'\"\\s]{12,}['\"]",
+      "flags": "i"
+    }
+  ]
+}
