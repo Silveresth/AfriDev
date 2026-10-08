@@ -41,19 +41,6 @@ import { PostCard } from './PostCard';
 
 type KindFilter = 'all' | PostKind;
 
-const SORTS: Array<{ value: FeedSort; label: string; icon: typeof Flame }> = [
-  { value: 'hot', label: 'Populaires', icon: Flame },
-  { value: 'new', label: 'Nouveaux', icon: Sparkles },
-  { value: 'top', label: 'Top', icon: TrendingUp },
-];
-
-const KINDS: Array<{ value: KindFilter; label: string; icon: typeof Rows3 }> = [
-  { value: 'all', label: 'Tous les formats', icon: Rows3 },
-  { value: 'text', label: 'Publications', icon: Newspaper },
-  { value: 'poll', label: 'Sondages', icon: BarChart3 },
-  { value: 'short', label: 'Vidéos', icon: Clapperboard },
-  { value: 'image', label: 'Images', icon: ImageIcon },
-];
 
 /** Accueil : en-tête de rubrique, tri et format, posts en cartes ; page de communauté avec ?tag=. */
 export function FeedScreen({ aside }: { aside?: React.ReactNode }) {

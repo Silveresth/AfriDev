@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 import { errorMessage } from '@/shared/api';
 import { useSession } from '@/shared/session';
-import { Button, CopyButton, Input, Skeleton, StatusBadge, TimeAgo, useToast } from '@/shared/ui';
+import { Button, CopyButton, Skeleton, StatusBadge, TimeAgo, useToast } from '@/shared/ui';
 
 import { useSessionActions, useSessions, useTwoFactor } from '../api';
 

@@ -109,14 +109,8 @@ export function LoginScreen({ initialMode = 'login' }: LoginScreenProps) {
   const { signIn, isAuthenticated } = useSession();
   const { t } = useLang();
 
-  const [mode, setMode] = useState<AuthMode>(initialMode);
-
-  useEffect(() => {
-    const modeParam = searchParams.get('mode');
-    if (modeParam === 'register' || modeParam === 'login') {
-      setMode(modeParam);
-    }
-  }, [searchParams]);
+  const modeParam = searchParams.get('mode');
+  const mode: AuthMode = modeParam === 'register' ? 'register' : modeParam === 'login' ? 'login' : initialMode;
 
   useEffect(() => {
     afterLogin.set(new URLSearchParams(window.location.search).get('next'));
@@ -129,14 +123,14 @@ export function LoginScreen({ initialMode = 'login' }: LoginScreenProps) {
   }, [isAuthenticated, router]);
 
   const handleModeSwitch = (newMode: AuthMode) => {
-    setMode(newMode);
-    const url = new URL(window.location.href);
+    const params = new URLSearchParams(searchParams.toString());
     if (newMode === 'register') {
-      url.searchParams.set('mode', 'register');
+      params.set('mode', 'register');
     } else {
-      url.searchParams.delete('mode');
+      params.delete('mode');
     }
-    window.history.replaceState({}, '', url.toString());
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : window.location.pathname);
   };
 
   return (

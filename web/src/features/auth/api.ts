@@ -97,7 +97,8 @@ export function startOAuth(provider: OAuthProvider) {
   } else {
     url = `${GITLAB_URL}/oauth/authorize?client_id=${GITLAB_CLIENT_ID}&redirect_uri=${redirect}&response_type=code&scope=read_user&state=${encodeURIComponent(state)}`;
   }
-  window.location.assign(url);
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+  window.location.href = url;
 }
 
 /** Vérifie le state renvoyé par le fournisseur et en déduit lequel il est. */

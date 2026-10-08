@@ -57,8 +57,10 @@ def delete_notification(*, notification: Notification) -> None:
 
 def clear_all(*, user) -> int:
     """Efface toute la boîte de réception (suppression douce, propagée aux copies locales)."""
-    return Notification.objects.alive().filter(recipient=user).update(
-        deleted_at=timezone.now(), updated_at=timezone.now()
+    return (
+        Notification.objects.alive()
+        .filter(recipient=user)
+        .update(deleted_at=timezone.now(), updated_at=timezone.now())
     )
 
 

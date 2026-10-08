@@ -11,7 +11,6 @@ import {
 import Link from 'next/link';
 import { useEffect } from 'react';
 
-import { useLang } from '@/shared/i18n';
 import { cn } from '@/shared/lib';
 
 interface ActionItem {
@@ -71,8 +70,6 @@ export function MobilePublishSheet({
   open: boolean;
   onClose: () => void;
 }) {
-  const { t } = useLang();
-
   // Bloque le défilement de l'arrière-plan quand ouvert
   useEffect(() => {
     if (!open) return;

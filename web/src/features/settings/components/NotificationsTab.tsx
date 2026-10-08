@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, BellRing, Check, Mail, MessageSquare, Shield, Smartphone } from 'lucide-react';
+import { BellRing, Mail, MessageSquare, Smartphone } from 'lucide-react';
 
 import { errorMessage, type Schemas } from '@/shared/api';
 import { Skeleton, Switch, useToast } from '@/shared/ui';

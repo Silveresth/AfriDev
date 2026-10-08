@@ -2,8 +2,6 @@
 
 import {
   AlertTriangle,
-  Code2,
-  Copy,
   Download,
   FileJson,
   KeyRound,
@@ -15,7 +13,7 @@ import { useState } from 'react';
 
 import { errorMessage } from '@/shared/api';
 import { useSession } from '@/shared/session';
-import { Button, CopyButton, Field, Input, Select, Skeleton, StatusBadge, Switch, TimeAgo, useToast } from '@/shared/ui';
+import { Button, CopyButton, Skeleton, StatusBadge, Switch, TimeAgo, useToast } from '@/shared/ui';
 
 import { downloadMyData, useAccessTokenActions, useAccessTokens } from '../api';
 

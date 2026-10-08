@@ -16,7 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { flushSync } from 'react-dom';
 
@@ -125,9 +125,8 @@ export function AppShell({
 }
 
 function Drawer({ communities, onClose }: { communities?: React.ReactNode; onClose: () => void }) {
-  const { isAuthenticated, profile, signOut } = useSession();
+  const { isAuthenticated, profile } = useSession();
   const { t } = useLang();
-  const router = useRouter();
   const name = profile?.display_name || profile?.username || '?';
   const accent = profile ? profileColorHex(profile.username, profile.accent_color) : undefined;
 

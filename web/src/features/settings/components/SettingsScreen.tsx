@@ -8,12 +8,10 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
-  Database,
   Gauge,
   Globe,
   HardDrive,
   Languages,
-  Layers,
   Lock,
   LogOut,
   Monitor,
@@ -23,11 +21,8 @@ import {
   Search,
   Send,
   ShieldCheck,
-  Smartphone,
   Sun,
   Trash2,
-  Tv,
-  User,
   Zap,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -35,13 +30,13 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import { api, unwrap } from '@/shared/api';
-import { type TextOnlyMode, useDataSaver, type VideoQuality } from '@/shared/data-saver';
+import { useDataSaver, type VideoQuality } from '@/shared/data-saver';
 import { LANGUAGES, type LocaleCode, useLang } from '@/shared/i18n';
 import { cn, formatBytes } from '@/shared/lib';
 import { flushOutbox, removeFromOutbox, useOutbox, useStorageEstimate } from '@/shared/offline';
 import { useSession } from '@/shared/session';
 import { type ThemePreference, useTheme } from '@/shared/theme';
-import { Avatar, Button, Card, StatusBadge, TimeAgo, useToast } from '@/shared/ui';
+import { Avatar, Button, StatusBadge, TimeAgo, useToast } from '@/shared/ui';
 
 import { NotificationsTab } from './NotificationsTab';
 import { PrivacyTab } from './PrivacyTab';
