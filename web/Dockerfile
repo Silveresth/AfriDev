@@ -7,6 +7,11 @@ RUN corepack enable
 FROM base AS builder
 WORKDIR /app
 
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_POWERSYNC_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_POWERSYNC_URL=$NEXT_PUBLIC_POWERSYNC_URL
+
 # Configuration et manifests du monorepo
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json ./
 COPY packages/ packages/
