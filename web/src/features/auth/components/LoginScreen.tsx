@@ -2,12 +2,10 @@
 
 import {
   AlertCircle,
-  AtSign,
   Eye,
   EyeOff,
   Layers,
   MessagesSquare,
-  Sparkles,
   Terminal,
   X,
 } from 'lucide-react';
@@ -15,7 +13,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import { errorMessage } from '@/shared/api';
-import { useLang } from '@/shared/i18n';
 import { cn } from '@/shared/lib';
 import { useSession } from '@/shared/session';
 import { LogoMark, Spinner } from '@/shared/ui';
@@ -25,7 +22,6 @@ import {
   authApi,
   type AuthResponse,
   completeAuth,
-  type OAuthProvider,
   startOAuth,
 } from '../api';
 import { OnboardingPreferencesModal } from './OnboardingPreferencesModal';
@@ -162,7 +158,7 @@ export function LoginScreen({ initialMode = 'login' }: { initialMode?: AuthMode 
                   Welcome back!
                 </h3>
                 <p className="text-sm text-zinc-400 leading-relaxed">
-                  Nous avons hâte de voir ce que vous allez partager aujourd'hui.
+                  Nous avons hâte de voir ce que vous allez partager aujourd&apos;hui.
                 </p>
               </div>
             ) : (
@@ -185,13 +181,13 @@ export function LoginScreen({ initialMode = 'login' }: { initialMode?: AuthMode 
                     <span className="flex size-6 items-center justify-center rounded-lg bg-zinc-800/80 text-zinc-300">
                       <Layers className="size-3.5" />
                     </span>
-                    <span>Snippets & Architectures prêts à l'emploi</span>
+                    <span>Snippets & Architectures prêts à l&apos;emploi</span>
                   </div>
                   <div className="flex items-center gap-2.5">
                     <span className="flex size-6 items-center justify-center rounded-lg bg-zinc-800/80 text-zinc-300">
                       <MessagesSquare className="size-3.5" />
                     </span>
-                    <span>Entraide Q&A accélérée par l'IA</span>
+                    <span>Entraide Q&amp;A accélérée par l&apos;IA</span>
                   </div>
                 </div>
               </div>
@@ -271,7 +267,7 @@ export function LoginScreen({ initialMode = 'login' }: { initialMode?: AuthMode 
             </p>
 
             <p className="text-[11px] text-ink-faint leading-relaxed">
-              En continuant, vous acceptez nos Conditions d'utilisation et notre Politique de confidentialité.
+              En continuant, vous acceptez nos Conditions d&apos;utilisation et notre Politique de confidentialité.
             </p>
           </div>
         </div>
@@ -357,7 +353,7 @@ function CredentialsForm({
       {mode === 'login' ? (
         <div className="space-y-1.5">
           <label htmlFor="modal-identifier" className="block text-xs font-semibold text-ink">
-            Nom d'utilisateur ou e-mail
+            Nom d&apos;utilisateur ou e-mail
           </label>
           <input
             id="modal-identifier"
@@ -374,7 +370,7 @@ function CredentialsForm({
         <>
           <div className="space-y-1.5">
             <label htmlFor="modal-username" className="block text-xs font-semibold text-ink">
-              Nom d'utilisateur
+              Nom d&apos;utilisateur
             </label>
             <input
               id="modal-username"

@@ -1,9 +1,9 @@
 'use client';
 
-import { Check, Compass, Cpu, Layers, Sparkles } from 'lucide-react';
+import { Check, Compass, Cpu, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 
-import { useUpdateProfile } from '@/features/profile/api';
+import { useUpdateProfile } from '@/features/profile';
 import { cn } from '@/shared/lib';
 import { Button } from '@/shared/ui';
 
@@ -100,10 +100,10 @@ export function OnboardingPreferencesModal({
             <span>Configuration de vos centres d’intérêt</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">
-            Personnalisez votre fil d'actualités
+            Personnalisez votre fil d&apos;actualités
           </h2>
           <p className="text-xs sm:text-sm text-ink-muted leading-relaxed">
-            Sélectionnez vos domaines d'expertise et technologies préférées pour que nous vous proposions des discussions, astuces de code et projets adaptés.
+            Sélectionnez vos domaines d&apos;expertise et technologies préférées pour que nous vous proposions des discussions, astuces de code et projets adaptés.
           </p>
         </div>
 
@@ -190,7 +190,7 @@ export function OnboardingPreferencesModal({
             onClick={onComplete}
             className="text-xs font-medium text-ink-muted hover:text-ink transition-colors cursor-pointer"
           >
-            Passer et aller à l'accueil
+            Passer et aller à l&apos;accueil
           </button>
 
           <Button

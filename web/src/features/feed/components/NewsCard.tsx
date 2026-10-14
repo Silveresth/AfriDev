@@ -110,7 +110,7 @@ export function NewsCard({ item }: { item: NewsItem }) {
             </div>
 
             <span className="text-[11px] font-medium text-ink-faint group-hover:text-primary transition-colors">
-              Lire l'aperçu →
+              Lire l&apos;aperçu →
             </span>
           </div>
         </div>

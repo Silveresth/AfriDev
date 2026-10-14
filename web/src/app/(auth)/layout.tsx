@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 /** Layout d'authentification : présentation sobre et pro à gauche, formulaire épuré à droite. */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (

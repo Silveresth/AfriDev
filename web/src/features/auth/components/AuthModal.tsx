@@ -2,41 +2,25 @@
 
 import {
   AlertCircle,
-  ArrowRight,
-  AtSign,
-  Check,
   Eye,
   EyeOff,
-  Flame,
-  Globe,
   Layers,
-  Lock,
-  Mail,
   MessagesSquare,
-  Sparkles,
   Terminal,
-  User,
-  Users,
-  Video,
   X,
 } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import { errorMessage } from '@/shared/api';
-import { useLang } from '@/shared/i18n';
 import { cn } from '@/shared/lib';
 import { useSession } from '@/shared/session';
-import { Button, LogoMark, Spinner } from '@/shared/ui';
+import { LogoMark, Spinner } from '@/shared/ui';
 
 import {
-  afterLogin,
   authApi,
   type AuthResponse,
   completeAuth,
-  type OAuthProvider,
-  oauthAvailable,
   startOAuth,
 } from '../api';
 import { OnboardingPreferencesModal } from './OnboardingPreferencesModal';
@@ -83,14 +67,15 @@ interface AuthModalProps {
 export function AuthModal({ open, onClose, initialMode = 'login' }: AuthModalProps) {
   const router = useRouter();
   const { signIn, isAuthenticated } = useSession();
-  const { t } = useLang();
 
   const [mode, setMode] = useState<AuthModalMode>(initialMode);
+  const [prevInitialMode, setPrevInitialMode] = useState<AuthModalMode>(initialMode);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  useEffect(() => {
+  if (initialMode !== prevInitialMode) {
+    setPrevInitialMode(initialMode);
     setMode(initialMode);
-  }, [initialMode, open]);
+  }
 
   useEffect(() => {
     if (isAuthenticated && !showOnboarding && open) {
@@ -171,7 +156,7 @@ export function AuthModal({ open, onClose, initialMode = 'login' }: AuthModalPro
                     Welcome back!
                   </h3>
                   <p className="text-sm text-zinc-400 leading-relaxed">
-                    Nous avons hâte de voir ce que vous allez partager aujourd'hui.
+                    Nous avons hâte de voir ce que vous allez partager aujourd&apos;hui.
                   </p>
                 </div>
               ) : (
@@ -194,13 +179,13 @@ export function AuthModal({ open, onClose, initialMode = 'login' }: AuthModalPro
                       <span className="flex size-6 items-center justify-center rounded-lg bg-zinc-800/80 text-zinc-300">
                         <Layers className="size-3.5" />
                       </span>
-                      <span>Snippets & Architectures prêts à l'emploi</span>
+                      <span>Snippets & Architectures prêts à l&apos;emploi</span>
                     </div>
                     <div className="flex items-center gap-2.5">
                       <span className="flex size-6 items-center justify-center rounded-lg bg-zinc-800/80 text-zinc-300">
                         <MessagesSquare className="size-3.5" />
                       </span>
-                      <span>Entraide Q&A accélérée par l'IA</span>
+                      <span>Entraide Q&amp;A accélérée par l&apos;IA</span>
                     </div>
                   </div>
                 </div>
@@ -280,7 +265,7 @@ export function AuthModal({ open, onClose, initialMode = 'login' }: AuthModalPro
               </p>
 
               <p className="text-[11px] text-ink-faint leading-relaxed">
-                En continuant, vous acceptez nos Conditions d'utilisation et notre Politique de confidentialité.
+                En continuant, vous acceptez nos Conditions d&apos;utilisation et notre Politique de confidentialité.
               </p>
             </div>
           </div>
@@ -297,7 +282,6 @@ function ModalCredentialsForm({
   mode: AuthModalMode;
   onSuccess: (response: AuthResponse) => void;
 }) {
-  const { t } = useLang();
   const [form, setForm] = useState({ identifier: '', username: '', email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -368,7 +352,7 @@ function ModalCredentialsForm({
       {mode === 'login' ? (
         <div className="space-y-1.5">
           <label htmlFor="modal-identifier" className="block text-xs font-semibold text-ink">
-            Nom d'utilisateur ou e-mail
+            Nom d&apos;utilisateur ou e-mail
           </label>
           <input
             id="modal-identifier"
@@ -385,7 +369,7 @@ function ModalCredentialsForm({
         <>
           <div className="space-y-1.5">
             <label htmlFor="modal-username" className="block text-xs font-semibold text-ink">
-              Nom d'utilisateur
+              Nom d&apos;utilisateur
             </label>
             <input
               id="modal-username"
