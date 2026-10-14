@@ -110,7 +110,7 @@ services:
         condition: service_started
 
   web:
-    image: ${IMAGE_WEB:-afridev-web:latest}
+    image: ${IMAGE_WEB:-ghcr.io/silveresth/afridev-web:latest}
     build:
       context: .
       dockerfile: web/Dockerfile
