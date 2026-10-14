@@ -1,0 +1,1 @@
+0 2 * * * root /usr/bin/docker system prune -af --volumes > /var/log/docker-prune.log 2>&1
