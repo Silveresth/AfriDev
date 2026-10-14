@@ -58,7 +58,7 @@ jobs:
             docker compose up -d postgres redis meilisearch powersync
             docker compose up -d --build backend celery
             IMAGE_WEB=ghcr.io/${{ env.REPO_OWNER }}/afridev-web:latest docker compose up -d --force-recreate --no-build web
-            docker compose up -d nginx
+            docker compose restart nginx || docker compose up -d nginx
             docker compose ps
             docker compose logs --tail=20 web
             docker compose logs --tail=20 backend
