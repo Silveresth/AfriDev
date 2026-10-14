@@ -225,6 +225,16 @@ const fr = {
   'common.previous': 'Précédent',
   'common.see_more': 'Voir plus',
   'common.see_less': 'Voir moins',
+  // ── Onboarding & Recommandations ──
+  'onboarding.title': 'Personnalisez votre fil et vos recommandations',
+  'onboarding.subtitle': 'Choisissez vos centres d’intérêt, technologies et communautés pour un contenu sur-mesure.',
+  'onboarding.tech_stack': 'Technologies & Langages',
+  'onboarding.tech_stack_desc': 'Sélectionnez vos technos préférées pour alimenter le fil et les snippets',
+  'onboarding.hubs': 'Communautés suggérées',
+  'onboarding.hubs_desc': 'Rejoignez les hubs clés pour échanger avec vos pairs',
+  'onboarding.topics': 'Thématiques prioritaires',
+  'onboarding.finish': 'Finaliser et accéder à mon espace',
+  'onboarding.skip': 'Passer pour le moment',
 } as const;
 
 export default fr;

@@ -1,5 +1,7 @@
+import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 
+import { PUBLIC_WEB_URL } from '@/shared/api';
 import { type Key, t } from '@/shared/i18n';
 
 export { languageColor, longDate, monthYear, PROFILE_COLORS, type ProfileColor, profileColor, profileColorHex } from './colors';
@@ -67,8 +69,100 @@ export function domainOf(url: string): string {
   return match?.[1] ?? '';
 }
 
-/** Ouvre un lien externe dans le navigateur intégré (l'utilisateur reste dans l'appli). */
+/**
+ * Tente de convertir une URL absolue ou relative en route interne mobile.
+ * Exemples supportés :
+ * - https://afridev.duckdns.org/post/123 -> /post/123
+ * - https://afridev.duckdns.org/feed/123 -> /post/123
+ * - /post/123 ou /feed/123 -> /post/123
+ * - https://.../questions/456 ou /questions/456 -> /question/456
+ * - https://.../question/456 ou /question/456 -> /question/456
+ * - https://.../h/slug -> /h/slug
+ * - https://.../u/username -> /u/username
+ * - afridev://post/123 -> /post/123
+ */
+export function resolveInternalRoute(url: string): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+
+  // Schéma personnalisé natif : afridev://...
+  if (/^afridev:\/\//i.test(trimmed)) {
+    const path = trimmed.replace(/^afridev:\/\//i, '/');
+    return normalizeInternalPath(path);
+  }
+
+  // URL interne relative
+  if (trimmed.startsWith('/')) {
+    return normalizeInternalPath(trimmed);
+  }
+
+  // Vérifier si l'URL pointe vers le domaine de l'application Web AfriDev ou localhost
+  try {
+    const parsed = new URL(trimmed);
+    const host = parsed.hostname.toLowerCase();
+    const isAfriDevDomain =
+      host === 'afridev.duckdns.org' ||
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host.endsWith('.afridev.org') ||
+      (PUBLIC_WEB_URL && (parsed.origin === new URL(PUBLIC_WEB_URL).origin || host === new URL(PUBLIC_WEB_URL).hostname.toLowerCase()));
+
+    if (isAfriDevDomain) {
+      return normalizeInternalPath(parsed.pathname);
+    }
+  } catch {
+    // URL invalide pour new URL(), vérifions les chemins relatifs directs
+    if (trimmed.startsWith('/')) {
+      return normalizeInternalPath(trimmed);
+    }
+  }
+
+  return null;
+}
+
+function normalizeInternalPath(pathname: string): string | null {
+  const clean = pathname.replace(/\/+$/, '');
+  
+  // Post : /post/[id] ou /feed/[id] (route web) -> /post/[id]
+  const postMatch = clean.match(/^\/(?:post|feed)\/([^/?#]+)/i);
+  if (postMatch) return `/post/${postMatch[1]}`;
+
+  // Question : /question/[id] ou /questions/[id] -> /question/[id]
+  const questionMatch = clean.match(/^\/(?:question|questions)\/([^/?#]+)/i);
+  if (questionMatch) return `/question/${questionMatch[1]}`;
+
+  // Hub : /h/[slug] -> /h/[slug]
+  const hubMatch = clean.match(/^\/h\/([^/?#]+)/i);
+  if (hubMatch) return `/h/${hubMatch[1]}`;
+
+  // Profil : /u/[username] -> /u/[username]
+  const userMatch = clean.match(/^\/u\/([^/?#]+)/i);
+  if (userMatch) return `/u/${userMatch[1]}`;
+
+  // Écran notifications : /notifications -> /notifications
+  if (clean === '/notifications') return '/notifications';
+
+  // Onglets principaux
+  if (clean === '/feed' || clean === '/') return '/(tabs)/feed';
+  if (clean === '/news') return '/(tabs)/news';
+  if (clean === '/questions') return '/(tabs)/questions';
+  if (clean === '/hubs') return '/(tabs)/hubs';
+
+  return null;
+}
+
+/** Ouvre un lien dans l'application si c'est une ressource interne, ou dans le navigateur intégré. */
 export function openLink(url: string) {
+  const internalRoute = resolveInternalRoute(url);
+  if (internalRoute) {
+    try {
+      router.push(internalRoute as any);
+      return Promise.resolve();
+    } catch {
+      // repli navigateur si le routage échoue
+    }
+  }
+
   return WebBrowser.openBrowserAsync(url, {
     presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
     controlsColor: '#C84B20',

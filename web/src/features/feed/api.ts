@@ -146,3 +146,15 @@ export function useCommunities(limit = 12) {
     staleTime: 10 * 60_000,
   });
 }
+
+export type NewsItem = Schemas['NewsItem'];
+export type NewsFilter = 'all' | 'hackernews' | 'devto' | 'rss' | 'fr';
+
+export function useTechNews(filter: NewsFilter = 'all', q = '') {
+  const query = filter === 'fr' ? { source: 'rss' as const, lang: 'fr' as const } : { source: filter };
+  return useQuery({
+    queryKey: ['news', filter, q],
+    queryFn: () => unwrap(api.GET('/api/feed/news/', { params: { query: { ...query, q: q || undefined } } })),
+    staleTime: 5 * 60_000,
+  });
+}

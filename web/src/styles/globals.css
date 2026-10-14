@@ -381,3 +381,18 @@ select.field-select {
   background-position: right 0.875rem center;
   background-size: 1rem;
 }
+
+/* Masquage de l'œil natif fourni par les navigateurs (Edge, Chrome, Safari)
+ * pour garantir que notre œil personnalisé soit strictement unique et identique partout. */
+input[type='password']::-ms-reveal,
+input[type='password']::-ms-clear {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+input[type='password']::-webkit-contacts-auto-fill-button,
+input[type='password']::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  position: absolute;
+  right: 0;
+}

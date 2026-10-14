@@ -34,6 +34,7 @@ import {
   useOAuthProviders,
 } from './api';
 import { GitHubLogo, GoogleLogo } from './ProviderLogos';
+import { OnboardingPreferencesModal } from './OnboardingPreferencesModal';
 
 type Mode = 'login' | 'register';
 
@@ -174,6 +175,8 @@ export function LoginScreen() {
   const [shakes, setShakes] = useState(0);
   const [pendingProvider, setPendingProvider] = useState<OAuthProvider | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [pendingTokens, setPendingTokens] = useState<any>(null);
 
   const finish = (response: AuthResponse) => {
     if (response.mfa_required && response.mfa_token) {
@@ -182,8 +185,12 @@ export function LoginScreen() {
     }
     if (response.tokens) {
       haptic.success();
-      // La garde de navigation (app/_layout.tsx) ouvre l'appli dès que la session existe.
-      signIn(response.tokens);
+      if (mode === 'register') {
+        setPendingTokens(response.tokens);
+        setShowOnboarding(true);
+      } else {
+        signIn(response.tokens);
+      }
     }
   };
 
@@ -307,6 +314,16 @@ export function LoginScreen() {
           <Text variant="display">{title}</Text>
           <Text tone="muted">{subtitle}</Text>
         </Animated.View>
+
+        <OnboardingPreferencesModal
+          visible={showOnboarding}
+          onComplete={() => {
+            setShowOnboarding(false);
+            if (pendingTokens) {
+              signIn(pendingTokens);
+            }
+          }}
+        />
 
         {mfaToken ? (
           <Animated.View entering={FadeInDown.duration(320)} style={styles.form}>

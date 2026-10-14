@@ -121,6 +121,8 @@ const en: MobileMessages = {
   'news.empty_body': 'Sources aren’t responding right now. Pull to retry.',
   'news.footer': 'Headlines and excerpts provided by their publishers. Tap an article to read it at the source.',
   'news.open_hint': 'Opens the article on {site}',
+  'news.open_source': 'Read full article at source',
+  'news.view_discussion': 'View source discussion',
 
   'qa.search_ph': 'Search a question',
   'qa.all': 'All',

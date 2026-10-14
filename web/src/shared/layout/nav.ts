@@ -99,5 +99,8 @@ export function navPath(pathname: string, username?: string) {
 
 export function isActive(pathname: string, href: string) {
   const base = href.split('?')[0] ?? href;
-  return pathname === base || pathname.startsWith(`${base}/`);
+  if (base === '/feed' && (pathname === '/' || pathname === '/feed' || pathname.startsWith('/feed/'))) {
+    return true;
+  }
+  return pathname === base || (base !== '/' && pathname.startsWith(`${base}/`));
 }

@@ -25,3 +25,10 @@ export function useTechNews(filter: NewsFilter, q: string) {
     staleTime: 5 * 60_000,
   });
 }
+
+/** Récupère un article à partir du cache TanStack Query des listes d'actu */
+export function useNewsItem(id: string | undefined): NewsItem | undefined {
+  const { data: allNews } = useTechNews('all', '');
+  if (!id) return undefined;
+  return allNews?.find((item: NewsItem) => item.id === id);
+}

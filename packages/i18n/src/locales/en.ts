@@ -227,6 +227,16 @@ const en: Record<MessageKey, string> = {
   'common.previous': 'Previous',
   'common.see_more': 'See more',
   'common.see_less': 'See less',
+  // ── Onboarding & Recommendations ──
+  'onboarding.title': 'Customize your feed and recommendations',
+  'onboarding.subtitle': 'Select your interests, stack and communities to get personalized content.',
+  'onboarding.tech_stack': 'Technologies & Languages',
+  'onboarding.tech_stack_desc': 'Select your favorite technologies to personalize your feed and snippets',
+  'onboarding.hubs': 'Suggested Communities',
+  'onboarding.hubs_desc': 'Join key hubs to connect and exchange with peers',
+  'onboarding.topics': 'Focus Topics',
+  'onboarding.finish': 'Finish and go to my feed',
+  'onboarding.skip': 'Skip for now',
 };
 
 export default en;

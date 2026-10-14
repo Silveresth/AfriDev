@@ -9,7 +9,12 @@
     "plugins": [{ "name": "next" }],
     "types": ["@serwist/next/typings"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@afridev/validation": ["../packages/validation/src/index.ts"],
+      "@afridev/validation/*": ["../packages/validation/src/*"],
+      "@afridev/api-client": ["../packages/api-client/src/index.ts"],
+      "@afridev/i18n": ["../packages/i18n/src/index.ts"],
+      "@afridev/sync-schema": ["../packages/sync-schema/src/index.ts"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

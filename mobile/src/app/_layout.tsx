@@ -56,6 +56,7 @@ function Navigator() {
           <Stack.Screen name="compose/question" options={MODAL} />
           <Stack.Screen name="edit-profile" options={MODAL} />
           <Stack.Screen name="post/[id]" />
+          <Stack.Screen name="news/[id]" />
           <Stack.Screen name="question/[id]" />
           <Stack.Screen name="h/[slug]" />
           <Stack.Screen name="u/[username]" />

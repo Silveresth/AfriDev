@@ -93,7 +93,7 @@ function Inline({ text }: { text: string }) {
             <RNText
               key={i}
               accessibilityRole="link"
-              onPress={() => /^https?:\/\//.test(url) && void openLink(url)}
+              onPress={() => /^(?:https?:\/\/|\/|afridev:\/\/)/.test(url) && void openLink(url)}
               style={{ color: colors.primaryInk, textDecorationLine: 'underline' }}
             >
               {link[1]}

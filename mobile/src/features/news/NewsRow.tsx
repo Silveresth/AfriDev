@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import { ArrowBigUp, MessageSquare } from 'lucide-react-native';
 import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -36,8 +37,8 @@ export const NewsRow = memo(function NewsRow({ item }: { item: NewsItem }) {
 
   return (
     <Pressable
-      onPress={() => void openLink(item.url)}
-      accessibilityRole="link"
+      onPress={() => router.push(`/news/${item.id}`)}
+      accessibilityRole="button"
       accessibilityHint={t('news.open_hint', { site: domain || item.source_name })}
       style={({ pressed }) => [styles.row, { borderBottomColor: colors.line }, pressed && { backgroundColor: colors.pressed }]}
     >

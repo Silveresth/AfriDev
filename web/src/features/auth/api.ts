@@ -67,12 +67,19 @@ export const pendingPhone = {
 /** Page où revenir après la connexion (paramètre ?next=, limité au site). */
 export const afterLogin = {
   set: (next: string | null) => {
-    if (next?.startsWith('/') && !next.startsWith('//')) sessionStorage.setItem(NEXT_KEY, next);
+    if (
+      next?.startsWith('/') &&
+      !next.startsWith('//') &&
+      !next.startsWith('/login') &&
+      !next.startsWith('/oauth')
+    ) {
+      sessionStorage.setItem(NEXT_KEY, next);
+    }
   },
   take: (): string => {
-    const next = sessionStorage.getItem(NEXT_KEY) ?? '/feed';
+    const next = sessionStorage.getItem(NEXT_KEY) ?? '/';
     sessionStorage.removeItem(NEXT_KEY);
-    return next;
+    return next && !next.startsWith('/login') ? next : '/';
   },
 };
 

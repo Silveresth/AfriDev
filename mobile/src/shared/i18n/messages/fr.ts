@@ -130,6 +130,8 @@ const fr = {
   'news.empty_body': 'Les sources ne répondent pas pour le moment. Tirez pour réessayer.',
   'news.footer': 'Titres et extraits fournis par leurs éditeurs. Touchez un article pour le lire à la source.',
   'news.open_hint': 'Ouvre l’article sur {site}',
+  'news.open_source': 'Lire l’article complet à la source',
+  'news.view_discussion': 'Voir la discussion source',
 
   // ── Q&A ──
   'qa.search_ph': 'Rechercher une question',
