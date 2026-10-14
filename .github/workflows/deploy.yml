@@ -64,9 +64,10 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker pull ghcr.io/${{ env.REPO_OWNER }}/afridev-web:latest
 docker pull ghcr.io/${{ env.REPO_OWNER }}/afridev-backend:latest
-docker compose up -d postgres redis meilisearch powersync
-docker compose up -d backend celery
-IMAGE_WEB=ghcr.io/${{ env.REPO_OWNER }}/afridev-web:latest docker compose up -d --force-recreate --no-build web
+            docker compose up -d postgres redis meilisearch powersync
+            chmod +x scripts/check-postgres-roles.sh && bash scripts/check-postgres-roles.sh
+            docker compose up -d backend celery
+            IMAGE_WEB=ghcr.io/${{ env.REPO_OWNER }}/afridev-web:latest docker compose up -d --force-recreate --no-build web
             docker compose restart nginx || docker compose up -d nginx
             docker compose ps
             docker compose logs --tail=20 web
