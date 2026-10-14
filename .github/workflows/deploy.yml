@@ -21,13 +21,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set lower case owner name
+        run: |
+          echo "REPO_OWNER=${OWNER,,}" >> $GITHUB_ENV
+        env:
+          OWNER: '${{ github.repository_owner }}'
+
       - name: Build and Push Web Image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: web/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/afridev-web:latest
+          tags: ghcr.io/${{ env.REPO_OWNER }}/afridev-web:latest
           build-args: |
             NEXT_PUBLIC_API_URL=https://afridev.duckdns.org
             NEXT_PUBLIC_POWERSYNC_URL=https://afridev.duckdns.org/sync
@@ -42,7 +48,7 @@ jobs:
             cd /var/www/AfriDev
             git pull origin main
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker pull ghcr.io/${{ github.repository_owner }}/afridev-web:latest
+            docker pull ghcr.io/${{ env.REPO_OWNER }}/afridev-web:latest
             docker compose up -d --build backend celery nginx
             docker compose up -d web
             docker image prune -f
