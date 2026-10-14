@@ -60,4 +60,5 @@ jobs:
             docker compose up -d nginx
             docker compose ps
             docker compose logs --tail=20 web
+            docker compose logs --tail=20 backend
             docker image prune -f
