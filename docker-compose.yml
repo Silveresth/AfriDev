@@ -101,8 +101,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      NEXT_PUBLIC_API_URL: http://localhost:8000
-      NEXT_PUBLIC_POWERSYNC_URL: http://localhost:8080
+      HOSTNAME: "0.0.0.0"
+      NEXT_PUBLIC_API_URL: https://afridev.duckdns.org
+      NEXT_PUBLIC_POWERSYNC_URL: https://afridev.duckdns.org/sync
     ports:
       - "3000:3000"
     depends_on:
