@@ -48,3 +48,9 @@ web/playwright-report/
 .DS_Store
 Thumbs.db
 .idea/
+
+# Archives & dumps
+*.tar
+*.tar.gz
+*.zip
+
