@@ -94,6 +94,7 @@ services:
         condition: service_started
 
   web:
+    image: ${IMAGE_WEB:-afridev-web:latest}
     build:
       context: .
       dockerfile: web/Dockerfile
