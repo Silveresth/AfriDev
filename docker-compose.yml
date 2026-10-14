@@ -58,6 +58,12 @@ services:
       additional_contexts:
         security-guard: ./packages/validation/src/security-guard
     restart: unless-stopped
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     # Vérifie que Postgres répond avant de lancer les migrations et le serveur ASGI.
     command: ["sh", "-c", "until python -c 'import psycopg, os; psycopg.connect(os.environ.get(\"DATABASE_URL\"))' 2>/dev/null; do echo 'Attente de la base de données...'; sleep 2; done; python manage.py migrate --noinput && exec daphne -b 0.0.0.0 -p 8000 config.asgi:application"]
     env_file:
@@ -109,6 +115,12 @@ services:
       context: .
       dockerfile: web/Dockerfile
     restart: unless-stopped
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/_next/webpack-hmr || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     environment:
       NODE_ENV: production
       PORT: 3000

@@ -41,7 +41,15 @@ jobs:
             NEXT_PUBLIC_API_URL=https://afridev.duckdns.org
             NEXT_PUBLIC_POWERSYNC_URL=https://afridev.duckdns.org/sync
             NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=uAfwwtAkFE69g01GNRZXTWkGXeOHF1kzk1Zp/Mah9x8=
-
+      - name: Build and Push Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: ghcr.io/${{ env.REPO_OWNER }}/afridev-backend:latest
+          build-args: |
+            # Add any needed build args here
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -55,9 +63,10 @@ jobs:
             git pull origin main
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker pull ghcr.io/${{ env.REPO_OWNER }}/afridev-web:latest
-            docker compose up -d postgres redis meilisearch powersync
-            docker compose up -d --build backend celery
-            IMAGE_WEB=ghcr.io/${{ env.REPO_OWNER }}/afridev-web:latest docker compose up -d --force-recreate --no-build web
+docker pull ghcr.io/${{ env.REPO_OWNER }}/afridev-backend:latest
+docker compose up -d postgres redis meilisearch powersync
+docker compose up -d backend celery
+IMAGE_WEB=ghcr.io/${{ env.REPO_OWNER }}/afridev-web:latest docker compose up -d --force-recreate --no-build web
             docker compose restart nginx || docker compose up -d nginx
             docker compose ps
             docker compose logs --tail=20 web
