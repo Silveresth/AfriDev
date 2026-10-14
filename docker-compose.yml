@@ -4,6 +4,7 @@ name: afridev
 services:
   postgres:
     image: pgvector/pgvector:pg17
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -21,11 +22,13 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports:
       - "6379:6379"
 
   meilisearch:
     image: getmeili/meilisearch:v1.16
+    restart: unless-stopped
     environment:
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKey}
       MEILI_NO_ANALYTICS: "true"
@@ -36,6 +39,7 @@ services:
 
   powersync:
     image: journeyapps/powersync-service:latest
+    restart: unless-stopped
     command: ["start", "-r", "unified"]
     environment:
       POWERSYNC_CONFIG_PATH: /config/powersync.yaml
@@ -53,8 +57,9 @@ services:
       dockerfile: Dockerfile
       additional_contexts:
         security-guard: ./packages/validation/src/security-guard
-    # Applique les migrations en attente avant de lancer le serveur ASGI.
-    command: ["sh", "-c", "python manage.py migrate --noinput && exec daphne -b 0.0.0.0 -p 8000 config.asgi:application"]
+    restart: unless-stopped
+    # Vérifie que Postgres répond avant de lancer les migrations et le serveur ASGI.
+    command: ["sh", "-c", "until python -c 'import psycopg, os; psycopg.connect(os.environ.get(\"DATABASE_URL\"))' 2>/dev/null; do echo 'Attente de la base de données...'; sleep 2; done; python manage.py migrate --noinput && exec daphne -b 0.0.0.0 -p 8000 config.asgi:application"]
     env_file:
       - .env
     environment:
@@ -81,7 +86,8 @@ services:
       dockerfile: Dockerfile
       additional_contexts:
         security-guard: ./packages/validation/src/security-guard
-    command: ["celery", "-A", "config", "worker", "-l", "info"]
+    restart: unless-stopped
+    command: ["sh", "-c", "until python -c 'import psycopg, os; psycopg.connect(os.environ.get(\"DATABASE_URL\"))' 2>/dev/null; do echo 'Attente de la base de données pour Celery...'; sleep 2; done; exec celery -A config worker -l info"]
     env_file:
       - .env
     environment:
@@ -102,6 +108,7 @@ services:
     build:
       context: .
       dockerfile: web/Dockerfile
+    restart: unless-stopped
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -117,6 +124,7 @@ services:
 
   nginx:
     image: nginx:alpine
+    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
