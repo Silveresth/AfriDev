@@ -158,3 +158,18 @@ const serwist = new Serwist({
 });
 
 serwist.addEventListeners();
+
+// Nettoyage automatique des anciens caches corrompus lors de l'activation
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((key) =>
+            ['apis', 'pages', 'pages-rsc', 'pages-rsc-prefetch', 'others', 'cross-origin'].includes(key)
+          )
+          .map((key) => caches.delete(key))
+      )
+    )
+  );
+});
