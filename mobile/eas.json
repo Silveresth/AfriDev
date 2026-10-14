@@ -11,7 +11,6 @@
     },
     "preview": {
       "distribution": "internal",
-      "channel": "preview",
       "android": { "buildType": "apk" },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://afridev.duckdns.org",
@@ -19,7 +18,6 @@
       }
     },
     "production": {
-      "channel": "production",
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://afridev.duckdns.org",
