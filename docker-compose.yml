@@ -61,8 +61,8 @@ services:
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       MEILISEARCH_URL: http://meilisearch:7700
-      MEILISEARCH_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKey}
-      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:80,http://localhost:8081
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:80,http://localhost:8081,https://afridev.duckdns.org
+      CSRF_TRUSTED_ORIGINS: https://afridev.duckdns.org
     ports:
       - "8000:8000"
     volumes:
