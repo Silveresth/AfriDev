@@ -1,6 +1,6 @@
 import type { ExpoConfig } from 'expo/config';
 
-const projectId = process.env.EAS_PROJECT_ID;
+const projectId = process.env.EAS_PROJECT_ID || '2a8f138b-c664-49ca-8935-4bef7ee3e08c';
 
 const config: ExpoConfig = {
   name: 'AfriDev Exchange',
