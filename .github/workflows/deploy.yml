@@ -36,6 +36,7 @@ jobs:
           context: .
           file: web/Dockerfile
           push: true
+          no-cache: true
           tags: ghcr.io/${{ env.REPO_OWNER }}/afridev-web:latest
           build-args: |
             NEXT_PUBLIC_API_URL=https://afridev.duckdns.org
@@ -47,6 +48,7 @@ jobs:
           context: .
           file: backend/Dockerfile
           push: true
+          no-cache: true
           tags: ghcr.io/${{ env.REPO_OWNER }}/afridev-backend:latest
           build-args: |
             # Add any needed build args here
@@ -60,10 +62,11 @@ jobs:
           script: |
             cd /var/www/AfriDev
             git reset --hard HEAD
+            git clean -fd
             git pull origin main
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker pull ghcr.io/${{ env.REPO_OWNER }}/afridev-web:latest
-docker pull ghcr.io/${{ env.REPO_OWNER }}/afridev-backend:latest
+            docker pull ghcr.io/${{ env.REPO_OWNER }}/afridev-backend:latest
             docker compose up -d postgres redis meilisearch powersync
             chmod +x scripts/check-postgres-roles.sh && bash scripts/check-postgres-roles.sh
             docker compose up -d backend celery
@@ -72,4 +75,4 @@ docker pull ghcr.io/${{ env.REPO_OWNER }}/afridev-backend:latest
             docker compose ps
             docker compose logs --tail=20 web
             docker compose logs --tail=20 backend
-            docker image prune -f
+            docker image prune -af
