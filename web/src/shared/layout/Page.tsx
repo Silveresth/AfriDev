@@ -41,6 +41,90 @@ export function Toolbar({ children, className }: { children: React.ReactNode; cl
   return <div className={cn('flex flex-wrap items-center gap-2', className)}>{children}</div>;
 }
 
+export interface ContextTabOption<T extends string> {
+  value: T;
+  label: React.ReactNode;
+  icon?: React.ReactNode;
+  count?: number;
+}
+
+/**
+ * Barre d'onglets contextuels épurée (style Google Docs / Drive sub-nav) :
+ * - Fixée en position sticky sous la TopBar (sticky top-16)
+ * - Indicateur actif sous forme de soulignement fin coloré avec police grasse
+ * - Défilement horizontal fluide et masqué sur mobiles/écrans étroits
+ */
+export function ContextTabs<T extends string>({
+  value,
+  onChange,
+  options,
+  actions,
+  className,
+}: {
+  value: T;
+  onChange: (value: T) => void;
+  options: ContextTabOption<T>[];
+  actions?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        'sticky top-16 z-10 -mx-6 mb-5 flex items-center justify-between border-b border-line bg-surface/95 px-6 backdrop-blur-md transition-colors sm:-mx-8 sm:px-8 lg:-mx-10 lg:px-10',
+        className,
+      )}
+    >
+      <nav
+        role="tablist"
+        aria-label="Onglets contextuels"
+        className="scrollbar-none -mb-px flex gap-2 overflow-x-auto"
+      >
+        {options.map((option) => {
+          const active = option.value === value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => onChange(option.value)}
+              className={cn(
+                'group relative inline-flex h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-body-sm font-medium whitespace-nowrap transition-all duration-150',
+                active
+                  ? 'border-primary text-ink font-bold'
+                  : 'border-transparent text-ink-muted hover:border-line-strong hover:text-ink',
+              )}
+            >
+              {option.icon ? (
+                <span
+                  className={cn(
+                    'transition-colors [&_svg]:size-4',
+                    active ? 'text-primary' : 'text-ink-faint group-hover:text-ink',
+                  )}
+                >
+                  {option.icon}
+                </span>
+              ) : null}
+              <span>{option.label}</span>
+              {option.count !== undefined ? (
+                <span
+                  className={cn(
+                    'rounded-full px-2 py-0.5 text-label-sm tabular-nums transition-colors',
+                    active ? 'bg-primary-soft text-primary-ink font-bold' : 'bg-container text-ink-muted',
+                  )}
+                >
+                  {option.count}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </nav>
+      {actions ? <div className="ml-3 flex shrink-0 items-center gap-2 py-1.5">{actions}</div> : null}
+    </div>
+  );
+}
+
 /** Largeur commune des pages de rubrique sans colonne de widgets (grilles : hubs, projets…). */
 export function PageContainer({ children, className }: { children: React.ReactNode; className?: string }) {
   return <div className={cn('mx-auto max-w-[1040px]', className)}>{children}</div>;

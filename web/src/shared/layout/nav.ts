@@ -82,13 +82,13 @@ export const PUBLISH_ITEMS: PublishItem[] = [
   { href: '/projects/new', label: 'Un projet open source', hint: 'Trouvez des contributeurs', msgKey: 'publish.project', hintKey: 'publish.project_hint' },
 ];
 
-/** Lien de la colonne de gauche (rubriques, hubs) : pilule teintée pour la page en cours. */
+/** Lien de la colonne de gauche (rubriques, hubs) : capsule "Google Pill" pour la page en cours. */
 export function navItemClasses(active: boolean) {
   return cn(
-    'group relative flex h-9 items-center gap-3 rounded-full text-[0.875rem] transition-colors',
+    'group relative flex items-center gap-3 rounded-full px-4 py-2.5 text-[0.875rem] transition-colors',
     active
-      ? 'bg-primary-soft font-semibold text-primary-ink'
-      : 'font-medium text-ink-muted hover:bg-shell-hover hover:text-ink',
+      ? 'bg-primary-soft font-semibold text-primary-ink shadow-2xs'
+      : 'font-medium text-ink-muted hover:bg-card/60 hover:text-ink',
   );
 }
 

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 import { BookmarkButton } from '@/features/bookmarks';
-import { PageHeader, Toolbar, TwoColumns } from '@/shared/layout';
+import { ContextTabs, PageHeader, Toolbar, TwoColumns } from '@/shared/layout';
 import { cn } from '@/shared/lib';
 import { useOutbox } from '@/shared/offline';
 import { useSession } from '@/shared/session';
@@ -81,29 +81,29 @@ export function QuestionsScreen({ aside }: { aside?: React.ReactNode }) {
         />
       </form>
 
-      <Toolbar>
-        <Segmented<Status>
-          value={status}
-          onChange={(value) => update('status', value === 'all' ? null : value)}
-          options={[
-            { value: 'all', label: 'Toutes', icon: <Layers aria-hidden /> },
-            { value: 'open', label: 'Sans solution', icon: <CircleDashed aria-hidden /> },
-            { value: 'resolved', label: 'Résolues', icon: <CheckCircle2 aria-hidden /> },
-          ]}
-        />
-        {tag || query ? (
-          <button
-            type="button"
-            onClick={() => {
-              setSearch('');
-              router.replace('/questions', { scroll: false });
-            }}
-            className="ml-auto inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-primary/20 bg-primary-soft px-3 text-body-sm font-medium text-primary-ink"
-          >
-            {tag ? `d/${tag}` : `« ${query} »`} <X className="size-3.5" aria-hidden />
-          </button>
-        ) : null}
-      </Toolbar>
+      <ContextTabs<Status>
+        value={status}
+        onChange={(value) => update('status', value === 'all' ? null : value)}
+        options={[
+          { value: 'all', label: 'Toutes les questions', icon: <Layers aria-hidden /> },
+          { value: 'open', label: 'Sans solution', icon: <CircleDashed aria-hidden /> },
+          { value: 'resolved', label: 'Résolues', icon: <CheckCircle2 aria-hidden /> },
+        ]}
+        actions={
+          tag || query ? (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('');
+                router.replace('/questions', { scroll: false });
+              }}
+              className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-primary/20 bg-primary-soft px-3 text-body-sm font-medium text-primary-ink transition-colors hover:bg-primary-soft/80"
+            >
+              {tag ? `d/${tag}` : `« ${query} »`} <X className="size-3.5" aria-hidden />
+            </button>
+          ) : null
+        }
+      />
 
       {pending.map((entry) => (
         <Card key={entry.id} className="flex items-start gap-3 border-dashed p-4">

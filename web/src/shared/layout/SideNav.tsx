@@ -108,14 +108,17 @@ function NavLink({
       aria-current={active ? 'page' : undefined}
       aria-label={collapsed ? label : undefined}
       title={collapsed ? label : undefined}
-      className={cn(navItemClasses(active), collapsed ? 'mx-auto w-12 justify-center' : 'px-4')}
+      className={cn(
+        navItemClasses(active),
+        collapsed ? 'mx-auto size-11 p-0 justify-center rounded-full' : '',
+      )}
     >
       <item.icon
         className={cn(
           'size-[18px] shrink-0 transition-colors',
           active ? 'text-primary' : 'text-ink-faint group-hover:text-ink-muted',
         )}
-        strokeWidth={active ? 2.25 : 2}
+        strokeWidth={active ? 2 : 1.75}
         aria-hidden
       />
       {collapsed ? null : (

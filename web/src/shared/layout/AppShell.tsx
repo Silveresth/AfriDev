@@ -110,7 +110,7 @@ export function AppShell({
           </div>
           <main
             id="contenu"
-            className="min-h-[calc(100dvh-4rem)] rounded-t-3xl bg-surface px-4 pt-6 pb-28 sm:px-6 lg:px-7 lg:pb-12"
+            className="min-h-[calc(100dvh-4rem)] rounded-t-3xl bg-surface px-6 py-8 pb-28 sm:px-8 lg:px-10 lg:pb-12"
           >
             {children}
           </main>
@@ -321,22 +321,25 @@ function ThemeToggle({ className }: { className?: string }) {
       document.documentElement.dataset.theme = next;
       flushSync(() => setTheme(next));
     };
+
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!document.startViewTransition || reduced) {
       apply();
       return;
     }
+
     const { left, top, width, height } = event.currentTarget.getBoundingClientRect();
     const x = left + width / 2;
     const y = top + height / 2;
     const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
     const root = document.documentElement;
     root.dataset.themeTransition = '';
+
     const transition = document.startViewTransition(apply);
     void transition.ready.then(() =>
       root.animate(
         { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
-        { duration: 520, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', pseudoElement: '::view-transition-new(root)' },
+        { duration: 380, easing: 'cubic-bezier(0.2, 0, 0, 1)', pseudoElement: '::view-transition-new(root)' },
       ),
     );
     void transition.finished.finally(() => delete root.dataset.themeTransition);

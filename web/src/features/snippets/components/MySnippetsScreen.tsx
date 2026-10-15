@@ -19,7 +19,7 @@ import {
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
-import { PageHeader, Toolbar, TwoColumns } from '@/shared/layout';
+import { ContextTabs, PageHeader, Toolbar, TwoColumns } from '@/shared/layout';
 import { formatBytes, utf8Size } from '@/shared/lib';
 import { useOutbox, useStorageEstimate } from '@/shared/offline';
 import {
@@ -93,24 +93,24 @@ export function MySnippetsScreen() {
           </>
         }
       />
-      <Toolbar>
-        <Segmented
-          value={visibility}
-          onChange={setVisibility}
-          options={[
-            { value: 'all', label: 'Tous', icon: <Layers aria-hidden />, count: snippets.items.length },
-            { value: 'public', label: 'Publics', icon: <Globe aria-hidden />, count: publicCount },
-            { value: 'private', label: 'Privés', icon: <Lock aria-hidden />, count: snippets.items.length - publicCount },
-          ]}
-        />
-        <SearchField
-          className="w-full sm:ml-auto sm:w-64"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Titre, fonction, tag…"
-          aria-label="Rechercher dans mes snippets"
-        />
-      </Toolbar>
+      <ContextTabs<Visibility>
+        value={visibility}
+        onChange={setVisibility}
+        options={[
+          { value: 'all', label: 'Tous les snippets', icon: <Layers aria-hidden />, count: snippets.items.length },
+          { value: 'public', label: 'Publics', icon: <Globe aria-hidden />, count: publicCount },
+          { value: 'private', label: 'Privés (Coffre)', icon: <Lock aria-hidden />, count: snippets.items.length - publicCount },
+        ]}
+        actions={
+          <SearchField
+            className="w-48 sm:w-60"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Rechercher…"
+            aria-label="Rechercher dans mes snippets"
+          />
+        }
+      />
       {languages.length > 1 ? (
         <FilterChips
           value={language}

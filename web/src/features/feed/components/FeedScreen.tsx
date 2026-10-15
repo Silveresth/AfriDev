@@ -22,7 +22,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 import { useLang } from '@/shared/i18n';
-import { PageHeader, Toolbar, TwoColumns } from '@/shared/layout';
+import { ContextTabs, PageHeader, Toolbar, TwoColumns } from '@/shared/layout';
 import { useOutbox } from '@/shared/offline';
 import { useSession } from '@/shared/session';
 import {
@@ -115,22 +115,22 @@ export function FeedScreen({ aside }: { aside?: React.ReactNode }) {
 
       {!isAuthenticated && !tag ? <WelcomeCard /> : null}
 
-      {/* Onglets principaux : Actualités Tech (Veille) vs Communauté */}
-      <div className="flex items-center justify-between border-b border-line pb-2 mb-3">
-        <Segmented<TabView>
-          value={tab}
-          onChange={(val) => setParam('tab', val === 'news' ? null : val)}
-          options={[
-            { value: 'news', label: 'Actu Tech & Veille', icon: <Radio aria-hidden /> },
-            { value: 'community', label: 'Discussions Communauté', icon: <Rows3 aria-hidden /> },
-          ]}
-        />
-        {tab === 'community' && isAuthenticated ? (
-          <ButtonLink href="/submit" size="sm" variant="primary">
-            <Plus className="size-4" aria-hidden /> Nouveau post
-          </ButtonLink>
-        ) : null}
-      </div>
+      {/* Onglets contextuels principaux (style Google Docs / Drive) */}
+      <ContextTabs<TabView>
+        value={tab}
+        onChange={(val) => setParam('tab', val === 'news' ? null : val)}
+        options={[
+          { value: 'news', label: 'Actu Tech & Veille', icon: <Radio aria-hidden /> },
+          { value: 'community', label: 'Discussions Communauté', icon: <Rows3 aria-hidden /> },
+        ]}
+        actions={
+          tab === 'community' && isAuthenticated ? (
+            <ButtonLink href="/submit" size="sm" variant="primary">
+              <Plus className="size-4" aria-hidden /> Nouveau post
+            </ButtonLink>
+          ) : null
+        }
+      />
 
       {tab === 'community' ? (
         <>
