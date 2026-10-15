@@ -78,6 +78,13 @@ export function AuthModal({ open, onClose, initialMode = 'login' }: AuthModalPro
   }
 
   useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  useEffect(() => {
     if (isAuthenticated && !showOnboarding && open) {
       onClose();
     }
@@ -109,18 +116,26 @@ export function AuthModal({ open, onClose, initialMode = 'login' }: AuthModalPro
         }}
       />
 
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-zinc-950/75 backdrop-blur-md animate-in fade-in duration-200">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-zinc-950/75 backdrop-blur-md animate-in fade-in duration-200"
+        onClick={onClose}
+      >
         <div
           role="dialog"
           aria-modal="true"
+          onClick={(e) => e.stopPropagation()}
           className="relative flex w-full max-w-4xl max-h-[92vh] overflow-hidden rounded-3xl border border-line bg-card shadow-2xl transition-all"
         >
           {/* Bouton de fermeture de la modale en haut à droite */}
           <button
             type="button"
-            onClick={onClose}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }}
             aria-label="Fermer"
-            className="absolute right-4 top-4 z-20 flex size-8 items-center justify-center rounded-full bg-container-low text-ink-muted transition-colors hover:bg-container hover:text-ink cursor-pointer"
+            className="absolute right-4 top-4 z-20 flex size-9 items-center justify-center rounded-full bg-container-low text-ink-muted transition-colors hover:bg-container hover:text-ink cursor-pointer"
           >
             <X className="size-4" />
           </button>

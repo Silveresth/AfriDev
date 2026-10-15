@@ -524,7 +524,18 @@ function BottomNav({ openAuthModal }: { openAuthModal: (mode: AuthModalMode) => 
         {MOBILE_TABS.map((item, index) =>
           item ? (
             <li key={item.href} className="flex flex-1 items-center justify-center">
-              <BottomTab item={item} active={isActive(pathname, item.href)} />
+              <BottomTab
+                item={item}
+                active={isActive(pathname, item.href)}
+                onClick={
+                  !isAuthenticated && item.href === '/profile'
+                    ? (e) => {
+                        e.preventDefault();
+                        openAuthModal('login');
+                      }
+                    : undefined
+                }
+              />
             </li>
           ) : (
             <li key={`create-${index}`} className="flex shrink-0 items-center justify-center px-1">
@@ -549,12 +560,21 @@ function BottomNav({ openAuthModal }: { openAuthModal: (mode: AuthModalMode) => 
 }
 
 /** Onglet du bas : pastille tactile avec micro-animations haptiques et badge actif. */
-function BottomTab({ item, active }: { item: NavItem; active: boolean }) {
+function BottomTab({
+  item,
+  active,
+  onClick,
+}: {
+  item: NavItem;
+  active: boolean;
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+}) {
   const { t } = useLang();
   const label = item.shortKey ? t(item.shortKey) : item.short;
   return (
     <Link
       href={item.href}
+      onClick={onClick}
       aria-current={active ? 'page' : undefined}
       className={cn(
         'group relative flex w-full flex-col items-center justify-center py-1 text-center transition-all duration-150 active:scale-85 select-none',

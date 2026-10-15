@@ -103,8 +103,18 @@ export function LoginScreen({ initialMode = 'login' }: { initialMode?: AuthMode 
   };
 
   const handleClose = () => {
-    router.push(afterLogin.take() || '/');
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push(afterLogin.take() || '/');
+    }
   };
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && handleClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   return (
     <>
@@ -116,13 +126,20 @@ export function LoginScreen({ initialMode = 'login' }: { initialMode?: AuthMode 
         }}
       />
 
-      <div className="relative flex w-full max-w-4xl max-h-[92vh] overflow-hidden rounded-3xl border border-line bg-card shadow-2xl transition-all">
+      <div
+        className="relative flex w-full max-w-4xl max-h-[92vh] overflow-hidden rounded-3xl border border-line bg-card shadow-2xl transition-all"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Bouton de fermeture popup en haut à droite */}
         <button
           type="button"
-          onClick={handleClose}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleClose();
+          }}
           aria-label="Fermer"
-          className="absolute right-4 top-4 z-20 flex size-8 items-center justify-center rounded-full bg-container-low text-ink-muted transition-colors hover:bg-container hover:text-ink cursor-pointer"
+          className="absolute right-4 top-4 z-20 flex size-9 items-center justify-center rounded-full bg-container-low text-ink-muted transition-colors hover:bg-container hover:text-ink cursor-pointer"
         >
           <X className="size-4" />
         </button>
