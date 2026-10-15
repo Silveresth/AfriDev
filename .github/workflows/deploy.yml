@@ -45,13 +45,13 @@ jobs:
       - name: Build and Push Backend Image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: backend
           file: backend/Dockerfile
+          build-contexts: |
+            security-guard=packages/validation/src/security-guard
           push: true
           no-cache: true
           tags: ghcr.io/${{ env.REPO_OWNER }}/afridev-backend:latest
-          build-args: |
-            # Add any needed build args here
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
