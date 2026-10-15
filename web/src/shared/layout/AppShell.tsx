@@ -44,6 +44,7 @@ import {
 import { modifierKeyLabel, openCommandPalette } from './command';
 import { isActive, MOBILE_TABS, NAV_ITEMS, type NavItem, navPath } from './nav';
 import { PublishMenu } from './PublishMenu';
+import { AuthModal, AuthModalMode } from '@/features/auth/components/AuthModal';
 import { useShellShortcuts, useSidebarCollapsed } from './shortcuts';
 import { SideNav } from './SideNav';
 
@@ -75,10 +76,13 @@ export function AppShell({
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
   const pathname = usePathname();
   const { t } = useLang();
-  // Le tiroir se referme de lui-même quand on change de page (il mémorise la page d'ouverture).
-  const drawerOpen = drawer === pathname;
   const openHelp = useCallback(() => setHelp(true), []);
   useShellShortcuts({ onToggleSidebar: toggleCollapsed, onHelp: openHelp });
+  
+  // Existing auth modal state already defined earlier
+  const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
+  const [authModalMode, setAuthModalMode] = useState<AuthModalMode>('login');
+  const openAuthModal = (mode: AuthModalMode) => { setAuthModalMode(mode); setAuthModalOpen(true); };
 
   return (
     <div className="min-h-dvh bg-shell">
@@ -90,7 +94,7 @@ export function AppShell({
       </a>
       {/* En-tête et colonne de gauche partagent le même fond : un seul cadre, sans filet entre eux. */}
       <header className="sticky top-0 z-30 bg-shell">
-        <TopBar notifications={notifications} onMenu={() => setDrawer(pathname)} onHelp={openHelp} />
+        <TopBar notifications={notifications} onMenu={() => setDrawer(pathname)} onHelp={openHelp} openAuthModal={openAuthModal} />
         <ConnectivityStrip />
       </header>
       <div className="mx-auto flex w-full max-w-[1440px]">
@@ -116,15 +120,15 @@ export function AppShell({
           </main>
         </div>
       </div>
-      {drawerOpen ? <Drawer communities={communities} onClose={() => setDrawer(null)} /> : null}
-      <BottomNav />
+      {drawer ? <Drawer communities={communities} onClose={() => setDrawer(null)} openAuthModal={openAuthModal} /> : null}
+      <BottomNav openAuthModal={openAuthModal} />
       <ShortcutsDialog open={help} onClose={() => setHelp(false)} />
-      {search}
+      <AuthModal open={authModalOpen} onClose={() => setAuthModalOpen(false)} initialMode={authModalMode} />
     </div>
   );
 }
 
-function Drawer({ communities, onClose }: { communities?: React.ReactNode; onClose: () => void }) {
+function Drawer({ communities, onClose, openAuthModal }: { communities?: React.ReactNode; onClose: () => void; openAuthModal: (mode: AuthModalMode) => void }) {
   const { isAuthenticated, profile } = useSession();
   const { t } = useLang();
   const name = profile?.display_name || profile?.username || '?';
@@ -176,20 +180,20 @@ function Drawer({ communities, onClose }: { communities?: React.ReactNode; onClo
               <p className="text-xs font-bold text-ink mb-1">Espace Développeurs Africains</p>
               <p className="text-[0.75rem] text-ink-muted mb-3">Rejoignez la communauté pour collaborer, partager et progresser.</p>
               <div className="flex gap-2">
-                <Link
-                  href="/login"
-                  onClick={onClose}
-                  className="flex-1 rounded-xl bg-primary py-2 text-center text-xs font-bold text-on-primary shadow-xs"
+                <button
+                  type="button"
+                  onClick={() => { openAuthModal('login'); onClose(); }}
+                  className="flex-1 rounded-xl bg-primary py-2 text-center text-xs font-bold text-on-primary shadow-xs cursor-pointer"
                 >
                   {t('auth.login')}
-                </Link>
-                <Link
-                  href="/register"
-                  onClick={onClose}
-                  className="flex-1 rounded-xl border border-line bg-container-low py-2 text-center text-xs font-medium text-ink"
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { openAuthModal('register'); onClose(); }}
+                  className="flex-1 rounded-xl border border-line bg-container-low py-2 text-center text-xs font-medium text-ink cursor-pointer"
                 >
                   {t('auth.register')}
-                </Link>
+                </button>
               </div>
             </div>
           )}
@@ -208,10 +212,12 @@ function TopBar({
   notifications,
   onMenu,
   onHelp,
+  openAuthModal,
 }: {
   notifications?: React.ReactNode;
   onMenu: () => void;
   onHelp: () => void;
+  openAuthModal: (mode: AuthModalMode) => void;
 }) {
   const { isAuthenticated, profile } = useSession();
   const { t } = useLang();
@@ -264,9 +270,10 @@ function TopBar({
         {isAuthenticated ? (
           <AccountMenu onHelp={onHelp} />
         ) : (
-          <Link href="/login" className={buttonClasses({ size: 'sm' })}>
-            <LogIn className="size-4" aria-hidden /> <span className="hidden xs:inline">{t('auth.login')}</span>
-          </Link>
+          <button type="button" onClick={() => openAuthModal('login')} className={buttonClasses({ size: 'sm' })}>
+            <LogIn className="size-4" aria-hidden />
+            <span className="hidden xs:inline">{t('auth.login')}</span>
+          </button>
         )}
       </div>
     </div>
@@ -504,7 +511,7 @@ function ShortcutRow({ keys, label }: { keys: string[]; label: string }) {
   );
 }
 
-function BottomNav() {
+function BottomNav({ openAuthModal }: { openAuthModal: (mode: AuthModalMode) => void }) {
   const { isAuthenticated, profile } = useSession();
   const { t } = useLang();
   const pathname = navPath(usePathname(), profile?.username);
@@ -524,13 +531,14 @@ function BottomNav() {
               {isAuthenticated ? (
                 <PublishMenu compact />
               ) : (
-                <Link
-                  href="/login"
-                  className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-amber-500 text-on-primary shadow-raised ring-2 ring-white/20 transition-transform active:scale-90"
+                <button
+                  type="button"
+                  onClick={() => openAuthModal('login')}
+                  className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-amber-500 text-on-primary shadow-raised ring-2 ring-white/20 transition-transform active:scale-90 cursor-pointer"
                   aria-label={t('auth.login')}
                 >
                   <LogIn className="size-5" aria-hidden />
-                </Link>
+                </button>
               )}
             </li>
           ),

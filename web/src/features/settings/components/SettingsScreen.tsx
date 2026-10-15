@@ -428,7 +428,7 @@ function LanguageCard() {
               <span className="block text-xs font-bold text-ink leading-tight">{currentLang.native}</span>
               <span className="block text-[0.65rem] text-ink-faint leading-tight">{currentLang.label}</span>
             </div>
-            <span className="ml-1 inline-block size-2 rounded-full bg-emerald-500" title={t('settings.lang.active_badge')} />
+            <span className="ml-1 inline-block size-2 rounded-full bg-orange-500" title={t('settings.lang.active_badge')} />
           </div>
         </div>
       </div>
@@ -567,7 +567,7 @@ function LanguageCard() {
                             <span className="font-bold text-ink truncate">{l.native}</span>
                             <span className="text-[0.7rem] text-ink-faint">({l.label})</span>
                             {l.complete ? (
-                              <span className="rounded bg-emerald-500/10 px-1 py-0.2 text-[0.6rem] font-bold text-emerald-600">
+                              <span className="rounded bg-orange-500/10 px-1 py-0.2 text-[0.6rem] font-bold text-orange-600">
                                 100%
                               </span>
                             ) : null}

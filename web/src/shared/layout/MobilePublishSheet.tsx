@@ -45,9 +45,9 @@ const ACTIONS: ActionItem[] = [
     title: 'Ajouter un Snippet de Code',
     description: 'Enregistrez un bloc de code (USSD, Orange Money, Flutter...) dans votre coffre hors-ligne.',
     icon: Code2,
-    gradient: 'from-emerald-500 to-teal-700',
+    gradient: 'from-orange-500 to-amber-700',
     badge: 'Offline',
-    badgeColor: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+    badgeColor: 'bg-orange-500/15 text-orange-600 dark:text-orange-400',
   },
   {
     href: '/projects/new',

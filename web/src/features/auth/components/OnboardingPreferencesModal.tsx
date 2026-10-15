@@ -95,7 +95,7 @@ export function OnboardingPreferencesModal({
       <div className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-3xl border border-line bg-card p-6 sm:p-8 shadow-2xl space-y-7">
         {/* En-tête sobre et professionnel */}
         <div className="space-y-2 border-b border-line pb-5">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+          <div className="inline-flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-600 dark:text-orange-400">
             <Sparkles className="size-3.5" />
             <span>Configuration de vos centres d’intérêt</span>
           </div>
@@ -110,7 +110,7 @@ export function OnboardingPreferencesModal({
         {/* Section 1 : Domaines d'intérêt (style cartes professionnelles) */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Compass className="size-4 text-emerald-600" />
+            <Compass className="size-4 text-orange-600" />
             <h3 className="text-sm font-bold text-ink">
               Domaines & Spécialités prioritaires
             </h3>
@@ -126,7 +126,7 @@ export function OnboardingPreferencesModal({
                   className={cn(
                     'flex items-center justify-between rounded-xl border p-3.5 text-left text-xs font-semibold transition-all cursor-pointer',
                     active
-                      ? 'border-emerald-600 bg-emerald-50/50 text-emerald-950 dark:bg-emerald-950/20 dark:text-emerald-200 dark:border-emerald-500 shadow-xs'
+                      ? 'border-orange-600 bg-orange-50/50 text-orange-950 dark:bg-orange-950/20 dark:text-orange-200 dark:border-orange-500 shadow-xs'
                       : 'border-line bg-container-low/40 text-ink-muted hover:border-line-strong hover:text-ink'
                   )}
                 >
@@ -135,7 +135,7 @@ export function OnboardingPreferencesModal({
                     className={cn(
                       'ml-2 flex size-5 shrink-0 items-center justify-center rounded-md border text-[11px] font-bold transition-colors',
                       active
-                        ? 'border-emerald-600 bg-emerald-600 text-white'
+                        ? 'border-orange-600 bg-orange-600 text-white'
                         : 'border-line-strong text-transparent'
                     )}
                   >
@@ -150,7 +150,7 @@ export function OnboardingPreferencesModal({
         {/* Section 2 : Technologies & Langages */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Cpu className="size-4 text-emerald-600" />
+            <Cpu className="size-4 text-orange-600" />
             <div>
               <h3 className="text-sm font-bold text-ink">
                 Technologies & Langages clés
@@ -171,7 +171,7 @@ export function OnboardingPreferencesModal({
                   className={cn(
                     'inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer select-none',
                     active
-                      ? 'bg-emerald-600 text-white shadow-xs'
+                      ? 'bg-orange-600 text-white shadow-xs'
                       : 'border border-line bg-container-low hover:border-line-strong text-ink-muted hover:text-ink'
                   )}
                 >
@@ -198,7 +198,7 @@ export function OnboardingPreferencesModal({
             variant="primary"
             loading={saving}
             onClick={handleFinish}
-            className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+            className="w-full sm:w-auto bg-orange-600 hover:bg-orange-500 text-white font-bold"
           >
             <Check className="size-4" />
             Enregistrer mes préférences

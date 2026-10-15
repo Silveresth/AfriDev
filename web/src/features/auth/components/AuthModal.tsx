@@ -449,7 +449,7 @@ function ModalCredentialsForm({
                       ? 'bg-danger'
                       : passwordStats.score === 3
                         ? 'bg-tertiary'
-                        : 'bg-emerald-600'
+                        : 'bg-orange-600'
                     : 'bg-transparent',
                 )}
               />
@@ -459,14 +459,14 @@ function ModalCredentialsForm({
                   passwordStats.score >= 3
                     ? passwordStats.score === 3
                       ? 'bg-tertiary'
-                      : 'bg-emerald-600'
+                      : 'bg-orange-600'
                     : 'bg-transparent',
                 )}
               />
               <div
                 className={cn(
                   'h-full flex-1 rounded-full transition-all duration-300',
-                  passwordStats.score >= 4 ? 'bg-emerald-600' : 'bg-transparent',
+                  passwordStats.score >= 4 ? 'bg-orange-600' : 'bg-transparent',
                 )}
               />
             </div>
@@ -482,7 +482,7 @@ function ModalCredentialsForm({
       <button
         type="submit"
         disabled={loading}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 text-xs font-bold text-white shadow-md transition-all hover:bg-emerald-500 active:scale-[0.99] cursor-pointer disabled:opacity-50 mt-2"
+        className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-orange-600 px-4 text-xs font-bold text-white shadow-md transition-all hover:bg-orange-500 active:scale-[0.99] cursor-pointer disabled:opacity-50 mt-2"
       >
         {loading ? (
           <Spinner className="size-4 text-white" />
