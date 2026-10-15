@@ -30,7 +30,8 @@ export default defineConfig([
           rules: [
             { from: 'app', allow: ['feature', 'shared'] },
             { from: 'feature', allow: ['feature', 'shared'] },
-            { from: 'shared', allow: ['shared'] },
+            // shared/layout (AppShell) assembles features — allow shared → feature
+            { from: 'shared', allow: ['shared', 'feature'] },
           ],
         },
       ],

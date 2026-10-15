@@ -44,7 +44,7 @@ import {
 import { modifierKeyLabel, openCommandPalette } from './command';
 import { isActive, MOBILE_TABS, NAV_ITEMS, type NavItem, navPath } from './nav';
 import { PublishMenu } from './PublishMenu';
-import { AuthModal, AuthModalMode } from '@/features/auth/components/AuthModal';
+import { AuthModal, type AuthModalMode } from '@/features/auth';
 import { useShellShortcuts, useSidebarCollapsed } from './shortcuts';
 import { SideNav } from './SideNav';
 
