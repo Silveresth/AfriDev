@@ -3,7 +3,8 @@
 import type { Schemas } from '@afridev/api-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { api, unwrap } from '@/shared/api';
+import { api, apiFetch, unwrap } from '@/shared/api';
+
 import { useInfiniteList } from '@/shared/query';
 import { useSession } from '@/shared/session';
 
@@ -79,14 +80,15 @@ export function useJoinHub(hub: Pick<Hub, 'slug'>) {
 export function useAssignModerator(slug: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (username: string) =>
-      unwrap(
-        api.POST('/api/hubs/{slug}/moderators/' as any, {
-          params: { path: { slug } } as any,
-          body: { username } as any,
-        }),
-      ),
-    onSuccess: (fresh: any) => {
+    mutationFn: async (username: string) => {
+      const res = await apiFetch(`/api/hubs/${encodeURIComponent(slug)}/moderators/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username }),
+      });
+      return (await res.json()) as Hub;
+    },
+    onSuccess: (fresh: Hub) => {
       queryClient.setQueryData(hubKeys.detail(slug), fresh);
       void queryClient.invalidateQueries({ queryKey: hubKeys.all });
     },
@@ -97,17 +99,19 @@ export function useAssignModerator(slug: string) {
 export function useRemoveModerator(slug: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (username: string) =>
-      unwrap(
-        api.DELETE('/api/hubs/{slug}/moderators/' as any, {
-          params: { path: { slug } } as any,
-          body: { username } as any,
-        }),
-      ),
-    onSuccess: (fresh: any) => {
+    mutationFn: async (username: string) => {
+      const res = await apiFetch(`/api/hubs/${encodeURIComponent(slug)}/moderators/`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username }),
+      });
+      return (await res.json()) as Hub;
+    },
+    onSuccess: (fresh: Hub) => {
       queryClient.setQueryData(hubKeys.detail(slug), fresh);
       void queryClient.invalidateQueries({ queryKey: hubKeys.all });
     },
   });
 }
+
 

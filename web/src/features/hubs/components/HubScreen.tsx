@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { TwoColumns } from '@/shared/layout';
 import { formatCount } from '@/shared/lib';
 import { useSession } from '@/shared/session';
-import { Avatar, buttonClasses, Button, CardSkeleton, ErrorNotice, HubIcon, profileColorHex, SideCard, Spinner, Tabs } from '@/shared/ui';
+import { Avatar, buttonClasses, Button, CardSkeleton, ErrorNotice, HubIcon, profileColorHex, SideCard, Tabs } from '@/shared/ui';
 
 import { type Hub, useAssignModerator, useHub, useRemoveModerator } from '../api';
 
@@ -15,6 +15,12 @@ import { memberLabel, VerifiedMark } from './HubCard';
 import { JoinButton } from './JoinButton';
 
 type Tab = 'posts' | 'questions' | 'snippets';
+
+interface ExtendedHubViewer {
+  is_member?: boolean;
+  is_creator?: boolean;
+  role?: string | null;
+}
 
 /**
  * Page d'un hub (/h/<slug>) : bannière, identité, Rejoindre, onglets de contenus.
@@ -120,7 +126,8 @@ function HubHeader({ hub }: { hub: Hub }) {
 }
 
 function HubAside({ hub }: { hub: Hub }) {
-  const isCreatorOrAdmin = Boolean((hub.viewer as any)?.is_creator);
+  const viewer = hub.viewer as ExtendedHubViewer | undefined;
+  const isCreatorOrAdmin = Boolean(viewer?.is_creator);
   const [showAddMod, setShowAddMod] = useState(false);
   const [usernameInput, setUsernameInput] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -137,8 +144,9 @@ function HubAside({ hub }: { hub: Hub }) {
       await assignMod.mutateAsync(cleanUsername);
       setUsernameInput('');
       setShowAddMod(false);
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Impossible d’ajouter ce modérateur.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Impossible d’ajouter ce modérateur.';
+      setErrorMsg(message);
     }
   }
 
@@ -146,10 +154,12 @@ function HubAside({ hub }: { hub: Hub }) {
     if (!confirm(`Voulez-vous révoquer les droits de modération de @${username} ?`)) return;
     try {
       await removeMod.mutateAsync(username);
-    } catch (err: any) {
-      alert(err?.message || 'Erreur lors de la révocation.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erreur lors de la révocation.';
+      alert(message);
     }
   }
+
 
   return (
     <>
@@ -249,7 +259,7 @@ function HubAside({ hub }: { hub: Hub }) {
               })}
             </ul>
           ) : (
-            <p className="px-4 py-2 text-label-md text-ink-faint">Aucun modérateur pour l'instant.</p>
+            <p className="px-4 py-2 text-label-md text-ink-faint">Aucun modérateur pour l&apos;instant.</p>
           )}
         </div>
       </SideCard>

@@ -222,8 +222,9 @@ export function SnippetComments({
           <Spinner />
         </div>
       ) : roots.length === 0 ? (
-        <p className="text-body-sm text-ink-faint">Aucun commentaire pour l'instant.</p>
+        <p className="text-body-sm text-ink-faint">Aucun commentaire pour l&apos;instant.</p>
       ) : (
+
         <div className="space-y-6">
           {roots.map((comment) => (
             <SingleComment

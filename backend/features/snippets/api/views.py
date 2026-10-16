@@ -168,7 +168,10 @@ class SecretScanView(APIView):
 
 
 class SnippetCommentListCreateView(APIView):
-    """GET : liste publique des commentaires d'un snippet. POST : ajouter un commentaire (auth requise)."""
+    """GET : liste publique des commentaires d'un snippet.
+
+    POST : ajouter un commentaire (authentification requise).
+    """
 
     def get_permissions(self):
         if self.request.method == "GET":

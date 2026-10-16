@@ -223,8 +223,9 @@ def add_comment(*, snippet: Snippet, author, body: str, parent_id=None) -> Snipp
 
 @transaction.atomic
 def delete_comment(*, comment: SnippetComment, user) -> None:
-    """Soft-delete d'un commentaire par son auteur ou le modérateur du hub, et décrément de comment_count."""
+    """Soft-delete d'un commentaire (auteur ou modérateur du hub) et décrément."""
     is_allowed = comment.author_id == user.id or getattr(user, "is_staff", False)
+
     if not is_allowed:
         snippet = Snippet.objects.alive().filter(id=comment.snippet_id).first()
         if snippet and snippet.hub_id:

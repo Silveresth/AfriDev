@@ -90,8 +90,11 @@ def delete_comment(*, comment: Comment, user) -> None:
             is_allowed = hub_selectors.is_hub_moderator(hub_id=post.hub_id, user=user)
 
     if not is_allowed:
-        raise PermissionDeniedError("Seul l'auteur ou un modérateur du hub peut supprimer ce commentaire.")
+        raise PermissionDeniedError(
+            "Seul l'auteur ou un modérateur du hub peut supprimer ce commentaire."
+        )
     _soft_delete(comment)
+
 
 
 
