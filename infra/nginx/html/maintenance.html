@@ -3,177 +3,330 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AfriDev — Maintenance en cours</title>
+  <title>AfriDev Exchange — Maintenance</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --orange: #f97316;
-      --orange-light: #fed7aa;
-      --bg: #0f172a;
-      --card: #1e293b;
-      --border: #334155;
-      --text: #f1f5f9;
-      --muted: #94a3b8;
+      --orange:      #f97316;
+      --orange-dim:  rgba(249,115,22,.12);
+      --orange-glow: rgba(249,115,22,.35);
+      --bg:          #09090b;
+      --surface:     #18181b;
+      --border:      #27272a;
+      --text:        #fafafa;
+      --muted:       #71717a;
+      --muted-light: #a1a1aa;
+    }
+
+    html, body {
+      height: 100%;
     }
 
     body {
-      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      padding: 2rem;
+      min-height: 100vh;
+      padding: 1.5rem;
+      overflow-x: hidden;
     }
 
+    /* ── Ambient glow ─────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 700px;
+      height: 500px;
+      background: radial-gradient(ellipse at center, var(--orange-glow) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Card ─────────────────────────────────────────── */
     .card {
-      background: var(--card);
+      position: relative;
+      z-index: 1;
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 1.5rem;
-      padding: 3rem 2.5rem;
-      max-width: 520px;
+      padding: 3rem 2.5rem 2.5rem;
+      max-width: 480px;
       width: 100%;
       text-align: center;
-      box-shadow: 0 25px 50px -12px rgba(0,0,0,.5);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,.03),
+        0 32px 64px -12px rgba(0,0,0,.7);
     }
 
+    /* ── Logo ─────────────────────────────────────────── */
     .logo {
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      font-size: 1.5rem;
+      gap: .5rem;
+      font-size: 1.25rem;
       font-weight: 800;
-      color: var(--orange);
-      margin-bottom: 2rem;
-      letter-spacing: -0.02em;
+      color: var(--text);
+      letter-spacing: -.02em;
+      margin-bottom: 2.5rem;
+      text-decoration: none;
     }
-    .logo svg { width: 2rem; height: 2rem; }
-
-    .icon-wrap {
-      width: 4rem;
-      height: 4rem;
-      border-radius: 50%;
-      background: rgba(249,115,22,.15);
+    .logo-icon {
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 1.5rem;
+      width: 2rem;
+      height: 2rem;
+      border-radius: .5rem;
+      background: var(--orange);
     }
-    .icon-wrap svg { width: 2rem; height: 2rem; color: var(--orange); }
+    .logo-icon svg { width: 1.2rem; height: 1.2rem; color: #fff; }
 
+    /* ── Spinner + wrench icon ───────────────────────── */
+    .icon-ring {
+      position: relative;
+      width: 5rem;
+      height: 5rem;
+      margin: 0 auto 1.75rem;
+    }
+    .spinner {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      border-top-color: var(--orange);
+      animation: spin 1.4s linear infinite;
+    }
+    .icon-center {
+      position: absolute;
+      inset: .625rem;
+      border-radius: 50%;
+      background: var(--orange-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon-center svg {
+      width: 1.4rem;
+      height: 1.4rem;
+      color: var(--orange);
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ── Heading ─────────────────────────────────────── */
     h1 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: 0.75rem;
-      letter-spacing: -0.01em;
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -.025em;
+      line-height: 1.2;
+      margin-bottom: .75rem;
+    }
+    h1 span {
+      background: linear-gradient(135deg, var(--orange) 0%, #fb923c 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
-    p {
-      color: var(--muted);
-      line-height: 1.6;
-      font-size: 0.95rem;
+    .subtitle {
+      color: var(--muted-light);
+      font-size: .95rem;
+      line-height: 1.65;
+      max-width: 360px;
+      margin: 0 auto;
     }
 
+    /* ── Divider ─────────────────────────────────────── */
     .divider {
       border: none;
       border-top: 1px solid var(--border);
-      margin: 1.75rem 0;
+      margin: 2rem 0;
     }
 
+    /* ── Progress steps ──────────────────────────────── */
     .steps {
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: .875rem;
       text-align: left;
     }
 
     .step {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      color: var(--muted);
-      font-size: 0.875rem;
+      gap: .875rem;
     }
-    .step-dot {
-      width: 0.5rem;
-      height: 0.5rem;
-      border-radius: 50%;
-      background: var(--orange);
+
+    .step-icon {
       flex-shrink: 0;
-      animation: pulse 2s infinite;
+      width: 2rem;
+      height: 2rem;
+      border-radius: .5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .75rem;
+      font-weight: 700;
     }
-    .step:not(:first-child) .step-dot { animation: none; background: var(--border); }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%       { opacity: .5; transform: scale(1.3); }
+    .step-icon.active {
+      background: var(--orange-dim);
+      border: 1px solid rgba(249,115,22,.3);
+      color: var(--orange);
     }
+    .step-icon.done {
+      background: rgba(34,197,94,.1);
+      border: 1px solid rgba(34,197,94,.3);
+      color: #22c55e;
+    }
+    .step-icon.pending {
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .step-icon svg { width: 1rem; height: 1rem; }
 
-    .eta {
-      margin-top: 1.75rem;
+    .step-text { display: flex; flex-direction: column; gap: .1rem; }
+    .step-label { font-size: .875rem; font-weight: 500; color: var(--text); }
+    .step-label.muted { color: var(--muted-light); font-weight: 400; }
+    .step-label.dim   { color: var(--muted); font-weight: 400; }
+
+    /* ── Pill animée ─────────────────────────────────── */
+    .eta-pill {
       display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
-      font-size: 0.8rem;
-      color: var(--muted);
-      background: rgba(148,163,184,.1);
+      gap: .5rem;
+      margin-top: 2rem;
+      background: rgba(255,255,255,.04);
       border: 1px solid var(--border);
       border-radius: 999px;
-      padding: 0.35rem 0.9rem;
+      padding: .45rem 1rem;
+      font-size: .8rem;
+      color: var(--muted-light);
     }
-    .eta svg { width: 0.9rem; height: 0.9rem; }
+    .eta-dot {
+      width: .45rem;
+      height: .45rem;
+      border-radius: 50%;
+      background: var(--orange);
+      animation: blink 2s ease-in-out infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .25; }
+    }
+
+    /* ── Footer ──────────────────────────────────────── */
+    .footer {
+      margin-top: 2.5rem;
+      font-size: .78rem;
+      color: var(--muted);
+    }
+    .footer a { color: var(--orange); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
+
   <div class="card">
 
     <!-- Logo -->
-    <div class="logo">
-      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="16" cy="16" r="14" fill="#f97316" opacity=".2"/>
-        <path d="M10 22 L16 10 L22 22" stroke="#f97316" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M12.5 18h7" stroke="#f97316" stroke-width="2.5" stroke-linecap="round"/>
-      </svg>
+    <a class="logo" href="/">
+      <span class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      </span>
       AfriDev
+    </a>
+
+    <!-- Spinner icon -->
+    <div class="icon-ring">
+      <div class="spinner"></div>
+      <div class="icon-center">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+        </svg>
+      </div>
     </div>
 
-    <!-- Wrench icon -->
-    <div class="icon-wrap">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-      </svg>
-    </div>
-
-    <h1>Maintenance en cours</h1>
-    <p>Nous améliorons AfriDev Exchange pour vous offrir une meilleure expérience. Le site sera de retour très bientôt.</p>
+    <!-- Texte principal -->
+    <h1>Nous améliorons<br><span>AfriDev Exchange</span></h1>
+    <p class="subtitle">
+      Notre équipe travaille sur des nouvelles fonctionnalités pour vous offrir une meilleure expérience. Le site sera de retour dans quelques instants.
+    </p>
 
     <hr class="divider">
 
+    <!-- Steps -->
     <div class="steps">
+
       <div class="step">
-        <div class="step-dot"></div>
-        <span>Mise à jour des fonctionnalités en cours…</span>
+        <div class="step-icon done">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <div class="step-text">
+          <span class="step-label">Mise à jour déployée</span>
+        </div>
       </div>
+
       <div class="step">
-        <div class="step-dot"></div>
-        <span>Optimisation des performances</span>
+        <div class="step-icon active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="2" x2="12" y2="6"/>
+            <line x1="12" y1="18" x2="12" y2="22"/>
+            <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/>
+            <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
+            <line x1="2" y1="12" x2="6" y2="12"/>
+            <line x1="18" y1="12" x2="22" y2="12"/>
+            <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/>
+            <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
+          </svg>
+        </div>
+        <div class="step-text">
+          <span class="step-label">Tests de stabilité en cours…</span>
+        </div>
       </div>
+
       <div class="step">
-        <div class="step-dot"></div>
-        <span>Tests de stabilité</span>
+        <div class="step-icon pending">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </div>
+        <div class="step-text">
+          <span class="step-label dim">Remise en ligne</span>
+        </div>
       </div>
+
     </div>
 
-    <div class="eta">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-      </svg>
-      Retour prévu dans quelques heures
+    <!-- ETA pill -->
+    <div class="eta-pill">
+      <div class="eta-dot"></div>
+      Retour prévu très bientôt
     </div>
 
   </div>
+
+  <!-- Footer -->
+  <p class="footer">
+    Des questions ? Contactez-nous sur
+    <a href="mailto:contact@afridev.dev">contact@afridev.dev</a>
+  </p>
+
 </body>
 </html>
