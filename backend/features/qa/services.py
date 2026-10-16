@@ -97,7 +97,7 @@ def create_question(
 
 @transaction.atomic
 def update_question(*, question: Question, user, title=None, body=None, tags=None) -> Question:
-    if question.author_id != user.id:
+    if question.author_id != user.id and not user.is_staff:
         raise PermissionDeniedError("Seul l'auteur peut modifier cette question.")
     fields = []
     if title is not None and title.strip() != question.title:

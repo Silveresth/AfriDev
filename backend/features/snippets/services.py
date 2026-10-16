@@ -74,7 +74,8 @@ def update_snippet(
     *, snippet: Snippet, user, title=None, language=None, content=None, tags=None, hub_id=...
 ) -> Snippet:
     """hub_id : absent = inchangé, None = retirer du hub, UUID = rattacher à ce hub."""
-    _check_owner(snippet, user)
+    if not user.is_staff:
+        _check_owner(snippet, user)
     fields = []
     if content is not None and content != snippet.content:
         _guard(content)
@@ -128,6 +129,30 @@ def unpublish_snippet(*, snippet: Snippet) -> Snippet:
     snippet.save(update_fields=["is_public", "updated_at"])
     transaction.on_commit(lambda: snippet_unpublished.send(sender=Snippet, snippet_id=snippet.id))
     return snippet
+
+
+def hide_snippet(*, snippet_id) -> bool:
+    """Masquage par la modération (réversible depuis le back-office)."""
+    snippet = Snippet.objects.alive().filter(id=snippet_id).first()
+    if snippet:
+        snippet.soft_delete()
+        if snippet.is_public:
+            transaction.on_commit(
+                lambda: snippet_unpublished.send(sender=Snippet, snippet_id=snippet.id)
+            )
+    return snippet is not None
+
+
+def restore_snippet(*, snippet_id) -> bool:
+    snippet = Snippet.objects.filter(id=snippet_id, deleted_at__isnull=False).first()
+    if snippet:
+        snippet.deleted_at = None
+        snippet.save(update_fields=["deleted_at", "updated_at"])
+        if snippet.is_public:
+            transaction.on_commit(
+                lambda: snippet_published.send(sender=Snippet, snippet_id=snippet.id)
+            )
+    return snippet is not None
 
 
 @transaction.atomic

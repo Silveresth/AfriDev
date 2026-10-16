@@ -3,11 +3,22 @@ from rest_framework import serializers
 from core.serializers import AuthorSerializer
 from features.feed import selectors as feed_selectors
 from features.profiles import selectors as profile_selectors
+from features.projects import selectors as project_selectors
 from features.qa import selectors as qa_selectors
 from features.snippets import selectors as snippet_selectors
 
-TARGET_TYPES = [("post", "Post"), ("question", "Question"), ("snippet", "Snippet")]
-HREFS = {"post": "/feed/{}", "question": "/questions/{}", "snippet": "/snippets/{}"}
+TARGET_TYPES = [
+    ("post", "Post"),
+    ("question", "Question"),
+    ("snippet", "Snippet"),
+    ("project", "Projet"),
+]
+HREFS = {
+    "post": "/feed/{}",
+    "question": "/questions/{}",
+    "snippet": "/snippets/{}",
+    "project": "/projects/{}",
+}
 
 
 class CollectionInputSerializer(serializers.Serializer):
@@ -80,7 +91,7 @@ def present_collections(collections) -> list[dict]:
 def present_items(items, *, viewer) -> list[dict]:
     """Résout titre, extrait et auteur de chaque contenu en une requête par type."""
     items = list(items)
-    by_type: dict[str, list] = {"post": [], "question": [], "snippet": []}
+    by_type: dict[str, list] = {kind: [] for kind in HREFS}
     for item in items:
         by_type[item.target_type].append(item.target_id)
     summaries = {
@@ -89,6 +100,7 @@ def present_items(items, *, viewer) -> list[dict]:
         "snippet": snippet_selectors.snippet_summaries(
             snippet_ids=by_type["snippet"], viewer_id=viewer.id
         ),
+        "project": project_selectors.project_summaries(project_ids=by_type["project"]),
     }
     authors = profile_selectors.author_cards(
         user_ids={s["author_id"] for group in summaries.values() for s in group.values()}

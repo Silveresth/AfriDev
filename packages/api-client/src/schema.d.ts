@@ -1938,6 +1938,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reactions/{target_type}/{target_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /api/reactions/<question|snippet|project>/<id>/ : vote ↑/↓ (0 = retrait). */
+        post: operations["reactions_vote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/snippets/": {
         parameters: {
             query?: never;
@@ -2424,9 +2441,10 @@ export interface components {
          * @description * `post` - Post
          *     * `question` - Question
          *     * `snippet` - Snippet
+         *     * `project` - Projet
          * @enum {string}
          */
-        BookmarkTargetTypeEnum: "post" | "question" | "snippet";
+        BookmarkTargetTypeEnum: "post" | "question" | "snippet" | "project";
         Candidate: {
             /** Format: uuid */
             id: string;
@@ -2779,10 +2797,25 @@ export interface components {
             matched_tags: string[];
             post: components["schemas"]["PostOutput"] | null;
             card: components["schemas"]["HomeCard"] | null;
+            /** @description null pour un post ou une offre. */
+            stats: components["schemas"]["HomeStats"] | null;
         };
         HomePage: {
             next: string | null;
             results: components["schemas"]["HomeItem"][];
+        };
+        /**
+         * @description Compteurs et état du visiteur d'une carte (question, snippet, projet) : actions directes
+         *     depuis le fil sans ouvrir le contenu.
+         */
+        HomeStats: {
+            score: number;
+            /** @description Vote du visiteur : -1, 0 ou 1. */
+            viewer_vote: number;
+            /** @description Réponses (question) ou commentaires. */
+            comment_count: number;
+            /** @description Auteur ou staff : modifier, supprimer. */
+            can_manage: boolean;
         };
         HubBan: {
             user: components["schemas"]["Author"];
@@ -3784,6 +3817,23 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        ReactionInputRequest: {
+            /**
+             * @description 1 = ↑, -1 = ↓, 0 = retrait.
+             *
+             *     * `-1` - -1
+             *     * `0` - 0
+             *     * `1` - 1
+             */
+            value: components["schemas"]["ValueEnum"];
+        };
+        ReactionSummary: {
+            score: number;
+            up: number;
+            down: number;
+            /** @description Vote du visiteur : -1, 0 ou 1. */
+            viewer_vote: number;
+        };
         /**
          * @description * `spam` - Spam ou publicité
          *     * `abuse` - Harcèlement ou propos haineux
@@ -4131,9 +4181,12 @@ export interface components {
          *     * `comment` - Commentaire
          *     * `question` - Question
          *     * `answer` - Réponse
+         *     * `snippet` - Snippet
+         *     * `project` - Projet
+         *     * `hub` - Hub
          * @enum {string}
          */
-        TargetTypeEnum: "post" | "comment" | "question" | "answer";
+        TargetTypeEnum: "post" | "comment" | "question" | "answer" | "snippet" | "project" | "hub";
         TimelinePoint: {
             /** Format: date */
             day: string;
@@ -5124,7 +5177,7 @@ export interface operations {
         parameters: {
             query: {
                 target_id: string;
-                target_type: "post" | "question" | "snippet";
+                target_type: "post" | "project" | "question" | "snippet";
             };
             header?: never;
             path: {
@@ -6574,7 +6627,7 @@ export interface operations {
                 page_size?: number;
                 source?: "ai" | "member";
                 status?: "dismissed" | "hidden" | "open";
-                target_type?: "answer" | "comment" | "post" | "question";
+                target_type?: "answer" | "comment" | "hub" | "post" | "project" | "question" | "snippet";
             };
             header?: never;
             path?: never;
@@ -7960,6 +8013,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AcceptedJob"];
+                };
+            };
+        };
+    };
+    reactions_vote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                target_id: string;
+                target_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactionInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReactionInputRequest"];
+                "multipart/form-data": components["schemas"]["ReactionInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReactionSummary"];
                 };
             };
         };

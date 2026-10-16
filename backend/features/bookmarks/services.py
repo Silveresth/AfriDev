@@ -4,13 +4,19 @@ from django.db import IntegrityError, transaction
 
 from core.exceptions import ConflictError, DomainError, NotFoundError, PermissionDeniedError
 from features.feed import selectors as feed_selectors
+from features.projects import selectors as project_selectors
 from features.qa import selectors as qa_selectors
 from features.snippets import selectors as snippet_selectors
 
 from .events import bookmark_changed
 from .models import BookmarkCollection, BookmarkItem
 
-TARGET_FIELDS = {"post": "post_id", "snippet": "snippet_id", "question": "question_id"}
+TARGET_FIELDS = {
+    "post": "post_id",
+    "snippet": "snippet_id",
+    "question": "question_id",
+    "project": "project_id",
+}
 DEFAULT_COLLECTION = "Favoris"
 MAX_COLLECTIONS = 50
 
@@ -88,6 +94,8 @@ def _target_exists(*, target_type: str, target_id, user) -> bool:
         return bool(feed_selectors.post_summaries(post_ids=[target_id]))
     if target_type == "question":
         return bool(qa_selectors.question_summaries(question_ids=[target_id]))
+    if target_type == "project":
+        return bool(project_selectors.project_summaries(project_ids=[target_id]))
     return bool(snippet_selectors.snippet_summaries(snippet_ids=[target_id], viewer_id=user.id))
 
 

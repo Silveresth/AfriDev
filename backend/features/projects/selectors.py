@@ -22,8 +22,9 @@ def list_projects(
     return projects
 
 
-def get_project(*, project_id) -> Project | None:
-    return Project.objects.alive().filter(id=project_id).first()
+def get_project(*, project_id, include_hidden: bool = False) -> Project | None:
+    projects = Project.objects.all() if include_hidden else Project.objects.alive()
+    return projects.filter(id=project_id).first()
 
 
 def list_open_issues(*, project_id) -> QuerySet[Issue]:

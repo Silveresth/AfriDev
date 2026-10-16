@@ -12,6 +12,9 @@ class Report(BaseModel):
         COMMENT = "comment", "Commentaire"
         QUESTION = "question", "Question"
         ANSWER = "answer", "Réponse"
+        SNIPPET = "snippet", "Snippet"
+        PROJECT = "project", "Projet"
+        HUB = "hub", "Hub"
 
     class Reason(models.TextChoices):
         SPAM = "spam", "Spam ou publicité"

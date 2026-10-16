@@ -58,8 +58,9 @@ def get_hub_by_slug(*, slug: str) -> Hub | None:
     return Hub.objects.alive().filter(slug=slug.lower()).first()
 
 
-def get_hub(*, hub_id) -> Hub | None:
-    return Hub.objects.alive().filter(id=hub_id).first()
+def get_hub(*, hub_id, include_hidden: bool = False) -> Hub | None:
+    hubs = Hub.objects.all() if include_hidden else Hub.objects.alive()
+    return hubs.filter(id=hub_id).first()
 
 
 def resolve_hub_id(*, value: str | None):

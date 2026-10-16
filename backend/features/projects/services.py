@@ -68,7 +68,7 @@ def create_project(
 
 @transaction.atomic
 def update_project(*, project: Project, user, **fields) -> Project:
-    if project.owner_id != user.id:
+    if project.owner_id != user.id and not user.is_staff:
         raise PermissionDeniedError("Seul le porteur du projet peut le modifier.")
     changed = []
     for name in ("name", "description", "repo_url", "tags", "is_recruiting"):
@@ -96,6 +96,22 @@ def delete_project(*, project: Project, user) -> None:
         raise PermissionDeniedError("Seul le porteur du projet peut le supprimer.")
     project.soft_delete()
     transaction.on_commit(lambda: project_deleted.send(sender=Project, project_id=project.id))
+
+
+def hide_project(*, project_id) -> bool:
+    """Masquage par la modération (réversible depuis le back-office)."""
+    project = Project.objects.alive().filter(id=project_id).first()
+    if project:
+        project.soft_delete()
+    return project is not None
+
+
+def restore_project(*, project_id) -> bool:
+    project = Project.objects.filter(id=project_id, deleted_at__isnull=False).first()
+    if project:
+        project.deleted_at = None
+        project.save(update_fields=["deleted_at", "updated_at"])
+    return project is not None
 
 
 @transaction.atomic

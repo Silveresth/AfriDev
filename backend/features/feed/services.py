@@ -132,7 +132,7 @@ def update_post(
     hub_id=...,
 ) -> Post:
     """hub_id : absent = inchangé, None = retirer du hub, UUID = déplacer dans ce hub."""
-    if post.author_id != user.id:
+    if post.author_id != user.id and not user.is_staff:
         raise PermissionDeniedError("Seul l'auteur peut modifier ce post.")
     fields = []
     if title is not None and title.strip() != post.title:

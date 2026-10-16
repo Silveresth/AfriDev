@@ -4,9 +4,12 @@ from core.serializers import AuthorSerializer, HubSummarySerializer
 from features.hubs import selectors as hub_selectors
 from features.media import selectors as media_selectors
 from features.profiles import selectors as profile_selectors
+from features.reactions import selectors as reaction_selectors
 
 from .. import selectors
 from ..models import Post
+
+REACTABLE = ("question", "snippet", "project")
 
 
 class PostInputSerializer(serializers.Serializer):
@@ -156,6 +159,16 @@ class HomeCardSerializer(serializers.Serializer):
     )
 
 
+class HomeStatsSerializer(serializers.Serializer):
+    """Compteurs et état du visiteur d'une carte (question, snippet, projet) : actions directes
+    depuis le fil sans ouvrir le contenu."""
+
+    score = serializers.IntegerField()
+    viewer_vote = serializers.IntegerField(help_text="Vote du visiteur : -1, 0 ou 1.")
+    comment_count = serializers.IntegerField(help_text="Réponses (question) ou commentaires.")
+    can_manage = serializers.BooleanField(help_text="Auteur ou staff : modifier, supprimer.")
+
+
 class HomeItemSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=["post", "question", "snippet", "project", "job"])
     id = serializers.UUIDField()
@@ -165,6 +178,7 @@ class HomeItemSerializer(serializers.Serializer):
     )
     post = PostOutputSerializer(allow_null=True)
     card = HomeCardSerializer(allow_null=True)
+    stats = HomeStatsSerializer(allow_null=True, help_text="null pour un post ou une offre.")
 
 
 class HomePageSerializer(serializers.Serializer):
@@ -184,6 +198,29 @@ def present_home(cards: list[dict], *, viewer, interests) -> list[dict]:
         )
     }
     wanted = {str(tag).lower() for tag in interests}
+    viewer_id = viewer.id if getattr(viewer, "is_authenticated", False) else None
+    is_staff = bool(getattr(viewer, "is_staff", False))
+    reactions = {
+        kind: reaction_selectors.summaries(
+            target_type=kind,
+            target_ids=[card["id"] for card in cards if card["type"] == kind],
+            viewer_id=viewer_id,
+        )
+        for kind in REACTABLE
+    }
+
+    def stats(card):
+        if card["type"] not in REACTABLE:
+            return None
+        summary = reactions[card["type"]].get(card["id"], {})
+        meta = card["meta"]
+        return {
+            "score": summary.get("score", 0),
+            "viewer_vote": summary.get("viewer_vote", 0),
+            "comment_count": meta.get("answer_count", meta.get("comment_count", 0)),
+            "can_manage": is_staff or (viewer_id is not None and card["author_id"] == viewer_id),
+        }
+
     items = []
     for card in cards:
         is_post = card["type"] == "post"
@@ -204,6 +241,7 @@ def present_home(cards: list[dict], *, viewer, interests) -> list[dict]:
                     "author": authors.get(card["author_id"]),
                     "meta": card["meta"],
                 },
+                "stats": None if is_post else stats(card),
             }
         )
     return items

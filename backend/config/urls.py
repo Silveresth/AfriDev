@@ -22,6 +22,7 @@ urlpatterns = [
     path("api/hubs/<slug:slug>/feed/", HubFeedView.as_view(), name="hub-feed"),
     path("api/hubs/", include("features.hubs.api.urls")),
     path("api/bookmarks/", include("features.bookmarks.api.urls")),
+    path("api/reactions/", include("features.reactions.api.urls")),
     path("api/", include("features.jobs_events.api.urls")),  # /api/job-board/ et /api/events/
     path("api/discussions/", include("features.discussions.api.urls")),
     path("api/translation/", include("features.translation.api.urls")),

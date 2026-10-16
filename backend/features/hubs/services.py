@@ -136,6 +136,22 @@ def delete_hub(*, hub: Hub, user) -> None:
     hub.soft_delete()
 
 
+def hide_hub(*, hub_id) -> bool:
+    """Masquage par la modération (réversible depuis le back-office)."""
+    hub = Hub.objects.alive().filter(id=hub_id).first()
+    if hub:
+        hub.soft_delete()
+    return hub is not None
+
+
+def restore_hub(*, hub_id) -> bool:
+    hub = Hub.objects.filter(id=hub_id, deleted_at__isnull=False).first()
+    if hub:
+        hub.deleted_at = None
+        hub.save(update_fields=["deleted_at", "updated_at"])
+    return hub is not None
+
+
 def require_hub(*, hub_id, user=None):
     """Pour feed / qa / snippets : vérifie qu'un hub existe avant d'y rattacher un contenu,
     et que l'auteur n'en est pas exclu."""

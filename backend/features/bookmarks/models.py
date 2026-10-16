@@ -4,6 +4,15 @@ from django.db.models import Q
 
 from core.models import BaseModel
 
+TARGET_FIELDS = ("post_id", "snippet_id", "question_id", "project_id")
+
+
+def _exactly_one(fields) -> Q:
+    condition = Q()
+    for chosen in fields:
+        condition |= Q(**{f"{f}__isnull": f != chosen for f in fields})
+    return condition
+
 
 class BookmarkCollection(BaseModel):
     """Dossier de marque-pages (« Mes snippets Django », « Trucs & astuces SQL »)."""
@@ -30,7 +39,7 @@ class BookmarkCollection(BaseModel):
 
 
 class BookmarkItem(BaseModel):
-    """Contenu enregistré : exactement un de post_id, snippet_id, question_id.
+    """Contenu enregistré : exactement un de post_id, snippet_id, question_id, project_id.
 
     Références sans clé étrangère (features feed / snippets / qa) : un contenu supprimé
     laisse l'élément en place, affiché comme indisponible.
@@ -45,16 +54,13 @@ class BookmarkItem(BaseModel):
     post_id = models.UUIDField(null=True, blank=True, db_index=True)
     snippet_id = models.UUIDField(null=True, blank=True, db_index=True)
     question_id = models.UUIDField(null=True, blank=True, db_index=True)
+    project_id = models.UUIDField(null=True, blank=True, db_index=True)
 
     class Meta:
         constraints = [
             models.CheckConstraint(
-                condition=(
-                    Q(post_id__isnull=False, snippet_id__isnull=True, question_id__isnull=True)
-                    | Q(post_id__isnull=True, snippet_id__isnull=False, question_id__isnull=True)
-                    | Q(post_id__isnull=True, snippet_id__isnull=True, question_id__isnull=False)
-                ),
-                name="bookmarks_item_one_target",
+                condition=_exactly_one(TARGET_FIELDS),
+                name="bookmarks_item_one_target_v2",
             ),
             *[
                 models.UniqueConstraint(
@@ -62,16 +68,14 @@ class BookmarkItem(BaseModel):
                     condition=Q(**{f"{field}__isnull": False}),
                     name=f"bookmarks_item_unique_{field}",
                 )
-                for field in ("post_id", "snippet_id", "question_id")
+                for field in TARGET_FIELDS
             ],
         ]
 
     @property
     def target_type(self) -> str:
-        if self.post_id:
-            return "post"
-        return "snippet" if self.snippet_id else "question"
+        return next(field[:-3] for field in TARGET_FIELDS if getattr(self, field))
 
     @property
     def target_id(self):
-        return self.post_id or self.snippet_id or self.question_id
+        return next(getattr(self, field) for field in TARGET_FIELDS if getattr(self, field))

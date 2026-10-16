@@ -96,7 +96,7 @@ class CollectionItemsView(APIView):
     @extend_schema(
         parameters=[
             OpenApiParameter(
-                "target_type", str, required=True, enum=["post", "question", "snippet"]
+                "target_type", str, required=True, enum=["post", "question", "snippet", "project"]
             ),
             OpenApiParameter("target_id", str, required=True),
         ],

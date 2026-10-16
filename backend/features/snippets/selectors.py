@@ -20,6 +20,12 @@ def get_public_snippet(*, snippet_id) -> Snippet | None:
     return Snippet.objects.alive().filter(id=snippet_id, is_public=True).first()
 
 
+def get_snippet(*, snippet_id, include_hidden: bool = False) -> Snippet | None:
+    """include_hidden : aussi un snippet masqué par la modération (back-office)."""
+    snippets = Snippet.objects.all() if include_hidden else Snippet.objects.alive()
+    return snippets.filter(id=snippet_id).first()
+
+
 def list_public_snippets(
     *, language: str | None = None, query: str | None = None, owner_id=None, hub_id=None
 ) -> QuerySet[Snippet]:
@@ -58,7 +64,7 @@ def home_candidates(*, before=None, limit: int, author_ids=None) -> list[dict]:
     if author_ids is not None:
         snippets = snippets.filter(owner_id__in=list(author_ids))
     rows = keyset_before(snippets, "published_at", before).only(
-        "id", "title", "language", "content", "tags", "owner_id", "published_at"
+        "id", "title", "language", "content", "tags", "owner_id", "published_at", "comment_count"
     )[:limit]
     result = []
     for s in rows:
@@ -74,8 +80,12 @@ def home_candidates(*, before=None, limit: int, author_ids=None) -> list[dict]:
                 "author_id": s.owner_id,
                 "sort_at": s.published_at,
                 "url": f"/snippets/{s.id}",
-                "popularity": 0,
-                "meta": {"language": s.language, "lines": len(lines)},
+                "popularity": s.comment_count,
+                "meta": {
+                    "language": s.language,
+                    "lines": len(lines),
+                    "comment_count": s.comment_count,
+                },
             }
         )
     return result

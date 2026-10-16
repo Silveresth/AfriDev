@@ -14,6 +14,7 @@ from features.jobs_events import selectors as jobs_selectors
 from features.profiles import selectors as profile_selectors
 from features.projects import selectors as project_selectors
 from features.qa import selectors as qa_selectors
+from features.reactions import selectors as reaction_selectors
 from features.snippets import selectors as snippet_selectors
 
 from .models import PersonalAccessToken, SocialAccount, User, UserSession
@@ -28,6 +29,7 @@ SECTIONS = (
     hub_selectors,
     bookmark_selectors,
     jobs_selectors,
+    reaction_selectors,
 )
 
 
