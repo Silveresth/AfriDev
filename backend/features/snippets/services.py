@@ -223,8 +223,15 @@ def add_comment(*, snippet: Snippet, author, body: str, parent_id=None) -> Snipp
 
 @transaction.atomic
 def delete_comment(*, comment: SnippetComment, user) -> None:
-    """Soft-delete d'un commentaire par son auteur et décrément de comment_count."""
-    if comment.author_id != user.id and not getattr(user, "is_staff", False):
+    """Soft-delete d'un commentaire par son auteur ou le modérateur du hub, et décrément de comment_count."""
+    is_allowed = comment.author_id == user.id or getattr(user, "is_staff", False)
+    if not is_allowed:
+        snippet = Snippet.objects.alive().filter(id=comment.snippet_id).first()
+        if snippet and snippet.hub_id:
+            from features.hubs import selectors as hub_selectors
+            is_allowed = hub_selectors.is_hub_moderator(hub_id=snippet.hub_id, user=user)
+
+    if not is_allowed:
         raise PermissionDeniedError("Vous ne pouvez pas supprimer ce commentaire.")
 
     comment.soft_delete()
@@ -234,4 +241,5 @@ def delete_comment(*, comment: SnippetComment, user) -> None:
             default=Value(0),
         )
     )
+
 

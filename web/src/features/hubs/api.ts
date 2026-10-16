@@ -74,3 +74,40 @@ export function useJoinHub(hub: Pick<Hub, 'slug'>) {
     },
   });
 }
+
+/** Nommer un modérateur pour le hub (réservé au créateur du hub). */
+export function useAssignModerator(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (username: string) =>
+      unwrap(
+        api.POST('/api/hubs/{slug}/moderators/' as any, {
+          params: { path: { slug } } as any,
+          body: { username } as any,
+        }),
+      ),
+    onSuccess: (fresh: any) => {
+      queryClient.setQueryData(hubKeys.detail(slug), fresh);
+      void queryClient.invalidateQueries({ queryKey: hubKeys.all });
+    },
+  });
+}
+
+/** Révoquer un modérateur du hub (réservé au créateur du hub). */
+export function useRemoveModerator(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (username: string) =>
+      unwrap(
+        api.DELETE('/api/hubs/{slug}/moderators/' as any, {
+          params: { path: { slug } } as any,
+          body: { username } as any,
+        }),
+      ),
+    onSuccess: (fresh: any) => {
+      queryClient.setQueryData(hubKeys.detail(slug), fresh);
+      void queryClient.invalidateQueries({ queryKey: hubKeys.all });
+    },
+  });
+}
+

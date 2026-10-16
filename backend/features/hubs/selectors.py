@@ -111,6 +111,23 @@ def list_moderators(*, hub_id) -> list:
     )
 
 
+def is_hub_moderator(*, hub_id, user) -> bool:
+    """Vérifie si l'utilisateur est créateur du hub, modérateur ou staff."""
+    if not user or not user.is_authenticated or not hub_id:
+        return False
+    if getattr(user, "is_staff", False):
+        return True
+    hub = Hub.objects.alive().filter(id=hub_id).first()
+    if not hub:
+        return False
+    if hub.creator_id == user.id:
+        return True
+    return HubMembership.objects.filter(
+        hub_id=hub_id, user=user, role=HubMembership.Role.MODERATOR
+    ).exists()
+
+
+
 def export_for_user(*, user_id) -> dict:
     """Données personnelles (export RGPD) : hubs créés et adhésions."""
     return {

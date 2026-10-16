@@ -10,8 +10,17 @@ from core.pagination import CursorPagination
 from core.permissions import ReadOnlyOrAuthenticated
 from core.schema import CURSOR_PARAMETERS, paginated
 
+from django.contrib.auth import get_user_model
+
 from .. import selectors, services
-from .serializers import HubInputSerializer, HubOutputSerializer, HubUpdateSerializer, present_hubs
+from .serializers import (
+    HubInputSerializer,
+    HubModeratorActionSerializer,
+    HubOutputSerializer,
+    HubUpdateSerializer,
+    present_hubs,
+)
+
 
 # Tri de l'exploration : populaires (membres) ou récents.
 SORTS = {"popular": "-member_count", "new": "-created_at"}
@@ -99,3 +108,34 @@ class HubJoinView(APIView):
         hub = _hub(slug)
         services.leave_hub(hub=hub, user=request.user)
         return Response(_one(hub, request))
+
+
+class HubModeratorsView(APIView):
+    """POST : nommer un modérateur ; DELETE : révoquer un modérateur (créateur du hub)."""
+
+    @extend_schema(request=HubModeratorActionSerializer, responses={200: HubOutputSerializer})
+    def post(self, request, slug):
+        hub = _hub(slug)
+        data = HubModeratorActionSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        username = data.validated_data["username"].strip()
+        user = get_user_model().objects.filter(username=username).first()
+        if not user:
+            raise NotFound(f"Utilisateur @{username} introuvable.")
+
+        services.assign_moderator(hub=hub, admin_user=request.user, target_user=user)
+        return Response(_one(hub, request))
+
+    @extend_schema(request=HubModeratorActionSerializer, responses={200: HubOutputSerializer})
+    def delete(self, request, slug):
+        hub = _hub(slug)
+        data = HubModeratorActionSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        username = data.validated_data["username"].strip()
+        user = get_user_model().objects.filter(username=username).first()
+        if not user:
+            raise NotFound(f"Utilisateur @{username} introuvable.")
+
+        services.remove_moderator(hub=hub, admin_user=request.user, target_user=user)
+        return Response(_one(hub, request))
+

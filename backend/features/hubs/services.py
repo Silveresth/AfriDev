@@ -140,3 +140,38 @@ def require_hub(*, hub_id):
     if not Hub.objects.alive().filter(id=hub_id).exists():
         raise NotFoundError("Hub introuvable.", code="hub_not_found")
     return hub_id
+
+
+@transaction.atomic
+def assign_moderator(*, hub: Hub, admin_user, target_user) -> HubMembership:
+    """Seul le créateur du hub (ou le staff) peut nommer un modérateur."""
+    if not (admin_user.is_staff or hub.creator_id == admin_user.id):
+        raise PermissionDeniedError("Seul le créateur du hub peut nommer des modérateurs.")
+
+    membership, created = HubMembership.objects.get_or_create(hub=hub, user=target_user)
+    if created:
+        Hub.objects.filter(id=hub.id).update(member_count=F("member_count") + 1)
+        hub.refresh_from_db(fields=["member_count"])
+
+    membership.role = HubMembership.Role.MODERATOR
+    membership.save(update_fields=["role", "updated_at"])
+    return membership
+
+
+@transaction.atomic
+def remove_moderator(*, hub: Hub, admin_user, target_user) -> HubMembership:
+    """Seul le créateur du hub (ou le staff) peut révoquer un modérateur."""
+    if not (admin_user.is_staff or hub.creator_id == admin_user.id):
+        raise PermissionDeniedError("Seul le créateur du hub peut retirer des modérateurs.")
+
+    if target_user.id == hub.creator_id:
+        raise DomainError("Le créateur du hub reste modérateur principal.")
+
+    membership = HubMembership.objects.filter(hub=hub, user=target_user).first()
+    if not membership:
+        raise NotFoundError("Ce membre ne fait pas partie du hub.")
+
+    membership.role = HubMembership.Role.MEMBER
+    membership.save(update_fields=["role", "updated_at"])
+    return membership
+

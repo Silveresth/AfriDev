@@ -234,13 +234,14 @@ class SnippetCommentListCreateView(APIView):
 
 
 class SnippetCommentDeleteView(APIView):
-    """Suppression douce d'un commentaire par son auteur."""
+    """Suppression douce d'un commentaire par son auteur ou le modérateur du hub."""
 
     @extend_schema(responses={204: None}, operation_id="snippets_comments_delete")
     def delete(self, request, snippet_id, comment_id):
-        comment = selectors.get_comment(comment_id=comment_id, author=request.user)
+        comment = selectors.get_comment(comment_id=comment_id)
         if comment is None or str(comment.snippet_id) != str(snippet_id):
             raise NotFound("Commentaire introuvable.")
         services.delete_comment(comment=comment, user=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
 

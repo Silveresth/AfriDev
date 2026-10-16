@@ -1,15 +1,16 @@
 'use client';
 
-import { Code2, MapPin, MessagesSquare, Newspaper, PenSquare, ScrollText, ShieldCheck, UsersRound } from 'lucide-react';
+import { Code2, MapPin, MessagesSquare, Newspaper, PenSquare, ScrollText, ShieldCheck, UserPlus, UsersRound, X } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
 import { TwoColumns } from '@/shared/layout';
 import { formatCount } from '@/shared/lib';
 import { useSession } from '@/shared/session';
-import { Avatar, buttonClasses, CardSkeleton, ErrorNotice, HubIcon, profileColorHex, SideCard, Tabs } from '@/shared/ui';
+import { Avatar, buttonClasses, Button, CardSkeleton, ErrorNotice, HubIcon, profileColorHex, SideCard, Spinner, Tabs } from '@/shared/ui';
 
-import { type Hub, useHub } from '../api';
+import { type Hub, useAssignModerator, useHub, useRemoveModerator } from '../api';
+
 import { memberLabel, VerifiedMark } from './HubCard';
 import { JoinButton } from './JoinButton';
 
@@ -119,6 +120,37 @@ function HubHeader({ hub }: { hub: Hub }) {
 }
 
 function HubAside({ hub }: { hub: Hub }) {
+  const isCreatorOrAdmin = Boolean((hub.viewer as any)?.is_creator);
+  const [showAddMod, setShowAddMod] = useState(false);
+  const [usernameInput, setUsernameInput] = useState('');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const assignMod = useAssignModerator(hub.slug);
+  const removeMod = useRemoveModerator(hub.slug);
+
+  async function handleAddModerator(e: React.FormEvent) {
+    e.preventDefault();
+    const cleanUsername = usernameInput.trim().replace(/^@/, '');
+    if (!cleanUsername) return;
+    setErrorMsg(null);
+    try {
+      await assignMod.mutateAsync(cleanUsername);
+      setUsernameInput('');
+      setShowAddMod(false);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Impossible d’ajouter ce modérateur.');
+    }
+  }
+
+  async function handleRemoveModerator(username: string) {
+    if (!confirm(`Voulez-vous révoquer les droits de modération de @${username} ?`)) return;
+    try {
+      await removeMod.mutateAsync(username);
+    } catch (err: any) {
+      alert(err?.message || 'Erreur lors de la révocation.');
+    }
+  }
+
   return (
     <>
       <SideCard title="À propos" icon={<UsersRound aria-hidden />}>
@@ -147,21 +179,81 @@ function HubAside({ hub }: { hub: Hub }) {
           </ol>
         </SideCard>
       ) : null}
-      {hub.moderators.length ? (
-        <SideCard title="Modération" icon={<ShieldCheck aria-hidden />}>
-          <ul className="pb-2">
-            {hub.moderators.map((moderator) => (
-              <li key={moderator.id}>
-                <Link href={`/u/${moderator.username}`} className="flex items-center gap-2.5 px-4 py-1.5 text-body-sm hover:bg-container-low">
-                  <Avatar name={moderator.display_name} src={moderator.avatar_url} size={24} />
-                  <span className="font-medium text-ink">{moderator.display_name}</span>
-                  <span className="text-ink-faint">@{moderator.username}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </SideCard>
-      ) : null}
+      <SideCard
+        title="Modération"
+        icon={<ShieldCheck aria-hidden />}
+        action={
+          isCreatorOrAdmin ? (
+            <button
+              type="button"
+              onClick={() => setShowAddMod((v) => !v)}
+              className="flex items-center gap-1 text-label-md font-medium text-primary-ink hover:underline"
+            >
+              <UserPlus className="size-3.5" aria-hidden />
+              {showAddMod ? 'Annuler' : 'Ajouter'}
+            </button>
+          ) : null
+        }
+      >
+        <div className="space-y-2 pb-2">
+          {showAddMod ? (
+            <form onSubmit={handleAddModerator} className="px-4 py-2 space-y-2 border-b border-line bg-container-low">
+              <label htmlFor="mod-username" className="block text-label-md font-semibold text-ink">
+                Nom d&apos;utilisateur
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="mod-username"
+                  type="text"
+                  placeholder="ex: amadou"
+                  value={usernameInput}
+                  onChange={(e) => setUsernameInput(e.target.value)}
+                  className="h-8 flex-1 rounded-lg border border-line bg-card px-2.5 text-body-sm text-ink placeholder:text-ink-faint focus:border-primary focus:outline-none"
+                />
+                <Button size="sm" type="submit" loading={assignMod.isPending}>
+                  Nommer
+                </Button>
+              </div>
+              {errorMsg ? <p className="text-label-md text-danger">{errorMsg}</p> : null}
+            </form>
+          ) : null}
+
+          {hub.moderators.length ? (
+            <ul>
+              {hub.moderators.map((moderator) => {
+                const isCreator = moderator.id === hub.creator?.id;
+                return (
+                  <li key={moderator.id} className="flex items-center justify-between px-4 py-1.5 hover:bg-container-low">
+                    <Link href={`/u/${moderator.username}`} className="flex min-w-0 flex-1 items-center gap-2.5 text-body-sm">
+                      <Avatar name={moderator.display_name} src={moderator.avatar_url} size={24} />
+                      <span className="truncate font-medium text-ink">{moderator.display_name}</span>
+                      <span className="text-label-md text-ink-faint">@{moderator.username}</span>
+                    </Link>
+                    {isCreator ? (
+                      <span className="ml-2 rounded bg-primary-soft px-1.5 py-0.5 text-[10px] font-bold text-primary-ink">
+                        Créateur
+                      </span>
+                    ) : isCreatorOrAdmin ? (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveModerator(moderator.username)}
+                        disabled={removeMod.isPending}
+                        title="Révoquer ce modérateur"
+                        className="ml-2 text-ink-faint hover:text-danger disabled:opacity-50"
+                      >
+                        <X className="size-3.5" aria-hidden />
+                      </button>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="px-4 py-2 text-label-md text-ink-faint">Aucun modérateur pour l'instant.</p>
+          )}
+        </div>
+      </SideCard>
     </>
   );
 }
+

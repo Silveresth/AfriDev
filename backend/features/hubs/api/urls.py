@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import HubDetailView, HubJoinView, HubListCreateView
+from .views import HubDetailView, HubJoinView, HubListCreateView, HubModeratorsView
 
 app_name = "hubs"
 
@@ -10,4 +10,6 @@ urlpatterns = [
     path("", HubListCreateView.as_view(), name="list-create"),
     path("<slug:slug>/", HubDetailView.as_view(), name="detail"),
     path("<slug:slug>/join/", HubJoinView.as_view(), name="join"),
+    path("<slug:slug>/moderators/", HubModeratorsView.as_view(), name="moderators"),
 ]
+

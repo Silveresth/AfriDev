@@ -82,9 +82,17 @@ def create_comment(*, author, post_id, body: str, parent_id=None, comment_id=Non
 
 
 def delete_comment(*, comment: Comment, user) -> None:
-    if comment.author_id != user.id and not user.is_staff:
-        raise PermissionDeniedError("Seul l'auteur peut supprimer ce commentaire.")
+    is_allowed = comment.author_id == user.id or getattr(user, "is_staff", False)
+    if not is_allowed:
+        post = feed_selectors.get_post(post_id=comment.post_id)
+        if post and post.hub_id:
+            from features.hubs import selectors as hub_selectors
+            is_allowed = hub_selectors.is_hub_moderator(hub_id=post.hub_id, user=user)
+
+    if not is_allowed:
+        raise PermissionDeniedError("Seul l'auteur ou un modérateur du hub peut supprimer ce commentaire.")
     _soft_delete(comment)
+
 
 
 def hide_comment(*, comment_id) -> bool:
