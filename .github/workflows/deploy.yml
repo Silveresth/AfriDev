@@ -72,7 +72,8 @@ jobs:
             # --no-build : l'image vient de GHCR (construite plus haut), jamais d'un build local.
             docker compose up -d --no-build backend celery celery-ai
             IMAGE_WEB=ghcr.io/${{ env.REPO_OWNER }}/afridev-web:latest docker compose up -d --force-recreate --no-build web
-            docker compose restart nginx || docker compose up -d nginx
+            # Recréé (et non redémarré) : applique aussi les nouveaux montages de volumes.
+            docker compose up -d --force-recreate --no-build nginx
             docker compose ps
             docker compose logs --tail=20 web
             docker compose logs --tail=20 backend
