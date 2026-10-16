@@ -1,21 +1,18 @@
 'use client';
 
-import { joinPhone } from '@afridev/validation';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, AtSign, Check, Eye, EyeOff, Loader2, Mail, Smartphone, X } from 'lucide-react';
+import { AlertCircle, AtSign, Check, Eye, EyeOff, Loader2, X } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect, useId, useState } from 'react';
+import { useId, useState, useEffect } from 'react';
 
 import { errorMessage } from '@/shared/api';
 import { cn } from '@/shared/lib';
 import { Spinner } from '@/shared/ui';
 
-import { authApi, type AuthResponse, COUNTRIES, type OAuthProvider, pendingPhone, startOAuth, useOAuthProviders } from '../api';
+import { authApi, type AuthResponse, type OAuthProvider, startOAuth, useOAuthProviders } from '../api';
 import { GitHubIcon, GitLabIcon, GoogleIcon } from './ProviderIcons';
 
 export type AuthMode = 'login' | 'register';
-type Method = 'email' | 'phone';
 
 const PROVIDERS: Record<OAuthProvider, { label: string; icon: typeof GoogleIcon }> = {
   google: { label: 'Google', icon: GoogleIcon },
@@ -28,8 +25,7 @@ const FIELD =
 
 /**
  * Formulaire de connexion / inscription partagé par la page /login et la fenêtre modale :
- * Google · GitHub (seulement s'ils sont configurés), e-mail + mot de passe, ou numéro de
- * téléphone (code SMS, pratique sans adresse e-mail).
+ * Google · GitHub · GitLab (seulement s'ils sont configurés), puis e-mail + mot de passe.
  */
 export function AuthPanel({
   mode,
@@ -40,7 +36,6 @@ export function AuthPanel({
   onModeChange: (mode: AuthMode) => void;
   onAuthenticated: (response: AuthResponse) => void;
 }) {
-  const [method, setMethod] = useState<Method>('email');
   return (
     <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 sm:p-8 md:p-10">
       <div role="tablist" aria-label="Connexion ou inscription" className="grid grid-cols-2 rounded-full bg-container p-1">
@@ -70,30 +65,7 @@ export function AuthPanel({
 
       <OAuthButtons />
 
-      <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Méthode">
-        {(
-          [
-            ['email', 'E-mail', Mail],
-            ['phone', 'Téléphone (SMS)', Smartphone],
-          ] as const
-        ).map(([value, label, Icon]) => (
-          <button
-            key={value}
-            type="button"
-            role="radio"
-            aria-checked={method === value}
-            onClick={() => setMethod(value)}
-            className={cn(
-              'flex h-10 items-center justify-center gap-2 rounded-xl border text-body-sm font-medium transition-colors',
-              method === value ? 'border-primary bg-primary-soft/50 text-ink' : 'border-line text-ink-muted hover:border-line-strong hover:text-ink',
-            )}
-          >
-            <Icon className="size-4" aria-hidden /> {label}
-          </button>
-        ))}
-      </div>
-
-      {method === 'phone' ? <PhoneForm /> : <EmailForm mode={mode} onAuthenticated={onAuthenticated} />}
+      <EmailForm mode={mode} onAuthenticated={onAuthenticated} />
 
       <p className="mt-auto text-center text-label-md text-ink-faint">
         En continuant, vous acceptez les conditions d&apos;utilisation et la politique de confidentialité d&apos;AfriDev.
@@ -105,11 +77,26 @@ export function AuthPanel({
 function OAuthButtons() {
   const providers = useOAuthProviders();
   const [pending, setPending] = useState<OAuthProvider | null>(null);
+
   if (providers.isPending) {
-    return <div className="h-11 animate-pulse rounded-full bg-container" aria-hidden />;
+    return (
+      <div className="space-y-4">
+        <div className="grid gap-2.5 sm:grid-cols-2">
+          <div className="h-11 animate-pulse rounded-full bg-container" aria-hidden />
+          <div className="h-11 animate-pulse rounded-full bg-container" aria-hidden />
+        </div>
+        <div className="flex items-center gap-3 text-label-md text-ink-faint">
+          <span className="h-px flex-1 bg-line" />
+          ou
+          <span className="h-px flex-1 bg-line" />
+        </div>
+      </div>
+    );
   }
+
   const available = (providers.data ?? []).filter((provider) => provider in PROVIDERS);
   if (!available.length) return null;
+
   return (
     <div className="space-y-4">
       <div className={cn('grid gap-2.5', available.length > 1 && 'sm:grid-cols-2')}>
@@ -134,7 +121,7 @@ function OAuthButtons() {
       </div>
       <div className="flex items-center gap-3 text-label-md text-ink-faint">
         <span className="h-px flex-1 bg-line" />
-        ou
+        ou avec un e-mail
         <span className="h-px flex-1 bg-line" />
       </div>
     </div>
@@ -365,73 +352,6 @@ function EmailForm({ mode, onAuthenticated }: { mode: AuthMode; onAuthenticated:
         className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 text-body-sm font-bold text-on-primary shadow-sm transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
       >
         {loading ? <Spinner className="size-4" /> : mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
-      </button>
-    </form>
-  );
-}
-
-/** Connexion ou inscription par SMS : le code arrive sur le téléphone (aucun e-mail requis). */
-function PhoneForm() {
-  const router = useRouter();
-  const [country, setCountry] = useState<string>(COUNTRIES[0].code);
-  const [number, setNumber] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    setError(null);
-    setLoading(true);
-    try {
-      const { phone_number } = await authApi.requestOtp(joinPhone(country, number));
-      pendingPhone.set(phone_number);
-      router.push('/verify-otp');
-    } catch (err) {
-      setError(errorMessage(err));
-      setLoading(false);
-    }
-  }
-
-  return (
-    <form onSubmit={submit} className="space-y-4">
-      {error ? <ErrorBox message={error} /> : null}
-      <div className="space-y-1.5">
-        <label htmlFor="auth-phone" className="block text-body-sm font-semibold text-ink">
-          Numéro de téléphone
-        </label>
-        <div className="flex gap-2">
-          <select
-            aria-label="Indicatif du pays"
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-            className={cn(FIELD, 'w-32 shrink-0 px-2.5')}
-          >
-            {COUNTRIES.map((item) => (
-              <option key={item.code + item.label} value={item.code}>
-                {item.flag} {item.label} {item.code}
-              </option>
-            ))}
-          </select>
-          <input
-            id="auth-phone"
-            type="tel"
-            inputMode="tel"
-            required
-            autoComplete="tel-national"
-            placeholder="90 12 34 56"
-            value={number}
-            onChange={(e) => setNumber(e.target.value)}
-            className={FIELD}
-          />
-        </div>
-        <p className="text-label-md text-ink-faint">Vous recevrez un code à 6 chiffres. Un compte est créé au premier passage.</p>
-      </div>
-      <button
-        type="submit"
-        disabled={loading || number.replace(/\D/g, '').length < 6}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 text-body-sm font-bold text-on-primary shadow-sm transition-all hover:brightness-110 disabled:opacity-60"
-      >
-        {loading ? <Spinner className="size-4" /> : 'Recevoir le code par SMS'}
       </button>
     </form>
   );
