@@ -4,6 +4,7 @@ import type { Schemas } from '@afridev/api-client';
 import { type InfiniteData, type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api, unwrap } from '@/shared/api';
+import { notificationHref as linkOf } from '@/shared/lib';
 import { type Page, useInfiniteList } from '@/shared/query';
 import { useSession } from '@/shared/session';
 
@@ -123,25 +124,7 @@ export function useClearNotifications() {
   );
 }
 
-/** Lien de l'écran concerné, d'après data = {type, id}. */
+/** Lien de l'écran concerné, d'après data = {type, id} (règle partagée avec le service worker). */
 export function notificationHref(notification: Notification): string | null {
-  const data = (notification.data ?? {}) as { type?: string; id?: string };
-  if (!data.id) return null;
-  switch (data.type) {
-    case 'post':
-      return `/feed/${data.id}`;
-    case 'question':
-      return `/questions/${data.id}`;
-    case 'snippet':
-      return `/snippets/${data.id}`;
-    case 'project':
-      return `/projects/${data.id}`;
-    case 'guide':
-      return `/projects/guides/${data.id}`;
-    case 'comment':
-    case 'answer':
-      return null;
-    default:
-      return null;
-  }
+  return linkOf(notification.data);
 }

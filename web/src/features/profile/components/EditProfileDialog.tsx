@@ -1,12 +1,12 @@
 'use client';
 
+import { SOCIAL_NETWORK_KEYS, type SocialNetwork, socialLinksSchema } from '@afridev/validation';
 import { BriefcaseBusiness, Check } from 'lucide-react';
 import { useState } from 'react';
 
 import { errorMessage } from '@/shared/api';
 import { cn } from '@/shared/lib';
 import {
-  Avatar,
   Button,
   Dialog,
   Field,
@@ -22,11 +22,22 @@ import {
 } from '@/shared/ui';
 
 import { type MyProfile, useUpdateProfile, WORK_PREFERENCES, type WorkPreference } from '../api';
+import { ProfileImagesField } from './ImageUploadField';
+import { SOCIAL_META } from './SocialLinks';
 
-/** Modification du profil : identité, liens, stack, disponibilité et couleur du profil. */
+type SocialForm = Record<SocialNetwork, string>;
+
+/** Modification du profil : médias, identité, réseaux, stack, disponibilité et couleur. */
 export function EditProfileDialog({ profile, open, onClose }: { profile: MyProfile; open: boolean; onClose: () => void }) {
   const update = useUpdateProfile();
+  const [uploading, setUploading] = useState(false);
+  const [socialErrors, setSocialErrors] = useState<Partial<Record<SocialNetwork, string>>>({});
+  const [social, setSocial] = useState<SocialForm>(
+    () => Object.fromEntries(SOCIAL_NETWORK_KEYS.map((key) => [key, profile.social_links?.[key] ?? ''])) as SocialForm,
+  );
   const [form, setForm] = useState({
+    avatar_url: profile.avatar_url,
+    banner_url: profile.banner_url,
     display_name: profile.display_name,
     bio: profile.bio,
     location: profile.location,
@@ -55,8 +66,18 @@ export function EditProfileDialog({ profile, open, onClose }: { profile: MyProfi
         className="space-y-7"
         onSubmit={async (event) => {
           event.preventDefault();
+          // Même validation que l'API (packages/validation) : erreurs affichées champ par champ.
+          const parsed = socialLinksSchema.safeParse(social);
+          if (!parsed.success) {
+            setSocialErrors(
+              Object.fromEntries(parsed.error.issues.map((issue) => [issue.path[0], issue.message])) as Partial<Record<SocialNetwork, string>>,
+            );
+            return;
+          }
+          setSocialErrors({});
           try {
-            await update.mutateAsync(form);
+            // Les réseaux vides sont envoyés vides : l'API les retire.
+            await update.mutateAsync({ ...form, social_links: social });
             onClose();
           } catch {
             // erreur affichée ci-dessous
@@ -64,17 +85,15 @@ export function EditProfileDialog({ profile, open, onClose }: { profile: MyProfi
         }}
       >
         <FieldGroup title="Apparence">
-          <div className="flex items-center gap-4 rounded-xl border border-line bg-container-low/60 p-3.5">
-            <div className="relative h-14 w-24 shrink-0 overflow-hidden rounded-lg" style={{ backgroundColor: accent }} aria-hidden>
-              <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.22)_1px,transparent_1.2px)] bg-[length:8px_8px]" />
-              <Avatar
-                name={form.display_name || profile.username}
-                src={profile.avatar_url}
-                color={accent}
-                size={30}
-                className="absolute bottom-1.5 left-2 ring-2 ring-card"
-              />
-            </div>
+          <ProfileImagesField
+            name={form.display_name || profile.username}
+            accent={accent}
+            avatarUrl={form.avatar_url}
+            bannerUrl={form.banner_url}
+            onChange={(changes) => setForm((current) => ({ ...current, ...changes }))}
+            onBusyChange={setUploading}
+          />
+          <div className="rounded-xl border border-line bg-container-low/60 p-3.5">
             <div className="min-w-0 flex-1 space-y-2">
               <p className="text-body-sm font-semibold text-ink">
                 Couleur du profil <span className="font-normal text-ink-muted">· {PROFILE_COLORS[form.accent_color].label}</span>
@@ -132,6 +151,34 @@ export function EditProfileDialog({ profile, open, onClose }: { profile: MyProfi
             <Field label="Site web" htmlFor="website">
               <Input id="website" type="url" placeholder="https://" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} />
             </Field>
+          </div>
+        </FieldGroup>
+
+        <FieldGroup title="Réseaux sociaux">
+          <p className="-mt-1 text-body-sm text-ink-muted">Chaque réseau renseigné s&apos;affiche en icône ronde sous votre bio.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {SOCIAL_NETWORK_KEYS.map((network) => {
+              const { label, icon: Icon, placeholder } = SOCIAL_META[network];
+              const error = socialErrors[network];
+              return (
+                <Field key={network} label={label} htmlFor={`social-${network}`} error={error}>
+                  <div className="relative">
+                    <Icon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-faint" />
+                    <Input
+                      id={`social-${network}`}
+                      type="url"
+                      inputMode="url"
+                      maxLength={200}
+                      placeholder={placeholder}
+                      className="pl-9"
+                      aria-invalid={Boolean(error)}
+                      value={social[network]}
+                      onChange={(e) => setSocial((current) => ({ ...current, [network]: e.target.value }))}
+                    />
+                  </div>
+                </Field>
+              );
+            })}
           </div>
         </FieldGroup>
 
@@ -202,8 +249,8 @@ export function EditProfileDialog({ profile, open, onClose }: { profile: MyProfi
           <Button variant="ghost" onClick={onClose}>
             Annuler
           </Button>
-          <Button type="submit" loading={update.isPending}>
-            Enregistrer le profil
+          <Button type="submit" loading={update.isPending} disabled={uploading}>
+            {uploading ? 'Envoi des images…' : 'Enregistrer le profil'}
           </Button>
         </div>
       </form>

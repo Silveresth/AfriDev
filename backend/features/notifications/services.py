@@ -1,5 +1,6 @@
 """Écritures (création, mise à jour, publication). Seul point d'entrée en écriture."""
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -7,7 +8,7 @@ from core.exceptions import DomainError
 from integrations import push
 
 from . import channels
-from .models import Notification, NotificationPreference, PushDevice
+from .models import Notification, NotificationPreference, PushDevice, WebPushSubscription
 
 
 @transaction.atomic
@@ -75,6 +76,33 @@ def register_device(*, user, token: str, platform: str = "") -> PushDevice:
 
 def unregister_device(*, user, token: str) -> None:
     PushDevice.objects.filter(user=user, token=token).delete()
+
+
+def forget_device(*, token: str) -> None:
+    """Déconnexion de l'appli : l'appareil ne reçoit plus les alertes de personne."""
+    PushDevice.objects.filter(token=token).delete()
+
+
+@transaction.atomic
+def subscribe_webpush(*, user, endpoint: str, p256dh: str, auth: str, user_agent: str = ""):
+    """Enregistre (ou réattribue) l'abonnement push d'un navigateur ; garde les N plus récents."""
+    if not push.webpush_configured():
+        raise DomainError("Les notifications web ne sont pas configurées.", code="webpush_disabled")
+    if not push.is_allowed_endpoint(endpoint):
+        raise DomainError("Service de notifications non reconnu.", code="invalid_push_endpoint")
+    subscription, _ = WebPushSubscription.objects.update_or_create(
+        endpoint=endpoint,
+        defaults={"user": user, "p256dh": p256dh, "auth": auth, "user_agent": user_agent[:200]},
+    )
+    stale = WebPushSubscription.objects.filter(user=user).order_by("-updated_at")[
+        settings.WEBPUSH_MAX_SUBSCRIPTIONS :
+    ]
+    WebPushSubscription.objects.filter(id__in=list(stale.values_list("id", flat=True))).delete()
+    return subscription
+
+
+def unsubscribe_webpush(*, user, endpoint: str) -> None:
+    WebPushSubscription.objects.filter(user=user, endpoint=endpoint).delete()
 
 
 def update_preferences(*, user, **fields) -> NotificationPreference:

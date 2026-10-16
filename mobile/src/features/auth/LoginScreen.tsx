@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
-import { AtSign, Eye, EyeOff, Lock, Mail, ShieldCheck, UserRound } from 'lucide-react-native';
+import { joinPhone, PHONE_COUNTRIES } from '@afridev/validation';
+import { AtSign, Eye, EyeOff, Lock, Mail, ShieldCheck, Smartphone, UserRound } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, {
@@ -16,7 +17,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { api, ApiError, errorMessage, unwrap } from '@/shared/api';
+import { api, ApiError, errorMessage, PUBLIC_WEB_URL, unwrap } from '@/shared/api';
+import { openLink } from '@/shared/lib';
 import { type Key, useT } from '@/shared/i18n';
 import { BrandTile } from '@/shared/brand';
 import { haptic, Shake, SOFT_SPRING } from '@/shared/motion';
@@ -29,14 +31,15 @@ import {
   OAuthCancelled,
   type OAuthProvider,
   passwordStrength,
-  PROVIDER_LABELS,
   signInWithProvider,
   useOAuthProviders,
+  useUsernameStatus,
 } from './api';
 import { GitHubLogo, GoogleLogo } from './ProviderLogos';
-import { OnboardingPreferencesModal } from './OnboardingPreferencesModal';
 
 type Mode = 'login' | 'register';
+type Method = 'email' | 'phone';
+const RESEND_AFTER = 45;
 
 const USERNAME = /^[A-Za-z0-9_]{3,30}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -154,7 +157,49 @@ function fieldError(error: unknown, field: string): string | null {
   return Array.isArray(value) && typeof value[0] === 'string' ? value[0] : null;
 }
 
-/** Connexion, inscription, GitHub / Google, puis code de double authentification si activée. */
+/** Choix de l'indicatif : liste déroulante compacte (les pays d'Afrique francophone d'abord). */
+function CountryPicker({ value, onChange }: { value: string; onChange: (code: string) => void }) {
+  const { colors } = useTheme();
+  const [open, setOpen] = useState(false);
+  const current = PHONE_COUNTRIES.find((country) => country.code === value) ?? PHONE_COUNTRIES[0];
+  return (
+    <View>
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        accessibilityRole="button"
+        accessibilityLabel={current.name}
+        style={[styles.country, { borderColor: colors.lineStrong, backgroundColor: colors.surface }]}
+      >
+        <Text>
+          {current.flag} {current.code}
+        </Text>
+      </Pressable>
+      {open ? (
+        <Animated.View entering={FadeIn.duration(150)} style={[styles.countryList, { borderColor: colors.line, backgroundColor: colors.background }]}>
+          <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+            {PHONE_COUNTRIES.map((country) => (
+              <Pressable
+                key={country.code + country.label}
+                onPress={() => {
+                  haptic.select();
+                  onChange(country.code);
+                  setOpen(false);
+                }}
+                style={styles.countryItem}
+              >
+                <Text variant="small">
+                  {country.flag} {country.name} <Text variant="small" tone="muted">{country.code}</Text>
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </Animated.View>
+      ) : null}
+    </View>
+  );
+}
+
+/** Connexion, inscription, GitHub / Google, SMS, puis code de double authentification si activée. */
 export function LoginScreen() {
   const { colors, isDark } = useTheme();
   const { t } = useT();
@@ -163,6 +208,12 @@ export function LoginScreen() {
   const providers = useOAuthProviders();
 
   const [mode, setMode] = useState<Mode>('login');
+  const [method, setMethod] = useState<Method>('email');
+  const [country, setCountry] = useState<string>(PHONE_COUNTRIES[0].code);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [otpPhone, setOtpPhone] = useState<string | null>(null);
+  const [otp, setOtp] = useState('');
+  const [resendIn, setResendIn] = useState(0);
   const [identifier, setIdentifier] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
@@ -175,9 +226,9 @@ export function LoginScreen() {
   const [shakes, setShakes] = useState(0);
   const [pendingProvider, setPendingProvider] = useState<OAuthProvider | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [pendingTokens, setPendingTokens] = useState<any>(null);
+  const usernameStatus = useUsernameStatus(mode === 'register' ? username : '');
 
+  // Nouveau compte : l'accueil s'ouvre de lui-même après la connexion (needs_onboarding).
   const finish = (response: AuthResponse) => {
     if (response.mfa_required && response.mfa_token) {
       setMfaToken(response.mfa_token);
@@ -185,14 +236,38 @@ export function LoginScreen() {
     }
     if (response.tokens) {
       haptic.success();
-      if (mode === 'register') {
-        setPendingTokens(response.tokens);
-        setShowOnboarding(true);
-      } else {
-        signIn(response.tokens);
-      }
+      signIn(response.tokens);
     }
   };
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const timer = setTimeout(() => setResendIn((value) => value - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendIn]);
+
+  const requestCode = useMutation({
+    mutationFn: (phone: string) => unwrap(api.POST('/api/accounts/otp/request/', { body: { phone_number: phone } })),
+    onSuccess: (data) => {
+      setOtpPhone(data.phone_number);
+      setOtp('');
+      setResendIn(RESEND_AFTER);
+    },
+    onError: () => {
+      haptic.error();
+      setShakes((n) => n + 1);
+    },
+  });
+
+  const verifyCode = useMutation({
+    mutationFn: () => unwrap(api.POST('/api/accounts/otp/verify/', { body: { phone_number: otpPhone ?? '', code: otp } })),
+    onSuccess: finish,
+    onError: () => {
+      haptic.error();
+      setShakes((n) => n + 1);
+      setOtp('');
+    },
+  });
 
   const fail = () => {
     haptic.error();
@@ -230,19 +305,10 @@ export function LoginScreen() {
     },
   });
 
+  // Seuls les fournisseurs réellement configurés sur le serveur sont proposés.
   const configured = providers.data ?? [];
   const startOAuth = (provider: OAuthProvider) => {
     submit.reset();
-    if (!configured.includes(provider)) {
-      oauth.reset();
-      setLocalError(
-        providers.isError
-          ? errorMessage(providers.error)
-          : t('login.provider_off', { provider: PROVIDER_LABELS[provider] }),
-      );
-      fail();
-      return;
-    }
     setLocalError(null);
     oauth.mutate(provider);
   };
@@ -292,8 +358,20 @@ export function LoginScreen() {
     </Pressable>
   );
 
-  const title = t(mfaToken ? 'login.title_mfa' : mode === 'login' ? 'login.title_login' : 'login.title_register');
-  const subtitle = t(mfaToken ? 'login.sub_mfa' : mode === 'login' ? 'login.sub_login' : 'login.sub_register');
+  const title = t(
+    mfaToken ? 'login.title_mfa' : otpPhone ? 'login.title_otp' : mode === 'login' ? 'login.title_login' : 'login.title_register',
+  );
+  const subtitle = mfaToken
+    ? t('login.sub_mfa')
+    : otpPhone
+      ? t('login.sub_otp', { phone: otpPhone })
+      : t(mode === 'login' ? 'login.sub_login' : 'login.sub_register');
+  const usernameHint =
+    usernameStatus?.data?.available === true
+      ? `✓ ${t('login.username_free')}`
+      : usernameStatus?.data
+        ? usernameStatus.data.reason
+        : t('login.username_hint');
 
   const githubTone = isDark
     ? { bg: '#F0F0F2', fg: '#0A0A0B', border: '#F0F0F2' }
@@ -315,17 +393,34 @@ export function LoginScreen() {
           <Text tone="muted">{subtitle}</Text>
         </Animated.View>
 
-        <OnboardingPreferencesModal
-          visible={showOnboarding}
-          onComplete={() => {
-            setShowOnboarding(false);
-            if (pendingTokens) {
-              signIn(pendingTokens);
-            }
-          }}
-        />
-
-        {mfaToken ? (
+        {otpPhone && !mfaToken ? (
+          <Animated.View entering={FadeInDown.duration(320)} style={styles.form}>
+            <Shake trigger={shakes}>
+              <CodeInput value={otp} onChange={setOtp} onComplete={() => setTimeout(() => verifyCode.mutate(), 50)} />
+            </Shake>
+            {verifyCode.isError ? (
+              <Text variant="small" tone="danger" style={styles.center}>
+                {errorMessage(verifyCode.error)}
+              </Text>
+            ) : null}
+            <Button label={t('login.verify')} block disabled={otp.length !== 6} loading={verifyCode.isPending} onPress={() => verifyCode.mutate()} />
+            <Button
+              label={resendIn > 0 ? t('login.resend_in', { seconds: resendIn }) : t('login.resend')}
+              variant="secondary"
+              disabled={resendIn > 0}
+              loading={requestCode.isPending}
+              onPress={() => requestCode.mutate(otpPhone)}
+            />
+            <Button
+              label={t('common.back')}
+              variant="ghost"
+              onPress={() => {
+                setOtpPhone(null);
+                verifyCode.reset();
+              }}
+            />
+          </Animated.View>
+        ) : mfaToken ? (
           <Animated.View entering={FadeInDown.duration(320)} style={styles.form}>
             <View style={[styles.mfaBadge, { backgroundColor: colors.secondarySoft }]}>
               <ShieldCheck size={18} color={colors.secondaryInk} />
@@ -356,35 +451,110 @@ export function LoginScreen() {
           <Animated.View layout={LinearTransition.springify().damping(18)} style={styles.form}>
             <ModeSwitch mode={mode} onChange={switchMode} />
 
-            <View style={styles.oauth}>
-              <Button
-                label={t('login.github')}
-                tone={githubTone}
-                block
-                leading={<GitHubLogo color={githubTone.fg} />}
-                loading={pendingProvider === 'github'}
-                disabled={Boolean(pendingProvider) && pendingProvider !== 'github'}
-                onPress={() => startOAuth('github')}
-              />
-              <Button
-                label={t('login.google')}
-                tone={googleTone}
-                block
-                leading={<GoogleLogo />}
-                loading={pendingProvider === 'google'}
-                disabled={Boolean(pendingProvider) && pendingProvider !== 'google'}
-                onPress={() => startOAuth('google')}
-              />
+            {configured.length ? (
+              <>
+                <View style={styles.oauth}>
+                  {configured.includes('google') ? (
+                    <Button
+                      label={t('login.google')}
+                      tone={googleTone}
+                      block
+                      leading={<GoogleLogo />}
+                      loading={pendingProvider === 'google'}
+                      disabled={Boolean(pendingProvider) && pendingProvider !== 'google'}
+                      onPress={() => startOAuth('google')}
+                    />
+                  ) : null}
+                  {configured.includes('github') ? (
+                    <Button
+                      label={t('login.github')}
+                      tone={githubTone}
+                      block
+                      leading={<GitHubLogo color={githubTone.fg} />}
+                      loading={pendingProvider === 'github'}
+                      disabled={Boolean(pendingProvider) && pendingProvider !== 'github'}
+                      onPress={() => startOAuth('github')}
+                    />
+                  ) : null}
+                </View>
+                <View style={styles.divider}>
+                  <View style={[styles.line, { backgroundColor: colors.line }]} />
+                  <Text variant="caption" tone="faint">
+                    {t('login.or')}
+                  </Text>
+                  <View style={[styles.line, { backgroundColor: colors.line }]} />
+                </View>
+              </>
+            ) : null}
+
+            <View style={styles.methods} accessibilityRole="radiogroup">
+              {(
+                [
+                  ['email', 'login.method_email', Mail],
+                  ['phone', 'login.method_phone', Smartphone],
+                ] as const
+              ).map(([value, label, Icon]) => {
+                const active = method === value;
+                return (
+                  <Pressable
+                    key={value}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                    onPress={() => {
+                      haptic.select();
+                      setMethod(value);
+                      setLocalError(null);
+                    }}
+                    style={[styles.method, { borderColor: active ? colors.primary : colors.line, backgroundColor: active ? colors.primarySoft : 'transparent' }]}
+                  >
+                    <Icon size={16} color={active ? colors.primaryInk : colors.inkMuted} />
+                    <Text variant="smallStrong" tone={active ? 'ink' : 'muted'}>
+                      {t(label)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
-            <View style={styles.divider}>
-              <View style={[styles.line, { backgroundColor: colors.line }]} />
-              <Text variant="caption" tone="faint">
-                {t('login.or_email')}
-              </Text>
-              <View style={[styles.line, { backgroundColor: colors.line }]} />
-            </View>
-
+            {method === 'phone' ? (
+              <Shake trigger={shakes}>
+                <View style={styles.fields}>
+                  <Text variant="smallStrong">{t('login.phone')}</Text>
+                  <View style={styles.phoneRow}>
+                    <CountryPicker value={country} onChange={setCountry} />
+                    <View style={styles.flex}>
+                      <TextField
+                        icon={Smartphone}
+                        value={phoneNumber}
+                        onChangeText={setPhoneNumber}
+                        placeholder="90 12 34 56"
+                        keyboardType="phone-pad"
+                        autoComplete="tel"
+                        textContentType="telephoneNumber"
+                        returnKeyType="send"
+                        onSubmitEditing={() => requestCode.mutate(joinPhone(country, phoneNumber))}
+                      />
+                    </View>
+                  </View>
+                  <Text variant="caption" tone="faint">
+                    {t('login.phone_hint')}
+                  </Text>
+                  {requestCode.isError ? (
+                    <Text variant="small" tone="danger">
+                      {errorMessage(requestCode.error)}
+                    </Text>
+                  ) : null}
+                  <Button
+                    label={t('login.send_code')}
+                    block
+                    loading={requestCode.isPending}
+                    disabled={phoneNumber.replace(/\D/g, '').length < 6}
+                    onPress={() => requestCode.mutate(joinPhone(country, phoneNumber))}
+                  />
+                </View>
+              </Shake>
+            ) : (
+            <>
             <Shake trigger={shakes}>
               <Animated.View key={mode} entering={FadeIn.duration(260)} exiting={FadeOut.duration(120)} style={styles.fields}>
                 {mode === 'login' ? (
@@ -416,6 +586,11 @@ export function LoginScreen() {
                       onSubmitEditing={onSubmit}
                       error={shown('password')}
                     />
+                    <Pressable onPress={() => void openLink(`${PUBLIC_WEB_URL}/forgot-password`)} style={styles.forgot} hitSlop={8}>
+                      <Text variant="small" tone="primary">
+                        {t('login.forgot')}
+                      </Text>
+                    </Pressable>
                   </>
                 ) : (
                   <>
@@ -436,8 +611,17 @@ export function LoginScreen() {
                       placeholder="amina_dev"
                       autoCapitalize="none"
                       autoComplete="username-new"
-                      hint={t('login.username_hint')}
-                      error={shown('username')}
+                      hint={usernameHint}
+                      error={shown('username') ?? (usernameStatus?.data?.available === false ? usernameStatus.data.reason : null)}
+                      trailing={
+                        usernameStatus?.data?.suggestion ? (
+                          <Pressable hitSlop={8} onPress={() => setUsername(usernameStatus.data?.suggestion ?? username)}>
+                            <Text variant="caption" tone="primary">
+                              {t('login.username_take', { name: usernameStatus.data.suggestion })}
+                            </Text>
+                          </Pressable>
+                        ) : undefined
+                      }
                     />
                     <TextField
                       label={t('login.email')}
@@ -488,6 +672,8 @@ export function LoginScreen() {
               disabled={Boolean(pendingProvider)}
               onPress={onSubmit}
             />
+            </>
+            )}
 
             <Pressable onPress={() => switchMode(mode === 'login' ? 'register' : 'login')} style={styles.switchLink}>
               <Text variant="small" tone="muted">
@@ -528,4 +714,11 @@ const styles = StyleSheet.create({
   codeChar: { fontSize: 24, fontWeight: '700', fontFamily: mono },
   hiddenInput: { position: 'absolute', opacity: 0, width: 1, height: 1 },
   center: { textAlign: 'center' },
+  methods: { flexDirection: 'row', gap: 8 },
+  method: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 42, borderRadius: radius.md, borderWidth: 1.5 },
+  phoneRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, zIndex: 2 },
+  country: { height: 52, paddingHorizontal: 12, borderRadius: radius.md, borderWidth: 1.5, justifyContent: 'center' },
+  countryList: { position: 'absolute', top: 56, left: 0, width: 230, maxHeight: 260, borderRadius: radius.md, borderWidth: 1, zIndex: 10, elevation: 6 },
+  countryItem: { paddingHorizontal: 12, paddingVertical: 10 },
+  forgot: { alignSelf: 'flex-end', marginTop: -6 },
 });

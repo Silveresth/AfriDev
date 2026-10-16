@@ -355,6 +355,26 @@
   animation: bell-ring 700ms ease-in-out;
 }
 
+/* Lignes de code qui « s'écrivent » (écran de connexion) et étapes de l'assistant d'accueil. */
+@keyframes type-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+@utility animate-type-in {
+  animation: type-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@utility animate-step {
+  animation: step-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* Tiroir du menu (téléphone) : glisse depuis la gauche. */
 @keyframes drawer-in {
   from {

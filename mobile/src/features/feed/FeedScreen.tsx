@@ -1,24 +1,28 @@
 import { router } from 'expo-router';
-import { Bell, Rows3 } from 'lucide-react-native';
+import { Bell, Rows3, UsersRound } from 'lucide-react-native';
 import { useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { useUnreadCount } from '@/features/notifications';
 import { CreateButton } from '@/shared/layout/CreateButton';
-import { useT } from '@/shared/i18n';
-import { AppearItem } from '@/shared/motion';
+import { type Key, useT } from '@/shared/i18n';
+import { AppearItem, haptic } from '@/shared/motion';
 import { useTheme } from '@/shared/theme';
-import { Chips, EmptyState, ErrorState, Header, IconButton, ListFooter, Loading } from '@/shared/ui';
+import { Chips, EmptyState, ErrorState, Header, IconButton, ListFooter, Loading, Text } from '@/shared/ui';
 
-import { type FeedSort, SORTS, useFeed } from './api';
-import { PostRow } from './PostRow';
+import { type HomeFilter, type HomeScope, useHomeFeed } from './api';
+import { HomeRow } from './HomeRow';
 
+const FILTERS: HomeFilter[] = ['all', 'posts', 'questions', 'snippets', 'projects', 'jobs'];
+
+/** Accueil : fil mixte « Pour vous » (classé selon vos préférences) ou « Abonnements ». */
 export function FeedScreen() {
   const { colors } = useTheme();
   const { t } = useT();
   const unread = useUnreadCount();
-  const [sort, setSort] = useState<FeedSort>('hot');
-  const feed = useFeed({ sort });
+  const [scope, setScope] = useState<HomeScope>('for_you');
+  const [filter, setFilter] = useState<HomeFilter>('all');
+  const feed = useHomeFeed(filter, scope);
 
   return (
     <View style={[styles.flex, { backgroundColor: colors.background }]}>
@@ -27,7 +31,28 @@ export function FeedScreen() {
         large
         right={<IconButton icon={Bell} label={t('nav.notifications')} badge={unread.data} onPress={() => router.push('/notifications')} />}
       />
-      <Chips options={SORTS.map((option) => ({ value: option.value, label: t(option.label) }))} value={sort} onChange={setSort} />
+      <View style={[styles.scopes, { borderBottomColor: colors.line }]} accessibilityRole="tablist">
+        {(['for_you', 'following'] as const).map((value) => {
+          const active = scope === value;
+          return (
+            <Pressable
+              key={value}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+              onPress={() => {
+                if (!active) haptic.select();
+                setScope(value);
+              }}
+              style={[styles.scope, { borderBottomColor: active ? colors.ink : 'transparent' }]}
+            >
+              <Text variant="smallStrong" tone={active ? 'ink' : 'muted'}>
+                {t(value === 'for_you' ? 'home.for_you' : 'home.following')}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Chips options={FILTERS.map((value) => ({ value, label: t(`home.filter.${value}` as Key) }))} value={filter} onChange={setFilter} />
 
       {feed.isPending ? (
         <Loading variant="post" />
@@ -36,10 +61,10 @@ export function FeedScreen() {
       ) : (
         <FlatList
           data={feed.items}
-          keyExtractor={(post) => post.id}
+          keyExtractor={(item) => `${item.type}-${item.id}`}
           renderItem={({ item, index }) => (
             <AppearItem index={index}>
-              <PostRow post={item} />
+              <HomeRow item={item} />
             </AppearItem>
           )}
           onEndReached={feed.loadMore}
@@ -53,7 +78,11 @@ export function FeedScreen() {
             />
           }
           ListEmptyComponent={
-            <EmptyState icon={Rows3} title={t('feed.empty_title')} body={t('feed.empty_body')} />
+            scope === 'following' ? (
+              <EmptyState icon={UsersRound} title={t('home.following_empty')} body={t('home.following_empty_body')} />
+            ) : (
+              <EmptyState icon={Rows3} title={t('feed.empty_title')} body={t('feed.empty_body')} />
+            )
           }
           ListFooterComponent={<ListFooter loading={feed.isFetchingNextPage} />}
           contentContainerStyle={styles.grow}
@@ -67,5 +96,6 @@ export function FeedScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   grow: { flexGrow: 1, paddingBottom: 72 },
-  login: { marginRight: 8 },
+  scopes: { flexDirection: 'row', gap: 4, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  scope: { height: 42, justifyContent: 'center', paddingHorizontal: 12, borderBottomWidth: 2 },
 });

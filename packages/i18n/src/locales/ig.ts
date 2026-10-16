@@ -68,9 +68,6 @@ const ig: LocaleMessages = {
   // ── Settings ──
   'settings.title': 'Ntọala',
   'settings.subtitle': 'Jikwaa ngosi gị, nchekwa data, nchekwa na ọkwa.',
-  'settings.badge': 'Mmasị & Nhazi',
-  'settings.tab.general': 'Izugbe & Netwọk',
-  'settings.tab.security': 'Nchekwa & Nnọkọ',
   'settings.tab.notifications': 'Ọkwa',
   'settings.tab.privacy': 'Nzuzo & API',
 

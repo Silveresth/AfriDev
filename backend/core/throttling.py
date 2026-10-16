@@ -7,6 +7,12 @@ class AIQuotaThrottle(UserRateThrottle):
     scope = "ai"
 
 
+class SemanticSearchThrottle(UserRateThrottle):
+    """Recherche par le sens, ouverte aux visiteurs : par utilisateur, sinon par adresse IP."""
+
+    scope = "semantic"
+
+
 class OTPThrottle(AnonRateThrottle):
     """Limite les envois de SMS (coût et abus) par adresse IP."""
 

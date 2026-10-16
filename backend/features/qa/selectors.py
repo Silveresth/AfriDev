@@ -1,8 +1,9 @@
 """Lectures. Seul point d'entrée en lecture pour les autres features."""
 
-from django.db.models import Count, F, Q, QuerySet
+from django.db.models import Count, Q, QuerySet
 
 from core.stats import count_per_day, merge_daily
+from core.utils import keyset_before
 
 from .models import Answer, AnswerVote, Question
 
@@ -40,6 +41,28 @@ def list_answers(*, question_id) -> QuerySet[Answer]:
         .filter(question_id=question_id)
         .order_by("-is_accepted", "-score", "created_at")
     )
+
+
+def list_author_answers(*, author_id, accepted: bool | None = None) -> QuerySet[Answer]:
+    """Historique d'entraide d'un membre : ses réponses avec le titre de la question (1 requête)."""
+    answers = (
+        Answer.objects.alive()
+        .filter(author_id=author_id, question__deleted_at__isnull=True)
+        .select_related("question")
+        .only(
+            "id",
+            "body",
+            "is_accepted",
+            "score",
+            "created_at",
+            "question__id",
+            "question__title",
+            "question__is_resolved",
+        )
+    )
+    if accepted is not None:
+        answers = answers.filter(is_accepted=accepted)
+    return answers
 
 
 def get_answer(*, answer_id, include_hidden: bool = False) -> Answer | None:
@@ -99,6 +122,31 @@ def tag_counts(*, since) -> dict[str, int]:
     return counts
 
 
+def home_candidates(*, before=None, limit: int, author_ids=None) -> list[dict]:
+    """Questions récentes pour le fil d'accueil mixte (une requête, index -created_at)."""
+    questions = list_questions()
+    if author_ids is not None:
+        questions = questions.filter(author_id__in=list(author_ids))
+    rows = keyset_before(questions, "created_at", before).only(
+        "id", "title", "body", "tags", "author_id", "created_at", "is_resolved", "answer_count"
+    )[:limit]
+    return [
+        {
+            "type": "question",
+            "id": q.id,
+            "title": q.title,
+            "excerpt": " ".join(q.body.split())[:220],
+            "tags": list(q.tags or []),
+            "author_id": q.author_id,
+            "sort_at": q.created_at,
+            "url": f"/questions/{q.id}",
+            "popularity": q.answer_count,
+            "meta": {"is_resolved": q.is_resolved, "answer_count": q.answer_count},
+        }
+        for q in rows
+    ]
+
+
 def question_summaries(*, question_ids) -> dict:
     """{question_id: {title, excerpt, author_id, created_at, is_resolved}}."""
     rows = Question.objects.alive().filter(id__in=list(question_ids))
@@ -136,22 +184,15 @@ def accepted_answer_tags(*, author_id) -> dict[str, int]:
     return counts
 
 
-def accepted_counts_by_author() -> dict:
-    """{author_id: réponses acceptées} pour tous les membres (classement « Top 5 % »)."""
-    rows = (
-        Answer.objects.alive()
-        .filter(is_accepted=True, question__deleted_at__isnull=True)
-        .exclude(question__author_id=F("author_id"))
-        .values("author_id")
-        .annotate(total=Count("id"))
-    )
-    return {row["author_id"]: row["total"] for row in rows}
-
-
 def answer_upvotes_received(*, author_id) -> int:
-    return AnswerVote.objects.filter(
-        answer__author_id=author_id, answer__deleted_at__isnull=True, value=1
-    ).count()
+    """Votes ↑ reçus sur ses réponses en ligne (hors votes pour soi-même) : Craft Entraide."""
+    return (
+        AnswerVote.objects.filter(
+            answer__author_id=author_id, answer__deleted_at__isnull=True, value=1
+        )
+        .exclude(user_id=author_id)
+        .count()
+    )
 
 
 def export_for_user(*, user_id) -> dict:

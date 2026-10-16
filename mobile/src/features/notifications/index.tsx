@@ -1,10 +1,10 @@
 import { type InfiniteData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { AtSign, Bell, CheckCheck, CheckCircle2, Heart, MessageSquare, Sparkles } from 'lucide-react-native';
+import { AtSign, Bell, CheckCheck, CheckCircle2, Heart, MessageSquare, Sparkles, UserPlus } from 'lucide-react-native';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { api, type Schemas, unwrap } from '@/shared/api';
-import { timeAgo } from '@/shared/lib';
+import { notificationRoute, timeAgo } from '@/shared/lib';
 import { useT } from '@/shared/i18n';
 import { AppearItem } from '@/shared/motion';
 import { type Page, useInfiniteList } from '@/shared/query';
@@ -64,14 +64,7 @@ function useMarkRead() {
   });
 }
 
-/** data = {type, id} : écran concerné (posts et questions ont un écran sur mobile). */
-function hrefOf(notification: Notification): string | null {
-  const data = (notification.data ?? {}) as { type?: string; id?: string };
-  if (!data.id) return null;
-  if (data.type === 'post') return `/post/${data.id}`;
-  if (data.type === 'question') return `/question/${data.id}`;
-  return null;
-}
+const hrefOf = (notification: Notification) => notificationRoute(notification.data);
 
 const ICONS: Partial<Record<Notification['kind'], typeof Bell>> = {
   new_comment: MessageSquare,
@@ -80,6 +73,7 @@ const ICONS: Partial<Record<Notification['kind'], typeof Bell>> = {
   new_answer: MessageSquare,
   answer_accepted: CheckCircle2,
   ai_answer_ready: Sparkles,
+  new_follower: UserPlus,
 };
 
 function NotificationRow({ notification, onOpen }: { notification: Notification; onOpen: () => void }) {

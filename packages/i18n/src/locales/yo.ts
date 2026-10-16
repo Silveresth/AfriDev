@@ -68,9 +68,6 @@ const yo: LocaleMessages = {
   // ── Settings ──
   'settings.title': 'Ètò',
   'settings.subtitle': 'Ṣàkóso àfihàn, ìpamọ́ dídà, ààbò àti àwọn ìfitilétí rẹ.',
-  'settings.badge': 'Àwọn àyànfẹ́ & Ìṣètò',
-  'settings.tab.general': 'Gbogbogbò & Nẹ́tíwọ́ọ̀kì',
-  'settings.tab.security': 'Ààbò & Àwọn ìwọlé',
   'settings.tab.notifications': 'Àwọn ìfitilétí',
   'settings.tab.privacy': 'Àṣírí & API',
 

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 
-import { FeedScreen, TrendingCard } from '@/features/feed';
+import { FeedScreen, TechNewsCard, TrendingCard } from '@/features/feed';
 import { RecommendedHubsCard } from '@/features/hubs';
 import { RecentJobsCard, UpcomingEventsCard } from '@/features/jobs-events';
 import { OpenQuestionsCard } from '@/features/qa';
@@ -15,6 +15,7 @@ export default function FeedPage() {
       <FeedScreen
         aside={
           <>
+            <TechNewsCard />
             <TrendingCard />
             <RecommendedHubsCard />
             <RecentJobsCard />

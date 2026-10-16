@@ -68,9 +68,6 @@ const rw: LocaleMessages = {
   // ── Settings ──
   'settings.title': 'Igenamiterere',
   'settings.subtitle': 'Cunga uko bigaragara, kuzigama interineti, umutekano n\'ibimenyeshwa.',
-  'settings.badge': 'Ibyifuzo & Imiterere',
-  'settings.tab.general': 'Muri rusange & Urusobe',
-  'settings.tab.security': 'Umutekano & Kwinjira',
   'settings.tab.notifications': 'Ibyamenyeshejwe',
   'settings.tab.privacy': 'Ibwiru & API',
 

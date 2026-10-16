@@ -5,8 +5,9 @@ from datetime import timedelta
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotAuthenticated, NotFound, ValidationError
 from rest_framework.response import Response
+from rest_framework.utils.urls import replace_query_param
 from rest_framework.views import APIView
 
 from core.pagination import CursorPagination
@@ -14,9 +15,10 @@ from core.permissions import ReadOnlyOrAuthenticated
 from core.schema import CURSOR_PARAMETERS, paginated
 from features.hubs import selectors as hub_selectors
 
-from .. import news, selectors, services
+from .. import home, news, selectors, services
 from .serializers import (
     CommunitySerializer,
+    HomePageSerializer,
     LikeInputSerializer,
     NewsItemSerializer,
     PollVoteInputSerializer,
@@ -24,6 +26,7 @@ from .serializers import (
     PostOutputSerializer,
     PostUpdateSerializer,
     VoteInputSerializer,
+    present_home,
     present_posts,
 )
 
@@ -50,6 +53,13 @@ class FeedView(APIView):
             OpenApiParameter("tag", str, required=False),
             OpenApiParameter("hub", str, required=False, description="Slug ou UUID du hub"),
             OpenApiParameter(
+                "media",
+                str,
+                required=False,
+                enum=list(selectors.MEDIA_FILTERS),
+                description="Seulement les posts avec une vidéo (ou une image)",
+            ),
+            OpenApiParameter(
                 "sort",
                 str,
                 required=False,
@@ -68,6 +78,7 @@ class FeedView(APIView):
             author_id=request.query_params.get("author"),
             tag=request.query_params.get("tag"),
             hub_id=hub_id,
+            media=request.query_params.get("media"),
         )
         if hub and hub_id is None:
             posts = posts.none()
@@ -155,6 +166,51 @@ class CommunitiesView(APIView):
         since = timezone.now() - timedelta(days=90)
         return Response(
             CommunitySerializer(selectors.communities(since=since, limit=limit), many=True).data
+        )
+
+
+class HomeFeedView(APIView):
+    """Fil d'accueil mixte : posts, questions, snippets, projets et offres (voir feed/home.py)."""
+
+    permission_classes = [ReadOnlyOrAuthenticated]
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("cursor", str, required=False),
+            OpenApiParameter("filter", str, required=False, enum=list(home.FILTERS)),
+            OpenApiParameter(
+                "scope",
+                str,
+                required=False,
+                enum=list(home.SCOPES),
+                description="for_you (défaut) ou following : seulement les membres suivis",
+            ),
+        ],
+        responses=HomePageSerializer,
+        operation_id="feed_home",
+    )
+    def get(self, request):
+        params = request.query_params
+        filter_ = params.get("filter", "all")
+        scope = params.get("scope", "for_you")
+        if filter_ not in home.FILTERS or scope not in home.SCOPES:
+            raise ValidationError({"filter": list(home.FILTERS), "scope": list(home.SCOPES)})
+        viewer_id = request.user.id if request.user.is_authenticated else None
+        if scope == "following" and viewer_id is None:
+            raise NotAuthenticated("Connectez-vous pour voir le fil de vos abonnements.")
+        try:
+            cards, cursor, interests = home.home_page(
+                viewer_id=viewer_id, filter=filter_, scope=scope, cursor=params.get("cursor")
+            )
+        except home.InvalidCursor as exc:
+            raise ValidationError({"cursor": str(exc)}) from exc
+        return Response(
+            {
+                "next": replace_query_param(request.build_absolute_uri(), "cursor", cursor)
+                if cursor
+                else None,
+                "results": present_home(cards, viewer=request.user, interests=interests),
+            }
         )
 
 

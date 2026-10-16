@@ -89,6 +89,20 @@ def index_document(
     return document
 
 
+def reembed_document(document: Document) -> int:
+    """Recalcule les vecteurs d'un document à partir de son texte stocké (changement de modèle
+    d'embedding) ; renvoie le nombre de morceaux."""
+    pieces = split_text(document.content)
+    vectors = embeddings.embed(pieces, input_type="document")
+    with transaction.atomic():
+        document.chunks.all().delete()
+        Chunk.objects.bulk_create(
+            Chunk(document=document, position=i, text=piece, embedding=vector)
+            for i, (piece, vector) in enumerate(zip(pieces, vectors, strict=True))
+        )
+    return len(pieces)
+
+
 def remove_document(*, source_type: str, source_id) -> None:
     document = Document.objects.filter(source_type=source_type, source_id=source_id).first()
     if document is None:

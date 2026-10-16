@@ -1,8 +1,10 @@
 """Vues minces : valident l'entrée, puis appellent services / selectors."""
 
+from uuid import UUID
+
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -11,7 +13,7 @@ from core.pagination import CursorPagination
 from core.permissions import ReadOnlyOrAuthenticated
 from core.schema import CURSOR_PARAMETERS, paginated
 from core.serializers import AcceptedJobSerializer
-from core.throttling import AIQuotaThrottle
+from core.throttling import AIQuotaThrottle, SemanticSearchThrottle
 from features.hubs import selectors as hub_selectors
 from features.knowledge import selectors as knowledge_selectors
 
@@ -20,6 +22,7 @@ from .serializers import (
     AnswerInputSerializer,
     AnswerOutputSerializer,
     AnswerVoteInputSerializer,
+    HelpAnswerSerializer,
     QuestionInputSerializer,
     QuestionOutputSerializer,
     QuestionUpdateSerializer,
@@ -27,6 +30,7 @@ from .serializers import (
     SimilarQuestionSerializer,
     TranscribeInputSerializer,
     present_answers,
+    present_help_answers,
     present_questions,
 )
 
@@ -141,6 +145,36 @@ class AnswerListCreateView(APIView):
         return Response(present_answers([answer])[0], status=status.HTTP_201_CREATED)
 
 
+class AuthorAnswersView(APIView):
+    """Réponses d'un membre (historique d'entraide affiché sur son profil)."""
+
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        parameters=[
+            *CURSOR_PARAMETERS,
+            OpenApiParameter("author", str, required=True, description="UUID de l'auteur"),
+            OpenApiParameter("accepted", bool, required=False),
+        ],
+        responses=paginated(HelpAnswerSerializer),
+        operation_id="qa_answers_by_author",
+    )
+    def get(self, request):
+        params = request.query_params
+        try:
+            author_id = UUID(params.get("author", ""))
+        except ValueError as exc:
+            raise ValidationError({"author": "UUID attendu."}) from exc
+        accepted = params.get("accepted")
+        answers = selectors.list_author_answers(
+            author_id=author_id,
+            accepted=None if accepted is None else accepted.lower() in ("1", "true"),
+        )
+        paginator = CursorPagination()
+        page = paginator.paginate_queryset(answers, request)
+        return paginator.get_paginated_response(present_help_answers(page))
+
+
 class AnswerDetailView(APIView):
     @extend_schema(responses={204: None})
     def delete(self, request, answer_id):
@@ -196,6 +230,7 @@ class SimilarQuestionsView(APIView):
     """Doublons probables, affichés pendant la rédaction (questions déjà résolues)."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [SemanticSearchThrottle]
 
     @extend_schema(
         parameters=[OpenApiParameter("q", str, required=True)],

@@ -1,10 +1,13 @@
 import uuid
+from io import StringIO
 
 import pytest
+from django.core.management import call_command
 
 from features.knowledge import indexer, selectors
 from features.knowledge.indexer import CHUNK_CHARS, split_text
 from features.knowledge.models import Chunk
+from integrations import embeddings
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -46,6 +49,25 @@ def test_reindex_skips_unchanged_content_and_remove_cleans_up():
     indexer.remove_document(source_type="project", source_id=source_id)
     assert not selectors.is_indexed(source_type="project", source_id=first.source_id)
     assert not Chunk.objects.exists()
+
+
+def test_reindex_command_rebuilds_every_chunk():
+    indexer.index_document(
+        source_type="question", source_id=uuid.uuid4(), title="Wave API", text="Paiement mobile"
+    )
+    old_ids = set(Chunk.objects.values_list("id", flat=True))
+    call_command("reindex_knowledge", stdout=StringIO())
+    new_ids = set(Chunk.objects.values_list("id", flat=True))
+    assert new_ids and new_ids.isdisjoint(old_ids)
+    assert selectors.semantic_search(query="wave paiement", limit=1)[0].title == "Wave API"
+
+
+def test_semantic_search_survives_embedding_outage(monkeypatch):
+    def down(*args, **kwargs):
+        raise embeddings.EmbeddingError("503")
+
+    monkeypatch.setattr(embeddings, "embed_one", down)
+    assert selectors.semantic_search(query="django") == []
 
 
 def test_fulltext_fallback_without_meilisearch():

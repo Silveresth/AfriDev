@@ -68,9 +68,6 @@ const ln: LocaleMessages = {
   // ── Settings ──
   'settings.title': 'Mabongisi',
   'settings.subtitle': 'Bongisa komona, bobateli bwa données, bokengi mpe biyebisi na yo.',
-  'settings.badge': 'Mabongisi & Bokengi',
-  'settings.tab.general': 'Banso & Réseau',
-  'settings.tab.security': 'Bokengi & Sessions',
   'settings.tab.notifications': 'Biyebisi',
   'settings.tab.privacy': 'Bosembo & API',
 

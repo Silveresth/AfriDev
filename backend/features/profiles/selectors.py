@@ -2,7 +2,7 @@
 
 from django.db.models import QuerySet
 
-from .models import Profile
+from .models import Profile, UserFollow
 
 
 def get_profile_by_username(*, username: str) -> Profile | None:
@@ -34,6 +34,104 @@ def author_cards(*, user_ids) -> dict:
         }
         for user_id, profile in get_profiles(user_ids=set(user_ids)).items()
     }
+
+
+def is_following(*, follower_id, followed_id) -> bool:
+    if not follower_id or follower_id == followed_id:
+        return False
+    return UserFollow.objects.filter(follower_id=follower_id, followed_id=followed_id).exists()
+
+
+def followed_ids(*, follower_id, user_ids) -> set:
+    """Parmi `user_ids`, ceux que suit `follower_id` (une requête pour toute une liste)."""
+    if not follower_id:
+        return set()
+    return set(
+        UserFollow.objects.filter(
+            follower_id=follower_id, followed_id__in=list(user_ids)
+        ).values_list("followed_id", flat=True)
+    )
+
+
+def list_followers(*, user_id):
+    """Abonnements reçus, plus récents d'abord (paginés par curseur sur created_at)."""
+    return UserFollow.objects.filter(followed_id=user_id).only("id", "follower_id", "created_at")
+
+
+def list_following(*, user_id):
+    return UserFollow.objects.filter(follower_id=user_id).only("id", "followed_id", "created_at")
+
+
+def following_user_ids(*, user_id) -> list:
+    """Membres suivis : sert au fil « Abonnements » et aux recommandations."""
+    return list(
+        UserFollow.objects.filter(follower_id=user_id).values_list("followed_id", flat=True)
+    )
+
+
+SUGGESTION_POOL = 300
+
+
+def suggested_people(*, user_id, tags, limit: int = 8) -> list[dict]:
+    """Membres à suivre : stack proche des tags choisis, puis Craft Score.
+
+    Pool borné (les plus réputés) puis score en mémoire : portable PostgreSQL / SQLite,
+    et une seule requête quelle que soit la taille de la communauté.
+    """
+    wanted = {str(tag).lower() for tag in tags or []}
+    already = set(following_user_ids(user_id=user_id)) | {user_id}
+    pool = (
+        Profile.objects.alive()
+        .exclude(user_id__in=already)
+        .only("user_id", "username", "display_name", "avatar_url", "stack", "karma_score")
+        .order_by("-karma_score")[:SUGGESTION_POOL]
+    )
+    ranked = []
+    for profile in pool:
+        shared = [skill for skill in profile.stack if skill.lower() in wanted]
+        if shared or not wanted:
+            ranked.append((len(shared), profile.karma_score, profile, shared))
+    ranked.sort(key=lambda row: (-row[0], -row[1]))
+    return [
+        {
+            "id": str(profile.user_id),
+            "username": profile.username,
+            "display_name": profile.display_name or profile.username,
+            "avatar_url": profile.avatar_url,
+            "craft_score": profile.karma_score,
+            "shared_stack": shared[:3],
+        }
+        for _, _, profile, shared in ranked[:limit]
+    ]
+
+
+def feed_preferences(*, user_id=None) -> dict:
+    """Ce dont le fil « Pour vous » a besoin : {mix, interests, following}. Anonyme : défauts."""
+    from . import preferences
+
+    if not user_id:
+        return {"mix": preferences.feed_mix(goals=[]), "interests": [], "following": []}
+    row = (
+        Profile.objects.filter(user_id=user_id)
+        .values("goals", "experience_level", "interests", "stack")
+        .first()
+    ) or {}
+    interests = list(dict.fromkeys([*(row.get("interests") or []), *(row.get("stack") or [])]))
+    return {
+        "mix": preferences.feed_mix(
+            goals=row.get("goals") or [], level=row.get("experience_level") or ""
+        ),
+        "interests": interests,
+        "following": following_user_ids(user_id=user_id),
+    }
+
+
+def github_stack(*, profile) -> list[str]:
+    """Technologies déduites des langages GitHub du membre (cache 6 h) ; [] sinon."""
+    from . import preferences
+
+    overview = github_overview(profile=profile)
+    return preferences.github_languages_to_tags(overview["top_languages"]) if overview else []
 
 
 def list_profiles_with_stack() -> QuerySet[Profile]:
@@ -76,6 +174,11 @@ def export_for_user(*, user_id) -> dict:
     profile = Profile.objects.filter(user_id=user_id).values().first()
     return {
         "profile": profile,
+        "following": list(
+            UserFollow.objects.filter(follower_id=user_id).values(
+                "followed__username", "created_at"
+            )
+        ),
         "endorsements_received": list(
             SkillEndorsement.objects.filter(endorsee_id=user_id).values(
                 "skill", "endorser__username", "created_at"

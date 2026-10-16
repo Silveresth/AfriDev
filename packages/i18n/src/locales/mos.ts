@@ -68,9 +68,6 @@ const mos: LocaleMessages = {
   // ── Settings ──
   'settings.title': 'Manegr',
   'settings.subtitle': 'Maneg f nif-gesre, koom/données koglgo, la kibaya.',
-  'settings.badge': 'Manegr & Yel-bʋse',
-  'settings.tab.general': 'Fãa & Netwɔrke',
-  'settings.tab.security': 'Koglgo & Kẽer',
   'settings.tab.notifications': 'Kibaya',
   'settings.tab.privacy': 'Solgem & API',
 

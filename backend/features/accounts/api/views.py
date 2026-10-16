@@ -29,11 +29,14 @@ from .serializers import (
     OTPRequestInputSerializer,
     OTPRequestOutputSerializer,
     OTPVerifyInputSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
     RegisterInputSerializer,
     RevokedCountSerializer,
     SessionSerializer,
     TOTPCodeSerializer,
     TOTPSetupSerializer,
+    UsernameStatusSerializer,
     UserSerializer,
     present_sessions,
     present_token,
@@ -83,6 +86,48 @@ class LoginView(APIView):
         data = LoginInputSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         user = services.authenticate_user(**data.validated_data)
+        return _auth_response(request, user, created=False)
+
+
+class UsernameStatusView(APIView):
+    """Disponibilité d'un pseudo, vérifiée pendant la saisie du formulaire d'inscription."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    @extend_schema(
+        parameters=[OpenApiParameter("username", str, required=True)],
+        responses=UsernameStatusSerializer,
+    )
+    def get(self, request):
+        return Response(services.username_status(request.query_params.get("username", "")))
+
+
+class PasswordResetRequestView(APIView):
+    """Toujours 202, que l'adresse existe ou non (pas d'énumération des comptes)."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [OTPThrottle]
+
+    @extend_schema(request=PasswordResetRequestSerializer, responses={202: None})
+    def post(self, request):
+        data = PasswordResetRequestSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        services.request_password_reset(**data.validated_data)
+        return Response(status=status.HTTP_202_ACCEPTED)
+
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [OTPThrottle]
+
+    @extend_schema(request=PasswordResetConfirmSerializer, responses=AuthResponseSerializer)
+    def post(self, request):
+        data = PasswordResetConfirmSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        user = services.reset_password(**data.validated_data)
         return _auth_response(request, user, created=False)
 
 
@@ -143,21 +188,35 @@ class OAuthProvidersView(APIView):
 
 
 class OAuthStartView(APIView):
-    """Appli mobile : redirige vers GitHub / Google ; le retour passe par OAuthCallbackView."""
+    """Web et mobile : redirige vers GitHub / Google ; le retour passe par OAuthCallbackView.
+
+    return_to : <site>/oauth/callback (web) ou afridev:// / exp:// (appli) ;
+    nonce : valeur aléatoire gardée par le site, renvoyée telle quelle au retour.
+    """
 
     permission_classes = [AllowAny]
     authentication_classes = []
 
     @extend_schema(
-        parameters=[OpenApiParameter("return_to", str, required=True)],
+        parameters=[
+            OpenApiParameter("return_to", str, required=True),
+            OpenApiParameter("nonce", str, required=False),
+        ],
         responses={302: None},
     )
     def get(self, request, provider):
-        url = oauth.authorize_url(
-            provider,
-            callback_url=_oauth_callback_url(request, provider),
-            return_to=request.query_params.get("return_to", ""),
-        )
+        try:
+            url = oauth.authorize_url(
+                provider,
+                callback_url=_oauth_callback_url(request, provider),
+                return_to=request.query_params.get("return_to", ""),
+                nonce=request.query_params.get("nonce", ""),
+            )
+        except oauth.OAuthError as exc:
+            return HttpResponse(
+                f"<p style='font-family:sans-serif;padding:24px'>{escape(exc.message)}</p>",
+                status=400,
+            )
         return HttpResponseRedirect(url)
 
 

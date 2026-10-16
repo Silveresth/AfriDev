@@ -6,4 +6,4 @@ import { tokenStore } from './token';
 /** Client commun web / mobile (packages/api-client), jetons gardés dans localStorage. */
 const client = createAfriDevClient({ baseUrl: API_URL, tokens: tokenStore });
 
-export const { api, authFetch, unwrap, apiFetch, waitForJob } = client;
+export const { api, authFetch, unwrap, apiFetch, waitForJob, uploadDirect } = client;

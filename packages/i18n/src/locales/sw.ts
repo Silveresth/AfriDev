@@ -68,9 +68,6 @@ const sw: LocaleMessages = {
   // ── Settings ──
   'settings.title': 'Mipangilio',
   'settings.subtitle': 'Dhibiti muonekano, uokoaji wa data, usalama na arifa zako.',
-  'settings.badge': 'Mapendeleo na Usanidi',
-  'settings.tab.general': 'Jumla na Mtandao',
-  'settings.tab.security': 'Usalama na Vipindi',
   'settings.tab.notifications': 'Arifa',
   'settings.tab.privacy': 'Faragha na API',
 

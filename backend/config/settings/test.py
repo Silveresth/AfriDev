@@ -30,8 +30,15 @@ VOYAGE_API_KEY = ""
 SMS_PROVIDER_API_KEY = ""
 MEILISEARCH_URL = ""
 EXPO_ACCESS_TOKEN = ""
+WEBPUSH_VAPID_PRIVATE_KEY = ""
 FFMPEG_BINARY = "ffmpeg-absent-in-tests"
 MEDIA_ROOT = BASE_DIR / ".test-media"
+MEDIA_CDN_URL = ""
+USE_R2_STORAGE = False
+STORAGES = {
+    **STORAGES,  # noqa: F405
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+}
 POWERSYNC_ALLOW_DEV_KEY = True
 POWERSYNC_DEV_KEY_PATH = BASE_DIR / ".test-powersync-key.pem"
 
@@ -41,6 +48,7 @@ REST_FRAMEWORK = {
         "user": "10000/hour",
         "anon": "10000/hour",
         "ai": "1000/day",
+        "semantic": "10000/hour",
         "otp": "1000/hour",
     },
 }

@@ -34,6 +34,7 @@ import {
   WORK_PREFERENCES,
   type WorkPreference,
 } from '../api';
+import { badgeIcon, SPECIAL_BADGES } from './badges';
 
 const PIN_ICONS = { post: Newspaper, question: MessagesSquare, snippet: Code2, project: FolderGit2 };
 const PIN_LABELS = { post: 'Post', question: 'Question', snippet: 'Snippet', project: 'Projet' };
@@ -50,23 +51,33 @@ export function BadgesCard({ profile }: { profile: PublicProfile }) {
       </div>
       {profile.badges?.length ? (
         <ul className="grid gap-2 sm:grid-cols-2">
-          {profile.badges.map((badge) => (
+          {profile.badges.map((badge) => {
+            const Icon = badgeIcon(badge.code);
+            return (
             <li key={badge.code} className="flex items-start gap-3 rounded-xl border border-line bg-container-low/60 p-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-tertiary-soft text-on-tertiary-soft ring-1 ring-tertiary/20">
-                <Award className="size-[18px]" aria-hidden />
+              <span
+                className={cn(
+                  'flex size-9 shrink-0 items-center justify-center rounded-lg ring-1',
+                  SPECIAL_BADGES[badge.code]?.className ?? 'bg-tertiary-soft text-on-tertiary-soft ring-tertiary/20',
+                )}
+              >
+                <Icon className="size-[18px]" aria-hidden />
               </span>
               <span className="min-w-0">
                 <span className="block text-body-sm font-semibold text-ink">{badge.label}</span>
                 <span className="block text-label-md text-ink-muted">{badge.description}</span>
               </span>
             </li>
-          ))}
+            );
+          })}
         </ul>
       ) : (
         <ul className="grid gap-2 sm:grid-cols-3">
           {[
+            ['Mentor Communautaire', 'Top 5 % Entraide et 10 réponses acceptées'],
+            ['Lead Contributor', '20 favoris sur vos snippets ou 50 ★ sur vos projets'],
             ['Expert Python', '3 réponses acceptées sur un même sujet'],
-            ['Contributeur majeur', '250 points de karma'],
+            ['Contributeur majeur', '250 points de Craft'],
             ['Top 5 % Entraide', 'Parmi les membres qui aident le plus'],
           ].map(([label, rule]) => (
             <li key={label} className="rounded-xl border border-dashed border-line-strong p-3">

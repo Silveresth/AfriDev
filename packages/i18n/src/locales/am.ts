@@ -68,9 +68,6 @@ const am: LocaleMessages = {
   // ── Settings ──
   'settings.title': 'ቅንብሮች',
   'settings.subtitle': 'የእይታ ምርጫዎችን፣ የውሂብ ቁጠባን፣ ደህንነትንና ማሳወቂያዎችን ያስተዳድሩ።',
-  'settings.badge': 'ምርጫዎች እና ውቅረት',
-  'settings.tab.general': 'አጠቃላይ እና አውታረ መረብ',
-  'settings.tab.security': 'ደህንነት እና ክፍለ-ጊዜዎች',
   'settings.tab.notifications': 'ማሳወቂያዎች',
   'settings.tab.privacy': 'ግላዊነት እና API',
 

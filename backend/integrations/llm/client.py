@@ -49,6 +49,11 @@ def resolve_model(tier: str) -> str:
     return tier  # nom de modèle explicite
 
 
+def is_configured() -> bool:
+    """Vrai si une clé Groq est présente : sinon inutile de mettre des tâches IA en file."""
+    return bool(settings.GROQ_API_KEY)
+
+
 @lru_cache(maxsize=1)
 def groq_client():
     from groq import Groq
@@ -56,6 +61,12 @@ def groq_client():
     if not settings.GROQ_API_KEY:
         raise LLMUnavailableError("GROQ_API_KEY n'est pas configurée.")
     return Groq(api_key=settings.GROQ_API_KEY, max_retries=2, timeout=60)
+
+
+def is_reasoning_model(model: str) -> bool:
+    """Modèles qui « réfléchissent » avant de répondre (gpt-oss, qwen3…) : ces jetons de
+    réflexion sont décomptés de max_completion_tokens."""
+    return model.startswith(("openai/gpt-oss", "qwen/"))
 
 
 def _create(
@@ -67,6 +78,14 @@ def _create(
     kwargs = {}
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
+    if is_reasoning_model(model):
+        # Réflexion courte, non renvoyée, et budget dédié : sans cela une réponse brève
+        # (tags, verdict de modération) peut être vide, tous les jetons ayant servi à réfléchir.
+        max_tokens += settings.GROQ_REASONING_BUDGET
+        extra = {"include_reasoning": False}
+        if model.startswith("openai/gpt-oss"):
+            extra["reasoning_effort"] = settings.GROQ_REASONING_EFFORT
+        kwargs["extra_body"] = extra
     try:
         response = groq_client().chat.completions.create(
             model=model,
@@ -83,6 +102,8 @@ def _create(
 
     choice = response.choices[0]
     usage = response.usage
+    if not (choice.message.content or "").strip() and choice.finish_reason == "length":
+        raise LLMError(f"Réponse vide : budget de {max_tokens} jetons épuisé ({model}).")
     return Completion(
         text=choice.message.content or "",
         model=response.model,

@@ -68,9 +68,6 @@ const bm: LocaleMessages = {
   // ── Settings ──
   'settings.title': 'Labɛnw',
   'settings.subtitle': 'I ka fɛnw labɛn, kɛnɛya, lakanani ni laɲiniw kow la.',
-  'settings.badge': 'Labɛnw & Kɔnɔkow',
-  'settings.tab.general': 'Bɛɛ ta & Netwɔrki',
-  'settings.tab.security': 'Lakanani & Donnikow',
   'settings.tab.notifications': 'Laɲiniw',
   'settings.tab.privacy': 'Gundolafɛnw & API',
 

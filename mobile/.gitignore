@@ -14,3 +14,7 @@ ios/
 *.key
 *.mobileprovision
 .env*.local
+
+# Identifiants Firebase (push Android) : secret EAS GOOGLE_SERVICES_JSON
+google-services.json
+GoogleService-Info.plist

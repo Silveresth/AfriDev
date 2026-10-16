@@ -35,6 +35,15 @@ export function useQuestions(filters: QuestionFilters = {}) {
   );
 }
 
+export type HelpAnswer = Schemas['HelpAnswer'];
+
+/** Réponses d'un membre, avec le titre de la question (historique d'entraide du profil). */
+export function useAuthorAnswers(author: string, accepted?: boolean) {
+  return useInfiniteList(['qa', 'answers-by-author', author, accepted ?? null], (cursor) =>
+    unwrap(api.GET('/api/qa/answers/', { params: { query: { cursor, author, accepted } } })),
+  );
+}
+
 export function useQuestion(id: string, initialData?: Question) {
   return useQuery({
     queryKey: qaKeys.detail(id),

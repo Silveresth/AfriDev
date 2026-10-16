@@ -18,6 +18,8 @@ export interface FeedFilters {
   tag?: string;
   /** Slug ou UUID du hub. */
   hub?: string;
+  /** Seulement les posts portant une vidéo (onglet « Vidéos & Tutos ») ou une image. */
+  media?: 'video' | 'image';
   sort?: FeedSort;
 }
 
@@ -51,6 +53,18 @@ function replacePost(queryClient: QueryClient, post: Post) {
           pages: data.pages.map((page) => ({
             ...page,
             results: page.results.map((item) => (item.id === post.id ? post : item)),
+          })),
+        }
+      : data,
+  );
+  // Fil d'accueil mixte : le post y est imbriqué dans un élément { type: 'post', post }.
+  queryClient.setQueriesData<InfiniteData<Page<Schemas['HomeItem']>>>({ queryKey: ['feed', 'home'] }, (data) =>
+    data
+      ? {
+          ...data,
+          pages: data.pages.map((page) => ({
+            ...page,
+            results: page.results.map((item) => (item.type === 'post' && item.id === post.id ? { ...item, post } : item)),
           })),
         }
       : data,
@@ -145,6 +159,19 @@ export function useCommunities(limit = 12) {
     queryFn: () => unwrap(api.GET('/api/feed/communities/', { params: { query: { limit } } })),
     staleTime: 10 * 60_000,
   });
+}
+
+export type HomeItem = Schemas['HomeItem'];
+export type HomeFilter = 'all' | 'posts' | 'questions' | 'snippets' | 'projects' | 'jobs';
+export type HomeScope = 'for_you' | 'following';
+
+/** Fil d'accueil mixte (posts, questions, snippets, projets, offres) classé selon les préférences. */
+export function useHomeFeed(filter: HomeFilter, scope: HomeScope, enabled = true) {
+  return useInfiniteList(
+    ['feed', 'home', filter, scope],
+    (cursor) => unwrap(api.GET('/api/feed/home/', { params: { query: { cursor, filter, scope } } })),
+    { enabled },
+  );
 }
 
 export type NewsItem = Schemas['NewsItem'];

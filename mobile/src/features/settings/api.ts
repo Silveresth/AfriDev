@@ -4,52 +4,14 @@ import * as Sharing from 'expo-sharing';
 
 import { api, type Schemas, unwrap } from '@/shared/api';
 import { t } from '@/shared/i18n';
-import { ME_KEY } from '@/shared/session';
 
-export type DeviceSession = Schemas['Session'];
 export type AccessToken = Schemas['AccessToken'];
 export type NotificationPreferences = Schemas['Preferences'];
 
 const keys = {
-  sessions: ['settings', 'sessions'] as const,
   tokens: ['settings', 'tokens'] as const,
   notifications: ['settings', 'notifications'] as const,
 };
-
-// ── Sécurité ──
-
-export function useSessions() {
-  return useQuery({ queryKey: keys.sessions, queryFn: () => unwrap(api.GET('/api/accounts/sessions/')) });
-}
-
-export function useSessionActions() {
-  const queryClient = useQueryClient();
-  const refresh = () => queryClient.invalidateQueries({ queryKey: keys.sessions });
-  const revoke = useMutation({
-    mutationFn: (id: string) => unwrap(api.DELETE('/api/accounts/sessions/{session_id}/', { params: { path: { session_id: id } } })),
-    onSuccess: refresh,
-  });
-  const revokeOthers = useMutation({
-    mutationFn: () => unwrap(api.POST('/api/accounts/sessions/revoke-others/')),
-    onSuccess: refresh,
-  });
-  return { revoke, revokeOthers };
-}
-
-export function useTwoFactor() {
-  const queryClient = useQueryClient();
-  const onUser = (user: Schemas['User']) => queryClient.setQueryData(ME_KEY, user);
-  const setup = useMutation({ mutationFn: () => unwrap(api.POST('/api/accounts/2fa/setup/')) });
-  const enable = useMutation({
-    mutationFn: (code: string) => unwrap(api.POST('/api/accounts/2fa/enable/', { body: { code } })),
-    onSuccess: onUser,
-  });
-  const disable = useMutation({
-    mutationFn: (code: string) => unwrap(api.POST('/api/accounts/2fa/disable/', { body: { code } })),
-    onSuccess: onUser,
-  });
-  return { setup, enable, disable };
-}
 
 // ── Notifications ──
 

@@ -139,6 +139,67 @@ export function useSetPinned() {
   });
 }
 
+export type FollowListItem = Schemas['FollowListItem'];
+export type HelpAnswer = Schemas['HelpAnswer'];
+
+/** Suivre / ne plus suivre, en optimiste (bouton et compteur changent tout de suite). */
+export function useFollow(username: string) {
+  const queryClient = useQueryClient();
+  const key = profileKeys.public(username);
+  return useMutation({
+    mutationFn: (follow: boolean) =>
+      unwrap(
+        follow
+          ? api.POST('/api/profiles/{username}/follow/', { params: { path: { username } } })
+          : api.POST('/api/profiles/{username}/unfollow/', { params: { path: { username } } }),
+      ),
+    onMutate: async (follow) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<PublicProfile>(key);
+      if (previous && previous.is_following !== follow) {
+        queryClient.setQueryData<PublicProfile>(key, {
+          ...previous,
+          is_following: follow,
+          followers_count: Math.max(0, previous.followers_count + (follow ? 1 : -1)),
+        });
+      }
+      return { previous };
+    },
+    onError: (_error, _follow, context) => {
+      if (context?.previous) queryClient.setQueryData(key, context.previous);
+    },
+    onSuccess: (state) => {
+      queryClient.setQueryData<PublicProfile>(key, (current) =>
+        current ? { ...current, is_following: state.is_following, followers_count: state.followers_count } : current,
+      );
+      void queryClient.invalidateQueries({ queryKey: MY_PROFILE_KEY });
+      void queryClient.invalidateQueries({ queryKey: ['profiles', 'follows'] });
+    },
+  });
+}
+
+export function useFollowList(username: string, kind: 'followers' | 'following', enabled: boolean) {
+  return useInfiniteList(
+    ['profiles', 'follows', username.toLowerCase(), kind],
+    (cursor) =>
+      unwrap(
+        kind === 'followers'
+          ? api.GET('/api/profiles/{username}/followers/', { params: { path: { username }, query: { cursor } } })
+          : api.GET('/api/profiles/{username}/following/', { params: { path: { username }, query: { cursor } } }),
+      ),
+    { enabled },
+  );
+}
+
+/** Réponses d'un membre avec le titre de la question (onglet « Q&A & Entraide »). */
+export function useAuthorAnswers(author: string, accepted: boolean | undefined, enabled: boolean) {
+  return useInfiniteList(
+    ['qa', 'answers-by-author', author, accepted ?? null],
+    (cursor) => unwrap(api.GET('/api/qa/answers/', { params: { query: { cursor, author, accepted } } })),
+    { enabled },
+  );
+}
+
 export function useSnippetsByAuthor(authorId: string, enabled: boolean) {
   return useInfiniteList(
     ['snippets', 'public', 'author', authorId],

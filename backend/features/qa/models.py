@@ -49,7 +49,11 @@ class Answer(BaseModel):
     score = models.IntegerField(default=0)
 
     class Meta:
-        indexes = [models.Index(fields=["question", "created_at"])]
+        indexes = [
+            models.Index(fields=["question", "created_at"]),
+            # Historique d'entraide d'un membre (onglet « Q&A » du profil), plus récent d'abord.
+            models.Index(fields=["author", "-created_at"]),
+        ]
 
 
 class AnswerVote(BaseModel):

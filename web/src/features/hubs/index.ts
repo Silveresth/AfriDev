@@ -1,5 +1,5 @@
 export type { Hub } from './api';
-export { useHub } from './api';
+export { useHub, useJoinHub } from './api';
 export { CreateHubDialog } from './components/CreateHubDialog';
 export { HubPicker, type PickedHub, toPickedHub } from './components/HubPicker';
 export { HubScreen } from './components/HubScreen';

@@ -17,6 +17,7 @@ class Notification(BaseModel):
         GUIDE_READY = "guide_ready", "Guide d'onboarding prêt"
         APPLICATION_RECEIVED = "application_received", "Nouvelle candidature"
         APPLICATION_ANSWERED = "application_answered", "Réponse à une candidature"
+        NEW_FOLLOWER = "new_follower", "Nouvel abonné"
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications"
@@ -40,6 +41,19 @@ class PushDevice(BaseModel):
     )
     token = models.CharField(max_length=200, unique=True)
     platform = models.CharField(max_length=10, blank=True)  # ios / android
+
+
+class WebPushSubscription(BaseModel):
+    """Abonnement Web Push d'un navigateur (PushSubscription du service worker)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="webpush_subscriptions"
+    )
+    endpoint = models.URLField(max_length=1000, unique=True)
+    # Clés de chiffrement du navigateur (base64url).
+    p256dh = models.CharField(max_length=120)
+    auth = models.CharField(max_length=40)
+    user_agent = models.CharField(max_length=200, blank=True)
 
 
 class NotificationPreference(BaseModel):

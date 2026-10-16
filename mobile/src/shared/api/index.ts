@@ -6,7 +6,18 @@ import { tokenStore } from './token';
 /** Client commun web / mobile (packages/api-client) : jeton renouvelé, 15 s maximum par requête. */
 const client = createAfriDevClient({ baseUrl: API_URL || 'http://api-non-configuree.invalid', tokens: tokenStore, timeoutMs: 15_000 });
 
-export const { api, unwrap, apiFetch } = client;
+export const { api, unwrap, apiFetch, uploadDirect } = client;
+
+/** Envoie un fichier local (URI de l'appareil photo / galerie) directement vers le stockage objet. */
+export async function uploadFromUri(
+  uri: string,
+  kind: 'image' | 'video' | 'audio',
+  mimeType: string,
+  filename?: string,
+) {
+  const body = await (await fetch(uri)).blob();
+  return uploadDirect({ kind, body, mimeType, size: body.size, filename });
+}
 
 /** Comme le web, mais une coupure réseau explique quoi faire (adresse de l'API, mode tunnel). */
 export function errorMessage(error: unknown): string {

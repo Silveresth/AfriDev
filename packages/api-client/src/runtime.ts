@@ -7,6 +7,17 @@ import { createApiClient } from './client';
  * Seul le stockage des jetons dépend de la plateforme (localStorage, SecureStore…).
  */
 
+type MediaOutput = components['schemas']['MediaOutput'];
+
+/** Fichier à envoyer : `body` est un Blob/File (web) ou un Blob lu depuis un URI (mobile). */
+export interface DirectUploadFile {
+  kind: components['schemas']['MediaKindEnum'];
+  body: Blob;
+  mimeType: string;
+  size: number;
+  filename?: string;
+}
+
 export interface Tokens {
   access: string;
   refresh: string;
@@ -185,7 +196,33 @@ export function createAfriDevClient({
     throw new ApiError("L'IA met trop de temps à répondre. Réessayez plus tard.", 'job_timeout', 0);
   }
 
-  return { api, request, authFetch, unwrap, apiFetch, waitForJob };
+  /**
+   * Envoi direct vers le stockage objet (Cloudflare R2) : l'API délivre une URL pré-signée,
+   * le fichier part du client vers R2 sans transiter par le serveur, puis l'API confirme.
+   */
+  async function uploadDirect(file: DirectUploadFile): Promise<MediaOutput> {
+    const presign = await unwrap(
+      api.POST('/api/media/presign-upload/', {
+        body: { kind: file.kind, mime_type: file.mimeType, size_bytes: file.size, filename: file.filename ?? '' },
+      }),
+    );
+    let sent: Response;
+    try {
+      sent = await fetch(presign.upload.url, {
+        method: presign.upload.method,
+        headers: presign.upload.headers,
+        body: file.body,
+      });
+    } catch {
+      throw new ApiError('Envoi du fichier impossible : vérifiez votre connexion.', 'network', 0);
+    }
+    if (!sent.ok) throw new ApiError("Le stockage a refusé l'envoi du fichier.", 'upload_failed', sent.status);
+    return unwrap(
+      api.POST('/api/media/{asset_id}/complete/', { params: { path: { asset_id: presign.asset_id } } }),
+    );
+  }
+
+  return { api, request, authFetch, unwrap, apiFetch, waitForJob, uploadDirect };
 }
 
 export type AfriDevClient = ReturnType<typeof createAfriDevClient>;

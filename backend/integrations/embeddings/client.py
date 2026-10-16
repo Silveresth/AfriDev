@@ -11,6 +11,9 @@ import re
 
 import httpx
 from django.conf import settings
+from django.core.cache import cache
+
+from core.utils import content_hash
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +73,16 @@ def embed(texts: list[str], *, input_type: str = "document") -> list[list[float]
 
 
 def embed_one(text: str, *, input_type: str = "query") -> list[float]:
-    return embed([text], input_type=input_type)[0]
+    """Les requêtes sont mises en cache : la détection de doublons pendant la saisie et les
+    recherches répétées ne refacturent pas le même embedding."""
+    if input_type != "query" or not settings.VOYAGE_API_KEY:
+        return embed([text], input_type=input_type)[0]
+    key = "emb:" + content_hash(settings.VOYAGE_MODEL, str(EMBEDDING_DIM), text)
+    vector = cache.get(key)
+    if vector is None:
+        vector = embed([text], input_type=input_type)[0]
+        cache.set(key, vector, settings.EMBEDDING_QUERY_CACHE_SECONDS)
+    return vector
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:

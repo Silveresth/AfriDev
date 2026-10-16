@@ -14,6 +14,8 @@ from .views import (
     OAuthStartView,
     OTPRequestView,
     OTPVerifyView,
+    PasswordResetConfirmView,
+    PasswordResetRequestView,
     RegisterView,
     RevokeOtherSessionsView,
     SessionDetailView,
@@ -21,6 +23,7 @@ from .views import (
     TOTPDisableView,
     TOTPEnableView,
     TOTPSetupView,
+    UsernameStatusView,
 )
 
 app_name = "accounts"
@@ -29,6 +32,13 @@ urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="login"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+    path("username-status/", UsernameStatusView.as_view(), name="username-status"),
+    path("password/reset/", PasswordResetRequestView.as_view(), name="password-reset"),
+    path(
+        "password/reset/confirm/",
+        PasswordResetConfirmView.as_view(),
+        name="password-reset-confirm",
+    ),
     path("otp/request/", OTPRequestView.as_view(), name="otp-request"),
     path("otp/verify/", OTPVerifyView.as_view(), name="otp-verify"),
     # « providers » avant « <provider> » : sinon il serait pris pour un nom de fournisseur.

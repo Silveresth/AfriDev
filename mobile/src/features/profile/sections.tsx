@@ -2,15 +2,14 @@ import { router } from 'expo-router';
 import {
   Award,
   BriefcaseBusiness,
-  CalendarDays,
   Check,
   CheckCircle2,
   Circle,
   Code2,
   FolderGit2,
   GitBranch,
-  Link2,
-  MapPin,
+  Hammer,
+  HandHelping,
   MessagesSquare,
   Newspaper,
   Pencil,
@@ -27,24 +26,22 @@ import { useEffect, useState } from 'react';
 import { Share, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
-  FadeIn,
   FadeInDown,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
   withRepeat,
   withTiming,
-  ZoomIn,
 } from 'react-native-reanimated';
 import { SvgUri } from 'react-native-svg';
 
 import { errorMessage, PUBLIC_WEB_URL } from '@/shared/api';
-import { formatCount, languageColor, monthYear, openLink, profileColorHex } from '@/shared/lib';
+import { formatCount, languageColor, openLink, profileColorHex } from '@/shared/lib';
 import { t } from '@/shared/i18n';
 import { haptic, PressableScale } from '@/shared/motion';
 import { useSession } from '@/shared/session';
 import { radius, useTheme } from '@/shared/theme';
-import { Avatar, Button, Sheet, Tag, Text, useToast } from '@/shared/ui';
+import { Button, Sheet, Text, useToast } from '@/shared/ui';
 
 import {
   type MyProfile,
@@ -61,6 +58,7 @@ import {
   WORK_PREFERENCES,
   type WorkPreference,
 } from './api';
+import { badgeIcon, SPECIAL_BADGES } from './badges';
 
 const PIN_ICONS = { post: Newspaper, question: MessagesSquare, snippet: Code2, project: FolderGit2 };
 const PIN_LABELS = { post: 'kind.post', question: 'kind.question', snippet: 'kind.snippet', project: 'kind.project' } as const;
@@ -141,115 +139,17 @@ export function OpenToWork({ profile }: { profile: PublicProfile }) {
   );
 }
 
-export function ProfileHero({ profile, isMe }: { profile: PublicProfile; isMe: boolean }) {
-  const { colors } = useTheme();
-  const name = profile.display_name || profile.username;
-  const accent = profileColorHex(profile.username, profile.accent_color);
-  const stats = [
-    { label: t('profile.karma'), value: profile.karma_score ?? 0, strong: true },
-    { label: t('profile.upvotes'), value: profile.karma_details?.upvotes ?? 0 },
-    { label: t('profile.accepted'), value: profile.karma_details?.accepted_answers ?? 0 },
-    { label: t('profile.snippet_saves'), value: profile.karma_details?.snippet_saves ?? 0 },
-  ];
-
-  return (
-    <View>
-      <Animated.View entering={FadeIn.duration(400)} style={[styles.banner, { backgroundColor: accent }]} />
-      <View style={styles.hero}>
-        <View style={styles.heroTop}>
-          <Animated.View entering={ZoomIn.springify().damping(13).delay(120)} style={[styles.avatarRing, { backgroundColor: colors.background }]}>
-            <Avatar name={name} src={profile.avatar_url} color={accent} size={92} />
-          </Animated.View>
-          <View style={styles.heroActions}>
-            {isMe ? <Button label={t('common.edit')} icon={Pencil} variant="secondary" size="sm" onPress={() => router.push('/edit-profile')} /> : null}
-            <Button label={t('feed.share')} icon={Share2} variant="secondary" size="sm" onPress={() => shareProfile(profile.username, name)} />
-          </View>
-        </View>
-
-        <Animated.View entering={FadeInDown.delay(160).duration(360)} style={styles.identity}>
-          <Text variant="display" numberOfLines={2}>
-            {name}
-          </Text>
-          {profile.badges?.length ? (
-            <View style={styles.wrap}>
-              {profile.badges.slice(0, 2).map((badge) => (
-                <Tag key={badge.code} label={badge.label} tone="primary" />
-              ))}
-            </View>
-          ) : null}
-          <Text tone="muted">
-            @{profile.username}
-            {profile.stack?.length ? `  /  ${t('profile.dev', { stack: profile.stack.slice(0, 3).join(', ') })}` : ''}
-          </Text>
-        </Animated.View>
-
-        <View style={styles.facts}>
-          {profile.location ? (
-            <View style={styles.inline}>
-              <MapPin size={14} color={colors.inkFaint} />
-              <Text variant="small" tone="muted">
-                {profile.location}
-              </Text>
-            </View>
-          ) : null}
-          <View style={styles.inline}>
-            <CalendarDays size={14} color={colors.inkFaint} />
-            <Text variant="small" tone="muted">
-              {t('profile.since', { date: monthYear(profile.created_at) })}
-            </Text>
-          </View>
-          {profile.github_username ? (
-            <PressableScale scaleTo={0.97} style={styles.inline} onPress={() => void openLink(`https://github.com/${profile.github_username}`)}>
-              <GitBranch size={14} color={colors.inkFaint} />
-              <Text variant="smallStrong">{profile.github_username}</Text>
-            </PressableScale>
-          ) : null}
-          {profile.website ? (
-            <PressableScale scaleTo={0.97} style={styles.inline} onPress={() => void openLink(profile.website)}>
-              <Link2 size={14} color={colors.inkFaint} />
-              <Text variant="smallStrong" numberOfLines={1}>
-                {profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-              </Text>
-            </PressableScale>
-          ) : null}
-        </View>
-        <OpenToWork profile={profile} />
-      </View>
-
-      <View style={[styles.stats, { borderColor: colors.line }]}>
-        {stats.map((stat, index) => (
-          <View
-            key={stat.label}
-            style={[
-              styles.stat,
-              { borderColor: colors.line },
-              index % 2 ? { borderLeftWidth: StyleSheet.hairlineWidth } : null,
-              index > 1 ? { borderTopWidth: StyleSheet.hairlineWidth } : null,
-            ]}
-          >
-            <Text variant="caption" tone="faint">
-              {stat.label}
-            </Text>
-            <Text variant="title" style={stat.strong ? { color: accent } : null}>
-              {formatCount(Number(stat.value))}
-            </Text>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
 // ── Profil complété (moi uniquement) ──
 
 export function CompletionCard({ profile }: { profile: MyProfile }) {
   const { colors } = useTheme();
   const steps = [
-    { label: t('profile.step.name'), done: Boolean(profile.display_name) },
+    { label: t('profile.step.avatar'), done: Boolean(profile.avatar_url) },
+    { label: t('profile.step.banner'), done: Boolean(profile.banner_url) },
     { label: t('profile.step.bio'), done: Boolean(profile.bio) },
     { label: t('profile.step.stack'), done: profile.stack.length > 0 },
     { label: t('profile.step.location'), done: Boolean(profile.location) },
-    { label: t('profile.step.github'), done: Boolean(profile.github_username) },
+    { label: t('profile.step.social'), done: Object.keys(profile.social_links ?? {}).length > 0 },
     { label: t('profile.step.pinned'), done: profile.pinned.length > 0 },
   ];
   const done = steps.filter((step) => step.done).length;
@@ -482,7 +382,7 @@ function AiBioSuggestion({ profile }: { profile: MyProfile }) {
   );
 }
 
-function Endorsements({ profile, isMe }: { profile: PublicProfile; isMe: boolean }) {
+export function Endorsements({ profile, isMe }: { profile: PublicProfile; isMe: boolean }) {
   const { colors } = useTheme();
   const endorsements = useEndorsements(profile.username);
   const endorse = useEndorse(profile.username);
@@ -531,27 +431,123 @@ function Endorsements({ profile, isMe }: { profile: PublicProfile; isMe: boolean
   );
 }
 
-export function AboutSection({ profile, me }: { profile: PublicProfile; me?: MyProfile }) {
+/** Mon profil : bio rédigée par l'IA (la bio elle-même s'affiche dans l'en-tête). */
+export function AiBioCard({ me }: { me: MyProfile }) {
   const aiBio = useAiBio();
+  const hasSuggestion = me.ai_bio_status === 'ready' && me.ai_bio_suggestion && me.ai_bio_suggestion !== me.bio;
+  if (me.bio && !hasSuggestion && me.ai_bio_status !== 'failed') return null;
   return (
-    <Card index={2}>
+    <Card index={1}>
       <CardTitle
-        icon={UsersRound}
+        icon={Sparkles}
         title={t('profile.about')}
-        right={me ? <Button label={t('profile.ai_write')} icon={Sparkles} variant="ghost" size="sm" loading={aiBio.isPending} onPress={() => aiBio.mutate()} /> : null}
+        right={<Button label={t('profile.ai_write')} icon={Sparkles} variant="ghost" size="sm" loading={aiBio.isPending} onPress={() => aiBio.mutate()} />}
       />
-      {profile.bio ? (
-        <Text>{profile.bio}</Text>
-      ) : (
-        <Text tone="muted">{t(me ? 'profile.no_bio_me' : 'profile.no_bio')}</Text>
-      )}
+      {me.bio ? null : <Text tone="muted">{t('profile.no_bio_me')}</Text>}
       {aiBio.isError ? (
         <Text variant="small" tone="danger">
           {errorMessage(aiBio.error)}
         </Text>
       ) : null}
-      {me ? <AiBioSuggestion profile={me} /> : null}
-      <Endorsements profile={profile} isMe={Boolean(me)} />
+      <AiBioSuggestion profile={me} />
+    </Card>
+  );
+}
+
+function Gauge({ icon: Icon, title, score, ratio, color, rows }: { icon: typeof Award; title: string; score: number; ratio: number; color: string; rows: [string, number, number][] }) {
+  const { colors } = useTheme();
+  const width = useSharedValue(0);
+  useEffect(() => {
+    width.value = withDelay(200, withTiming(Math.round(ratio * 100), { duration: 700, easing: Easing.out(Easing.cubic) }));
+  }, [ratio, width]);
+  const bar = useAnimatedStyle(() => ({ width: `${width.value}%` }));
+  return (
+    <View style={styles.gap}>
+      <View style={styles.inline}>
+        <Icon size={16} color={colors.inkFaint} />
+        <Text variant="bodyStrong" style={styles.flex}>
+          {title}
+        </Text>
+        <Text variant="bodyStrong">{formatCount(score)} pts</Text>
+      </View>
+      <View style={[styles.track, { backgroundColor: colors.containerHigh }]}>
+        <Animated.View style={[styles.fill, { backgroundColor: color }, bar]} />
+      </View>
+      {rows.map(([label, value, points]) => (
+        <View key={label} style={[styles.gaugeRow, { backgroundColor: colors.surface }]}>
+          <Text variant="small" tone="muted" style={styles.flex}>
+            {label}
+          </Text>
+          <Text variant="small">
+            {formatCount(value)} <Text variant="small" tone="faint">× {points}</Text>
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** Onglet « Craft & Stack » : double jauge Entraide / Création détaillée. */
+export function CraftSection({ profile }: { profile: PublicProfile }) {
+  const { colors } = useTheme();
+  const { craft } = profile;
+  const max = Math.max(1, craft.help.score, craft.creation.score);
+  const accent = profileColorHex(profile.username, profile.accent_color);
+  return (
+    <Card index={0}>
+      <CardTitle
+        icon={Sparkles}
+        title={t('profile.karma')}
+        right={
+          <Text variant="title" style={{ color: accent }}>
+            {formatCount(craft.score)}
+          </Text>
+        }
+      />
+      <Text variant="small" tone="muted">
+        {t('profile.craft_desc')}
+      </Text>
+      <Gauge
+        icon={HandHelping}
+        title={t('profile.craft_help')}
+        score={craft.help.score}
+        ratio={craft.help.score / max}
+        color={colors.secondary}
+        rows={[
+          [t('profile.craft_answer_upvotes'), craft.help.breakdown.answer_upvotes ?? 0, 5],
+          [t('profile.accepted'), craft.help.breakdown.accepted_answers ?? 0, 15],
+        ]}
+      />
+      <Gauge
+        icon={Hammer}
+        title={t('profile.craft_creation')}
+        score={craft.creation.score}
+        ratio={craft.creation.score / max}
+        color={colors.primary}
+        rows={[
+          [t('profile.craft_post_upvotes'), craft.creation.breakdown.post_upvotes ?? 0, 5],
+          [t('profile.craft_snippet_saves'), craft.creation.breakdown.snippet_saves ?? 0, 10],
+        ]}
+      />
+      {craft.project_stars ? (
+        <View style={styles.inline}>
+          <Star size={14} color={colors.tertiary} />
+          <Text variant="small" tone="muted">
+            {t('profile.craft_project_stars', { count: formatCount(craft.project_stars) })}
+          </Text>
+        </View>
+      ) : null}
+    </Card>
+  );
+}
+
+/** Stack et compétences endossées par les pairs. */
+export function StackSection({ profile, isMe }: { profile: PublicProfile; isMe: boolean }) {
+  return (
+    <Card index={2}>
+      <CardTitle icon={UsersRound} title={t('profile.skills')} />
+      {profile.stack.length ? null : <Text tone="muted">{t('profile.stack_empty')}</Text>}
+      <Endorsements profile={profile} isMe={isMe} />
     </Card>
   );
 }
@@ -659,10 +655,13 @@ export function BadgesSection({ profile }: { profile: PublicProfile }) {
         {t('profile.badges_desc')}
       </Text>
       {profile.badges?.length ? (
-        profile.badges.map((badge) => (
+        profile.badges.map((badge) => {
+          const Icon = badgeIcon(badge.code);
+          const special = SPECIAL_BADGES[badge.code];
+          return (
           <View key={badge.code} style={[styles.badgeRow, { borderColor: colors.line, backgroundColor: colors.surface }]}>
-            <View style={[styles.badgeIcon, { backgroundColor: colors.tertiarySoft }]}>
-              <Award size={18} color={colors.tertiary} />
+            <View style={[styles.badgeIcon, { backgroundColor: special ? `${special.color}22` : colors.tertiarySoft }]}>
+              <Icon size={18} color={special?.color ?? colors.tertiary} />
             </View>
             <View style={styles.flex}>
               <Text variant="smallStrong">{badge.label}</Text>
@@ -671,9 +670,12 @@ export function BadgesSection({ profile }: { profile: PublicProfile }) {
               </Text>
             </View>
           </View>
-        ))
+          );
+        })
       ) : (
         [
+          [t('badge.mentor'), t('badge.mentor_rule')],
+          [t('badge.lead'), t('badge.lead_rule')],
           [t('badge.python'), t('badge.python_rule')],
           [t('badge.major'), t('badge.major_rule')],
           [t('badge.top'), t('badge.top_rule')],
@@ -729,6 +731,7 @@ const styles = StyleSheet.create({
   inline: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   gap: { gap: 10 },
+  gaugeRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 7, borderRadius: radius.md },
   card: { marginHorizontal: 16, padding: 16, gap: 12, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth * 2 },
   cardTitle: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 36 },
   banner: { height: 112 },

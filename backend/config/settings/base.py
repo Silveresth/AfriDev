@@ -119,15 +119,21 @@ CACHES = {
     }
 }
 
-CELERY_BROKER_URL = REDIS_URL
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=REDIS_URL)
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TASK_ACKS_LATE = True
+# Un message à la fois par processus : une rafale de tâches IA lentes ne bloque pas en
+# réserve un SMS d'OTP derrière elle.
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_TASK_ROUTES = {
     "features.*.tasks.ai_*": {"queue": "ai"},
     "features.accounts.tasks.*": {"queue": "sms"},
     "features.projects.tasks.*": {"queue": "github"},
 }
 CELERY_TASK_DEFAULT_QUEUE = "default"
+# Limites de durée des tâches ai_* (un appel Groq bloqué ne monopolise pas un processus).
+CELERY_TASK_ANNOTATIONS = ["core.celery_annotations.AITaskLimits"]
+AI_TASK_SOFT_TIME_LIMIT = env.int("AI_TASK_SOFT_TIME_LIMIT", default=150)
 
 CHANNEL_LAYERS = {
     "default": {
@@ -152,6 +158,8 @@ REST_FRAMEWORK = {
         "user": "1000/hour",
         "anon": "100/hour",
         "ai": env("AI_QUOTA_PER_DAY", default="50/day"),
+        # Recherche par le sens (un embedding Voyage par requête non mise en cache).
+        "semantic": env("SEMANTIC_SEARCH_QUOTA", default="120/hour"),
         "otp": env("OTP_QUOTA", default="5/hour"),
     },
 }
@@ -195,19 +203,28 @@ PUBLIC_WEB_URL = env("PUBLIC_WEB_URL", default="http://localhost:3000")
 
 # ── Services externes ──
 # IA : Groq (API compatible OpenAI). Les modèles restent configurables car Groq
-# fait évoluer son catalogue.
+# fait évoluer son catalogue (console.groq.com/docs/deprecations) : les Llama 3.x
+# précédemment utilisés ont été retirés le 16/08/2026.
 GROQ_API_KEY = env("GROQ_API_KEY", default="")
 # Réponse instantanée (RAG), bio IA, agent d'onboarding.
-GROQ_SMART_MODEL = env("GROQ_SMART_MODEL", default="llama-3.3-70b-versatile")
+GROQ_SMART_MODEL = env("GROQ_SMART_MODEL", default="openai/gpt-oss-120b")
 # Tâches rapides : tags, doublons, modération, résumé en 3 points, traduction.
-GROQ_FAST_MODEL = env("GROQ_FAST_MODEL", default="llama-3.1-8b-instant")
+GROQ_FAST_MODEL = env("GROQ_FAST_MODEL", default="openai/gpt-oss-20b")
 # Questions vocales (Whisper hébergé par Groq).
 GROQ_TRANSCRIPTION_MODEL = env("GROQ_TRANSCRIPTION_MODEL", default="whisper-large-v3-turbo")
+# Modèles à raisonnement (gpt-oss) : effort low/medium/high et jetons réservés à la réflexion,
+# ajoutés au plafond de réponse de chaque appel.
+GROQ_REASONING_EFFORT = env("GROQ_REASONING_EFFORT", default="low")
+GROQ_REASONING_BUDGET = env.int("GROQ_REASONING_BUDGET", default=512)
 # Durée du cache des réponses IA (secondes).
 LLM_CACHE_SECONDS = env.int("LLM_CACHE_SECONDS", default=60 * 60 * 24 * 7)
 
+# Embeddings du RAG. Changer de modèle (ou ajouter la clé après coup) impose
+# `manage.py reindex_knowledge` : des vecteurs de modèles différents ne se comparent pas.
 VOYAGE_API_KEY = env("VOYAGE_API_KEY", default="")
 VOYAGE_MODEL = env("VOYAGE_MODEL", default="voyage-3.5-lite")
+# Cache des embeddings de requêtes (recherche par le sens, doublons pendant la saisie).
+EMBEDDING_QUERY_CACHE_SECONDS = env.int("EMBEDDING_QUERY_CACHE_SECONDS", default=60 * 60 * 24)
 
 GITHUB_TOKEN = env("GITHUB_TOKEN", default="")
 GITHUB_CLIENT_ID = env("GITHUB_CLIENT_ID", default="")
@@ -241,16 +258,75 @@ POWERSYNC_JWT_KID = env("POWERSYNC_JWT_KID", default="afridev-powersync")
 POWERSYNC_ALLOW_DEV_KEY = DEBUG
 POWERSYNC_DEV_KEY_PATH = BASE_DIR / ".powersync_dev_key.pem"
 
-# Médias : URL publique (CDN) devant le stockage ; vide = URLs Django locales.
+# ── Médias : stockage objet Cloudflare R2 (API S3) ──
+# Sans R2_BUCKET_NAME : disque local (dev). Avec : les clients envoient directement vers R2
+# via une URL pré-signée ; aucun fichier lourd ne transite par la mémoire du VPS.
+R2_ACCESS_KEY_ID = env("R2_ACCESS_KEY_ID", default="")
+R2_SECRET_ACCESS_KEY = env("R2_SECRET_ACCESS_KEY", default="")
+R2_BUCKET_NAME = env("R2_BUCKET_NAME", default="")
+# https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+R2_ENDPOINT_URL = env("R2_ENDPOINT_URL", default="")
+# URL publique (domaine personnalisé R2 ou r2.dev) ; vide = URLs Django locales.
 MEDIA_CDN_URL = env("MEDIA_CDN_URL", default="")
 MEDIA_MAX_UPLOAD_MB = env.int("MEDIA_MAX_UPLOAD_MB", default=50)
+# Durée de validité d'une URL d'envoi pré-signée (secondes).
+MEDIA_PRESIGN_EXPIRES = env.int("MEDIA_PRESIGN_EXPIRES", default=15 * 60)
+USE_R2_STORAGE = bool(R2_BUCKET_NAME)
+
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+if USE_R2_STORAGE:
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "access_key": R2_ACCESS_KEY_ID,
+            "secret_key": R2_SECRET_ACCESS_KEY,
+            "bucket_name": R2_BUCKET_NAME,
+            "endpoint_url": R2_ENDPOINT_URL,
+            "region_name": "auto",
+            "signature_version": "s3v4",
+            # Clés UUID uniques : pas de HEAD « exists » avant chaque écriture.
+            "file_overwrite": True,
+            "default_acl": None,
+            "querystring_auth": False,
+            "custom_domain": MEDIA_CDN_URL.split("://", 1)[-1].rstrip("/") or None,
+            "object_parameters": {"CacheControl": "public, max-age=31536000, immutable"},
+        },
+    }
+
 FFMPEG_BINARY = env("FFMPEG_BINARY", default="ffmpeg")
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+# Au-delà, un fichier reçu en multipart est écrit sur disque plutôt que gardé en RAM.
+FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
 
 # Notifications push (Expo).
 EXPO_PUSH_URL = env("EXPO_PUSH_URL", default="https://exp.host/--/api/v2/push/send")
 EXPO_ACCESS_TOKEN = env("EXPO_ACCESS_TOKEN", default="")
+# Notifications push du site (Web Push / VAPID). Clé privée : `manage.py generate_vapid_key`.
+# Vide : le web n'en propose pas (la clé publique est déduite de la clé privée).
+WEBPUSH_VAPID_PRIVATE_KEY = env("WEBPUSH_VAPID_PRIVATE_KEY", default="")
+# Contact exigé par les services de push en cas d'abus (mailto: ou https:).
+WEBPUSH_VAPID_SUBJECT = env("WEBPUSH_VAPID_SUBJECT", default="mailto:contact@afridev.dev")
+# Services de push des navigateurs (Chrome/Edge, Firefox, Safari, Windows) ; sous-domaines inclus.
+WEBPUSH_ALLOWED_HOSTS = env.list(
+    "WEBPUSH_ALLOWED_HOSTS",
+    default=[
+        "fcm.googleapis.com",
+        "push.services.mozilla.com",
+        "push.apple.com",
+        "notify.windows.com",
+    ],
+)
+# Abonnements web conservés par membre (les plus anciens sont remplacés).
+WEBPUSH_MAX_SUBSCRIPTIONS = 10
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="AfriDev Exchange <no-reply@afridev.dev>")
+# E-mails (mot de passe oublié, notifications) : smtp+tls://user:pass@smtp.exemple.com:587
+# (Brevo, Mailjet, Resend…). Vide : affichés dans les journaux.
+vars().update(env.email_url("EMAIL_URL", default="consolemail://"))
+# Lien « mot de passe oublié » : valable 1 heure.
+PASSWORD_RESET_TIMEOUT = 60 * 60
 
 # Modération : nombre de signalements qui masque un contenu en attendant un modérateur.
 MODERATION_AUTO_HIDE_REPORTS = env.int("MODERATION_AUTO_HIDE_REPORTS", default=3)

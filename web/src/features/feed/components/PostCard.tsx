@@ -1,8 +1,8 @@
 'use client';
 
 import {
-  ArrowBigDown,
-  ArrowBigUp,
+  ThumbsDown,
+  ThumbsUp,
   BarChart3,
   CheckCircle2,
   Circle,
@@ -262,7 +262,7 @@ export function PostCard({ post, detail = false, community: showCommunity = true
   );
 }
 
-/** ↑ score ↓ : capsule à filet ; elle prend la couleur du vote donné. */
+/** 👍 score 👎 : capsule à filet ; elle prend la couleur du vote donné. */
 function VotePill({ post }: { post: Post }) {
   const { isAuthenticated } = useSession();
   const router = useRouter();
@@ -290,24 +290,24 @@ function VotePill({ post }: { post: Post }) {
     >
       <button
         type="button"
-        aria-label="Vote positif"
+        aria-label="Pouce levé"
         aria-pressed={mine === 1}
         onClick={() => cast(1)}
         className="flex h-full w-8 items-center justify-center rounded-l-lg transition-colors hover:bg-primary-soft hover:text-primary"
       >
-        <ArrowBigUp className={cn('size-[18px]', mine === 1 && 'fill-current')} aria-hidden />
+        <ThumbsUp className={cn('size-4', mine === 1 && 'fill-current')} aria-hidden />
       </button>
       <span className="min-w-[1.5rem] text-center text-body-sm font-semibold tabular-nums" aria-label={`Score : ${score}`}>
         {formatCount(score)}
       </span>
       <button
         type="button"
-        aria-label="Vote négatif"
+        aria-label="Pouce baissé"
         aria-pressed={mine === -1}
         onClick={() => cast(-1)}
         className="flex h-full w-8 items-center justify-center rounded-r-lg transition-colors hover:bg-downvote-soft hover:text-downvote"
       >
-        <ArrowBigDown className={cn('size-[18px]', mine === -1 && 'fill-current')} aria-hidden />
+        <ThumbsDown className={cn('size-4', mine === -1 && 'fill-current')} aria-hidden />
       </button>
     </div>
   );

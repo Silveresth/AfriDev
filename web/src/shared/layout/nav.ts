@@ -8,6 +8,7 @@ import {
   Home,
   type LucideIcon,
   MessagesSquare,
+  Newspaper,
   UserRound,
   UsersRound,
 } from 'lucide-react';
@@ -31,6 +32,7 @@ export interface NavItem {
 /** Raccourcis de la colonne de gauche, dans l'ordre d'affichage. */
 export const NAV_ITEMS: NavItem[] = [
   { href: '/feed', label: 'Accueil', short: 'Accueil', icon: Home, key: 'h', msgKey: 'nav.home', shortKey: 'nav.home' },
+  { href: '/news', label: 'Actu tech', short: 'Actu', icon: Newspaper, key: 'n', msgKey: 'nav.news', shortKey: 'nav.news' },
   { href: '/search', label: 'Explorer', short: 'Explorer', icon: Compass, key: 'e', msgKey: 'nav.search', shortKey: 'nav.search' },
   { href: '/hubs', label: 'Hubs', short: 'Hubs', icon: UsersRound, key: 'u', msgKey: 'nav.hubs', shortKey: 'nav.hubs' },
   { href: '/questions', label: 'Q&A', short: 'Q&A', icon: MessagesSquare, key: 'q', msgKey: 'nav.questions', shortKey: 'nav.questions' },
@@ -50,7 +52,7 @@ export interface NavSection {
 
 /** Regroupement de la colonne de gauche : communauté, savoir partagé, carrière, espace perso. */
 export const NAV_SECTIONS: NavSection[] = [
-  { title: null, hrefs: ['/feed', '/search', '/hubs'] },
+  { title: null, hrefs: ['/feed', '/news', '/search', '/hubs'] },
   { title: 'Savoir', msgKey: 'nav.section.know', hrefs: ['/questions', '/snippets', '/projects'] },
   { title: 'Carrière', msgKey: 'nav.section.career', hrefs: ['/jobs', '/events'] },
   { title: 'Mon espace', msgKey: 'nav.section.my_space', hrefs: ['/bookmarks', '/profile'] },

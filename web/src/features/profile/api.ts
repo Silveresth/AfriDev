@@ -4,6 +4,7 @@ import type { Schemas } from '@afridev/api-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api, API_URL, unwrap } from '@/shared/api';
+import { useInfiniteList } from '@/shared/query';
 import { MY_PROFILE_KEY } from '@/shared/session';
 
 export type PublicProfile = Schemas['PublicProfile'];
@@ -49,7 +50,66 @@ export function useAiBio() {
   });
 }
 
-export const qrCodeUrl = (username: string) => `${API_URL}/api/profiles/${encodeURIComponent(username)}/qr.svg`;
+export type FollowListItem = Schemas['FollowListItem'];
+export type FollowState = Schemas['FollowState'];
+export type Craft = Schemas['Craft'];
+export type SocialLinks = Schemas['SocialLinks'];
+
+/**
+ * Suivre / ne plus suivre, en optimiste : le bouton et le compteur changent tout de suite,
+ * puis s'alignent sur la réponse du serveur (ou reviennent en arrière en cas d'échec).
+ */
+export function useFollow(username: string) {
+  const queryClient = useQueryClient();
+  const key = profileKeys.public(username);
+  return useMutation({
+    mutationFn: (follow: boolean) =>
+      unwrap(
+        follow
+          ? api.POST('/api/profiles/{username}/follow/', { params: { path: { username } } })
+          : api.POST('/api/profiles/{username}/unfollow/', { params: { path: { username } } }),
+      ),
+    onMutate: async (follow) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<PublicProfile>(key);
+      if (previous && previous.is_following !== follow) {
+        queryClient.setQueryData<PublicProfile>(key, {
+          ...previous,
+          is_following: follow,
+          followers_count: Math.max(0, previous.followers_count + (follow ? 1 : -1)),
+        });
+      }
+      return { previous };
+    },
+    onError: (_error, _follow, context) => {
+      if (context?.previous) queryClient.setQueryData(key, context.previous);
+    },
+    onSuccess: (state) => {
+      queryClient.setQueryData<PublicProfile>(key, (current) =>
+        current ? { ...current, is_following: state.is_following, followers_count: state.followers_count } : current,
+      );
+      // Mon compteur « Abonnements » et les listes d'abonnés affichées.
+      void queryClient.invalidateQueries({ queryKey: MY_PROFILE_KEY });
+      void queryClient.invalidateQueries({ queryKey: ['profiles', 'follows'] });
+    },
+  });
+}
+
+/** Abonnés ou abonnements d'un membre (fenêtre ouverte depuis la barre de statistiques). */
+export function useFollowList(username: string, kind: 'followers' | 'following', enabled: boolean) {
+  return useInfiniteList(
+    ['profiles', 'follows', username.toLowerCase(), kind],
+    (cursor) =>
+      unwrap(
+        kind === 'followers'
+          ? api.GET('/api/profiles/{username}/followers/', { params: { path: { username }, query: { cursor } } })
+          : api.GET('/api/profiles/{username}/following/', { params: { path: { username }, query: { cursor } } }),
+      ),
+    { enabled },
+  );
+}
+
+export const qrCodeUrl =(username: string) => `${API_URL}/api/profiles/${encodeURIComponent(username)}/qr.svg`;
 
 export type WorkPreference = Schemas['WorkPreferencesEnum'];
 export type Endorsement = Schemas['Endorsement'];

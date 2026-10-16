@@ -67,11 +67,15 @@ class VoteInputSerializer(serializers.Serializer):
     value = serializers.ChoiceField(choices=[-1, 0, 1], help_text="1 = ↑, -1 = ↓, 0 = retrait.")
 
 
-def present_posts(posts, *, viewer) -> list[dict]:
-    """Assemble auteurs, médias et résultats de sondage en un minimum de requêtes."""
+def present_posts(posts, *, viewer, authors: dict | None = None) -> list[dict]:
+    """Assemble auteurs, médias et résultats de sondage en un minimum de requêtes.
+
+    `authors` : cartes déjà chargées (fil d'accueil mixte), pour ne pas les relire.
+    """
     posts = list(posts)
     ids = [post.id for post in posts]
-    authors = profile_selectors.author_cards(user_ids={post.author_id for post in posts})
+    if authors is None:
+        authors = profile_selectors.author_cards(user_ids={post.author_id for post in posts})
     media = media_selectors.describe_many(asset_ids={post.media_id for post in posts})
     polls = selectors.poll_results(post_ids=[p.id for p in posts if p.kind == Post.Kind.POLL])
     states = selectors.viewer_state(post_ids=ids, user=viewer)
@@ -103,6 +107,74 @@ def present_posts(posts, *, viewer) -> list[dict]:
         }
         for post in posts
     ]
+
+
+class HomeCardSerializer(serializers.Serializer):
+    """Question, snippet, projet ou offre, sous une forme commune pour le fil d'accueil."""
+
+    title = serializers.CharField()
+    excerpt = serializers.CharField(allow_blank=True)
+    tags = serializers.ListField(child=serializers.CharField())
+    url = serializers.CharField(help_text="Chemin de la page du contenu sur le site.")
+    author = AuthorSerializer(allow_null=True)
+    meta = serializers.DictField(
+        help_text="question : is_resolved, answer_count · snippet : language, lines · "
+        "project : stars, language, is_recruiting, repo_url · job : company, location, "
+        "is_remote, contract_type, salary_range, apply_url"
+    )
+
+
+class HomeItemSerializer(serializers.Serializer):
+    type = serializers.ChoiceField(choices=["post", "question", "snippet", "project", "job"])
+    id = serializers.UUIDField()
+    created_at = serializers.DateTimeField()
+    matched_tags = serializers.ListField(
+        child=serializers.CharField(), help_text="Tags suivis par le visiteur (« Pour vous »)."
+    )
+    post = PostOutputSerializer(allow_null=True)
+    card = HomeCardSerializer(allow_null=True)
+
+
+class HomePageSerializer(serializers.Serializer):
+    next = serializers.CharField(allow_null=True)
+    results = HomeItemSerializer(many=True)
+
+
+def present_home(cards: list[dict], *, viewer, interests) -> list[dict]:
+    """Cartes du fil mixte : une lecture des auteurs pour tous les types, posts complets."""
+    authors = profile_selectors.author_cards(user_ids={card["author_id"] for card in cards})
+    posts = {
+        row["id"]: row
+        for row in present_posts(
+            [card["post"] for card in cards if card["type"] == "post"],
+            viewer=viewer,
+            authors=authors,
+        )
+    }
+    wanted = {str(tag).lower() for tag in interests}
+    items = []
+    for card in cards:
+        is_post = card["type"] == "post"
+        items.append(
+            {
+                "type": card["type"],
+                "id": card["id"],
+                "created_at": card["sort_at"],
+                "matched_tags": [tag for tag in card["tags"] if str(tag).lower() in wanted][:3],
+                "post": posts.get(card["id"]) if is_post else None,
+                "card": None
+                if is_post
+                else {
+                    "title": card["title"],
+                    "excerpt": card["excerpt"],
+                    "tags": card["tags"][:5],
+                    "url": card["url"],
+                    "author": authors.get(card["author_id"]),
+                    "meta": card["meta"],
+                },
+            }
+        )
+    return items
 
 
 class CommunitySerializer(serializers.Serializer):

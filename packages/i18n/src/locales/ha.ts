@@ -68,9 +68,6 @@ const ha: LocaleMessages = {
   // ── Settings ──
   'settings.title': 'Saituna',
   'settings.subtitle': 'Sarrafa yanayin gani, adana bayanai, tsaro da sanarwa.',
-  'settings.badge': 'Zabi & Tsari',
-  'settings.tab.general': 'Gabaɗaya & Hanyar sadarwa',
-  'settings.tab.security': 'Tsaro & Zama',
   'settings.tab.notifications': 'Sanarwa',
   'settings.tab.privacy': 'Sirri & API',
 

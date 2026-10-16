@@ -68,9 +68,6 @@ const zu: LocaleMessages = {
   // ── Settings ──
   'settings.title': 'Izilungiselelo',
   'settings.subtitle': 'Phatha okuncamelayo, ukulondolozwa kwedatha, ukuphepha nezaziso.',
-  'settings.badge': 'Okuncamelayo & Nokucushwa',
-  'settings.tab.general': 'Okuvamile & Nenethiwekhi',
-  'settings.tab.security': 'Ukuphepha & Nezikhathi',
   'settings.tab.notifications': 'Izaziso',
   'settings.tab.privacy': 'Ubumfihlo & ne-API',
 

@@ -9,6 +9,7 @@ import { ApiError, tokenStore } from '@/shared/api';
 import { AnimatedSplash } from '@/shared/brand';
 import { DataSaverProvider } from '@/shared/data-saver';
 import { LangProvider } from '@/shared/i18n';
+import { PushRegistration } from '@/shared/push';
 import { SessionProvider, useSession } from '@/shared/session';
 import { ThemeProvider, useTheme } from '@/shared/theme';
 import { ToastProvider } from '@/shared/ui';
@@ -41,6 +42,7 @@ function Navigator() {
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} animated />
+      {isAuthenticated ? <PushRegistration /> : null}
       <Stack
         screenOptions={{
           headerShown: false,
@@ -55,6 +57,7 @@ function Navigator() {
           <Stack.Screen name="compose/post" options={MODAL} />
           <Stack.Screen name="compose/question" options={MODAL} />
           <Stack.Screen name="edit-profile" options={MODAL} />
+          <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', gestureEnabled: false }} />
           <Stack.Screen name="post/[id]" />
           <Stack.Screen name="news/[id]" />
           <Stack.Screen name="question/[id]" />
@@ -62,7 +65,6 @@ function Navigator() {
           <Stack.Screen name="u/[username]" />
           <Stack.Screen name="notifications" />
           <Stack.Screen name="settings/index" />
-          <Stack.Screen name="settings/security" />
           <Stack.Screen name="settings/notifications" />
           <Stack.Screen name="settings/privacy" />
           <Stack.Screen name="settings/language" />

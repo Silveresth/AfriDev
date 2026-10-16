@@ -63,6 +63,35 @@ class AnswerOutputSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField()
 
 
+class HelpAnswerSerializer(serializers.Serializer):
+    """Réponse vue depuis le profil de son auteur (onglet « Q&A & Entraide »)."""
+
+    id = serializers.UUIDField()
+    question_id = serializers.UUIDField()
+    question_title = serializers.CharField()
+    question_is_resolved = serializers.BooleanField()
+    excerpt = serializers.CharField()
+    is_accepted = serializers.BooleanField()
+    score = serializers.IntegerField()
+    created_at = serializers.DateTimeField()
+
+
+def present_help_answers(answers) -> list[dict]:
+    return [
+        {
+            "id": a.id,
+            "question_id": a.question.id,
+            "question_title": a.question.title,
+            "question_is_resolved": a.question.is_resolved,
+            "excerpt": " ".join(a.body.split())[:200],
+            "is_accepted": a.is_accepted,
+            "score": a.score,
+            "created_at": a.created_at,
+        }
+        for a in answers
+    ]
+
+
 class AnswerVoteInputSerializer(serializers.Serializer):
     value = serializers.ChoiceField(choices=[-1, 0, 1])
 

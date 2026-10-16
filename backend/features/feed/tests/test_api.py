@@ -1,4 +1,9 @@
+from datetime import timedelta
+
 import pytest
+from django.utils import timezone
+
+from features.feed.models import Post
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -38,6 +43,9 @@ def test_title_score_vote_and_sorts(auth_client, client_for, other_user, user):
         "/api/feed/", {"title": "Wave en prod", "body": "Retour d'expérience"}, format="json"
     ).data
     new = auth_client.post("/api/feed/", {"title": "Tout neuf"}, format="json").data
+    # Deux posts créés dans la même milliseconde (horloge Windows) n'ont pas d'ordre : on vieillit
+    # l'ancien d'une minute, avant les votes qui recalculent le rang « hot ».
+    Post.objects.filter(id=old["id"]).update(created_at=timezone.now() - timedelta(minutes=1))
     assert old["title"] == "Wave en prod" and old["score"] == 0
 
     other = client_for(other_user)

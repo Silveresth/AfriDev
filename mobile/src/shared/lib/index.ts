@@ -151,6 +151,19 @@ function normalizeInternalPath(pathname: string): string | null {
   return null;
 }
 
+/**
+ * Écran d'une notification d'après data = {type, id} (posts, questions et profils ont un écran
+ * dans l'appli). Partagé par la liste des notifications et l'ouverture d'une notification push.
+ */
+export function notificationRoute(data: unknown): string | null {
+  const { type, id } = (data ?? {}) as { type?: string; id?: string };
+  if (!id) return null;
+  if (type === 'post') return `/post/${id}`;
+  if (type === 'question') return `/question/${id}`;
+  if (type === 'profile') return `/u/${id}`;
+  return null;
+}
+
 /** Ouvre un lien dans l'application si c'est une ressource interne, ou dans le navigateur intégré. */
 export function openLink(url: string) {
   const internalRoute = resolveInternalRoute(url);

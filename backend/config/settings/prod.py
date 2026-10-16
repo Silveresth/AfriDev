@@ -3,10 +3,15 @@ from .base import env
 
 DEBUG = False
 SECRET_KEY = env("DJANGO_SECRET_KEY")
+# Domaine public, plus les noms internes : « backend » (appels du site côté serveur via
+# http://backend:8000) et localhost (healthcheck du conteneur).
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS")
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SECURE_SSL_REDIRECT = True
+# nginx redirige déjà HTTP -> HTTPS. Côté Django, la redirection casserait les appels internes
+# du site (http://backend:8000) : désactivée par défaut.
+SECURE_SSL_REDIRECT = env.bool("DJANGO_SECURE_SSL_REDIRECT", default=False)
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_HSTS_SECONDS = 60 * 60 * 24 * 365

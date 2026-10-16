@@ -2,7 +2,8 @@
 
 import type { Schemas } from '@afridev/api-client';
 
-import { apiFetch } from '@/shared/api';
+import { uploadDirect } from '@/shared/api';
+import { API_URL } from '@/shared/api/config';
 
 export type MediaAsset = Schemas['MediaOutput'];
 export type MediaKind = 'image' | 'video' | 'audio';
@@ -10,15 +11,21 @@ export type MediaKind = 'image' | 'video' | 'audio';
 const MAX_IMAGE_SIDE = 1600;
 const VIDEO_MAX_MB = 50;
 
+/** En dev, l'API sert les fichiers en chemins relatifs (/media/…) ; en production, le CDN R2. */
+export function absoluteMediaUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  return url.startsWith('/') ? `${API_URL}${url}` : url;
+}
+
 /**
- * Recompresse une photo dans le navigateur avant l'envoi (WebP, 1600 px max) :
+ * Recompresse une photo dans le navigateur avant l'envoi (WebP, `maxSide` px max) :
  * une photo de téléphone de 4 Mo passe souvent sous 300 Ko.
  */
-export async function compressImage(file: File): Promise<File> {
+export async function compressImage(file: File, maxSide = MAX_IMAGE_SIDE): Promise<File> {
   if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
   try {
     const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(bitmap.width, bitmap.height));
+    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(bitmap.width * scale);
     canvas.height = Math.round(bitmap.height * scale);
@@ -32,14 +39,28 @@ export async function compressImage(file: File): Promise<File> {
   }
 }
 
-export async function uploadMedia(file: File, kind: MediaKind): Promise<MediaAsset> {
+export async function uploadMedia(file: File, kind: MediaKind, options: { maxSide?: number } = {}): Promise<MediaAsset> {
   if (kind === 'video' && file.size > VIDEO_MAX_MB * 1024 * 1024) {
     throw new Error(`Vidéo trop lourde (${VIDEO_MAX_MB} Mo maximum). Compressez-la avant l'envoi.`);
   }
-  const prepared = kind === 'image' ? await compressImage(file) : file;
-  const form = new FormData();
-  form.append('kind', kind);
-  form.append('file', prepared);
-  const response = await apiFetch('/api/media/', { method: 'POST', body: form });
-  return (await response.json()) as MediaAsset;
+  const prepared = kind === 'image' ? await compressImage(file, options.maxSide) : file;
+  // Envoi direct vers le stockage objet (URL pré-signée) : le fichier ne passe pas par l'API.
+  return uploadDirect({
+    kind,
+    body: prepared,
+    mimeType: prepared.type || 'application/octet-stream',
+    size: prepared.size,
+    filename: prepared.name,
+  });
+}
+
+/**
+ * Photo de profil ou bannière : recompressée à la bonne taille dans le navigateur, puis envoyée
+ * directement vers R2. Renvoie l'URL publique de l'original (déjà léger), utilisable aussitôt.
+ */
+export async function uploadProfileImage(file: File, target: 'avatar' | 'banner'): Promise<string> {
+  const asset = await uploadMedia(file, 'image', { maxSide: target === 'avatar' ? 512 : 1600 });
+  const url = absoluteMediaUrl(asset.original_url);
+  if (!url) throw new Error("L'image n'a pas pu être enregistrée.");
+  return url;
 }

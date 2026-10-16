@@ -11,6 +11,8 @@ class MediaAsset(BaseModel):
         AUDIO = "audio", "Message vocal"
 
     class Status(models.TextChoices):
+        # URL pré-signée délivrée, le client n'a pas encore confirmé l'envoi vers R2.
+        UPLOADING = "uploading", "Envoi en cours"
         PROCESSING = "processing", "En traitement"
         READY = "ready", "Prêt"
         FAILED = "failed", "Échec"
@@ -33,4 +35,12 @@ class MediaAsset(BaseModel):
     error = models.TextField(blank=True)
 
     class Meta:
-        indexes = [models.Index(fields=["owner", "-created_at"])]
+        indexes = [
+            models.Index(fields=["owner", "-created_at"]),
+            # Purge des envois jamais confirmés (commande purge_stale_uploads).
+            models.Index(
+                fields=["created_at"],
+                name="media_uploading_idx",
+                condition=models.Q(status="uploading"),
+            ),
+        ]

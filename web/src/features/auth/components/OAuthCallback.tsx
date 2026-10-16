@@ -8,9 +8,9 @@ import { errorMessage } from '@/shared/api';
 import { useSession } from '@/shared/session';
 import { buttonClasses, ErrorNotice, Spinner } from '@/shared/ui';
 
-import { afterLogin, authApi, completeAuth, consumeOAuthState, oauthRedirectUri } from '../api';
+import { afterLogin, authApi, completeAuth, consumeOAuthReturn } from '../api';
 
-/** Retour de GitHub / GitLab : échange du code contre une session AfriDev. */
+/** Retour de Google / GitHub (via le rebond de l'API) : échange du code contre une session. */
 export function OAuthCallback() {
   const params = useSearchParams();
   const router = useRouter();
@@ -22,23 +22,23 @@ export function OAuthCallback() {
     if (started.current) return; // le code OAuth n'est valable qu'une fois
     started.current = true;
     void (async () => {
-      const code = params.get('code');
-      const provider = consumeOAuthState(params.get('state'));
       if (params.get('error')) {
-        setError('Connexion annulée chez le fournisseur.');
+        setError(params.get('error') === 'access_denied' ? 'Connexion annulée chez le fournisseur.' : `Connexion refusée : ${params.get('error')}`);
         return;
       }
-      if (!code || !provider) {
+      const ticket = consumeOAuthReturn(params);
+      if (!ticket) {
         setError('Lien de connexion invalide ou expiré. Recommencez depuis la page de connexion.');
         return;
       }
       try {
-        const response = await authApi.oauth(provider, code, oauthRedirectUri());
+        const response = await authApi.oauth(ticket.provider, ticket.code, ticket.redirectUri);
         if (!completeAuth(response, signIn)) {
           router.replace('/verify-2fa');
           return;
         }
-        router.replace(response.created ? '/profile?welcome=1' : afterLogin.take());
+        // Nouveau compte : l'assistant d'accueil s'ouvre de lui-même (needs_onboarding).
+        router.replace(afterLogin.take());
       } catch (e) {
         setError(errorMessage(e));
       }
@@ -59,7 +59,7 @@ export function OAuthCallback() {
     );
   }
   return (
-    <p className="flex items-center gap-3 text-body-lg text-ink-muted" role="status">
+    <p className="flex items-center gap-3 text-body-lg text-white/80" role="status">
       <Spinner /> Connexion en cours…
     </p>
   );

@@ -1,7 +1,22 @@
+import { SOCIAL_NETWORK_KEYS, type SocialNetwork, socialLinksSchema } from '@afridev/validation';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { BriefcaseBusiness, Check, GitBranch, Globe, MapPin, Plus, UserRound, X } from 'lucide-react-native';
+import {
+  BriefcaseBusiness,
+  Camera,
+  Check,
+  GitBranch,
+  Globe,
+  ImagePlus,
+  type LucideIcon,
+  MapPin,
+  Plus,
+  Trash2,
+  UserRound,
+  X,
+} from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, {
   FadeInDown,
   interpolateColor,
@@ -13,7 +28,7 @@ import Animated, {
   ZoomOut,
 } from 'react-native-reanimated';
 
-import { errorMessage } from '@/shared/api';
+import { absoluteUrl, errorMessage } from '@/shared/api';
 import { PROFILE_COLORS, type ProfileColor, profileColor } from '@/shared/lib';
 import { type Key, useT } from '@/shared/i18n';
 import { haptic, PressableScale } from '@/shared/motion';
@@ -22,6 +37,8 @@ import { radius, typography, useTheme } from '@/shared/theme';
 import { Avatar, Button, Header, Loading, Switch, Text, TextField, useToast } from '@/shared/ui';
 
 import { type MyProfile, useUpdateProfile, WORK_PREFERENCES, type WorkPreference } from './api';
+import { PhotoAccessDenied, pickProfileImage } from './pickImage';
+import { SOCIAL_META } from './social';
 
 const SUGGESTIONS = ['python', 'django', 'react', 'react-native', 'flutter', 'node', 'go', 'laravel'];
 
@@ -36,9 +53,31 @@ function Group({ title, index, children }: { title: string; index: number; child
   );
 }
 
-/** Aperçu de la bannière : la couleur glisse vers la nouvelle teinte choisie. */
-function BannerPreview({ color, name, avatar }: { color: string; name: string; avatar?: string }) {
+/**
+ * Bannière (3:1) et avatar modifiables d'un toucher : aperçu local immédiat, puis envoi direct
+ * vers R2 de la version réduite et recompressée sur le téléphone. La couleur glisse vers la
+ * nouvelle teinte choisie quand il n'y a pas de bannière.
+ */
+function MediaPicker({
+  color,
+  name,
+  avatarUrl,
+  bannerUrl,
+  onChange,
+  onBusyChange,
+}: {
+  color: string;
+  name: string;
+  avatarUrl: string;
+  bannerUrl: string;
+  onChange: (changes: { avatar_url?: string; banner_url?: string }) => void;
+  onBusyChange: (busy: boolean) => void;
+}) {
   const { colors } = useTheme();
+  const toast = useToast();
+  const { t } = useT();
+  const [previews, setPreviews] = useState<{ avatar?: string; banner?: string }>({});
+  const [busy, setBusy] = useState<{ avatar: boolean; banner: boolean }>({ avatar: false, banner: false });
   const previous = useSharedValue(color);
   const next = useSharedValue(color);
   const progress = useSharedValue(1);
@@ -48,15 +87,110 @@ function BannerPreview({ color, name, avatar }: { color: string; name: string; a
     progress.value = 0;
     progress.value = withTiming(1, { duration: 350 });
   }, [color, next, previous, progress]);
+  useEffect(() => onBusyChange(busy.avatar || busy.banner), [busy, onBusyChange]);
   const style = useAnimatedStyle(() => ({ backgroundColor: interpolateColor(progress.value, [0, 1], [previous.value, next.value]) }));
+
+  const pick = async (target: 'avatar' | 'banner') => {
+    try {
+      const picked = await pickProfileImage(target);
+      if (!picked) return;
+      haptic.select();
+      setPreviews((current) => ({ ...current, [target]: picked.preview }));
+      setBusy((current) => ({ ...current, [target]: true }));
+      try {
+        const url = await picked.upload;
+        onChange(target === 'avatar' ? { avatar_url: url } : { banner_url: url });
+      } catch (error) {
+        setPreviews((current) => ({ ...current, [target]: undefined }));
+        toast(errorMessage(error), 'error');
+      } finally {
+        setBusy((current) => ({ ...current, [target]: false }));
+      }
+    } catch (error) {
+      toast(error instanceof PhotoAccessDenied ? t('edit.photo_denied') : errorMessage(error), 'error');
+    }
+  };
+
+  const banner = previews.banner ?? absoluteUrl(bannerUrl);
   return (
-    <Animated.View style={[styles.banner, style]}>
-      <View style={[styles.bannerAvatar, { backgroundColor: colors.background }]}>
-        <Avatar name={name} src={avatar} color={color} size={44} />
+    <View style={styles.gap}>
+      <View style={styles.mediaWrap}>
+        <PressableScale scaleTo={0.98} accessibilityLabel={t('edit.change_banner')} onPress={() => void pick('banner')}>
+          <Animated.View style={[styles.banner, style]}>
+            {banner ? <Image source={{ uri: banner }} style={StyleSheet.absoluteFill} contentFit="cover" /> : null}
+            <View style={styles.bannerBadge}>
+              {busy.banner ? <ActivityIndicator size="small" color="#FFFFFF" /> : <ImagePlus size={16} color="#FFFFFF" />}
+            </View>
+          </Animated.View>
+        </PressableScale>
+        <PressableScale
+          scaleTo={0.94}
+          accessibilityLabel={t('edit.change_avatar')}
+          onPress={() => void pick('avatar')}
+          style={[styles.bannerAvatar, { backgroundColor: colors.background }]}
+        >
+          <Avatar name={name} src={previews.avatar ?? avatarUrl} color={color} size={72} />
+          <View style={styles.avatarBadge}>
+            {busy.avatar ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Camera size={14} color="#FFFFFF" />}
+          </View>
+        </PressableScale>
       </View>
-    </Animated.View>
+      {bannerUrl && !busy.banner ? (
+        <Button
+          label={t('edit.remove_banner')}
+          icon={Trash2}
+          variant="ghost"
+          size="sm"
+          onPress={() => {
+            setPreviews((current) => ({ ...current, banner: undefined }));
+            onChange({ banner_url: '' });
+          }}
+          style={styles.removeBanner}
+        />
+      ) : null}
+      <Text variant="caption" tone="faint">
+        {t('edit.media_hint')}
+      </Text>
+    </View>
   );
 }
+
+/** Un champ par réseau ; la validation (https + domaine) est celle de l'API (packages/validation). */
+function SocialFields({
+  value,
+  errors,
+  onChange,
+}: {
+  value: SocialForm;
+  errors: Partial<Record<SocialNetwork, string>>;
+  onChange: (network: SocialNetwork, url: string) => void;
+}) {
+  return (
+    <View style={styles.gap}>
+      {SOCIAL_NETWORK_KEYS.map((network) => {
+        const { label, icon, placeholder } = SOCIAL_META[network];
+        return (
+          <TextField
+            key={network}
+            label={label}
+            // Le logo X (SVG) accepte les mêmes props size / color qu'une icône lucide.
+            icon={icon as LucideIcon}
+            value={value[network]}
+            onChangeText={(url) => onChange(network, url.trim())}
+            placeholder={placeholder}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            maxLength={200}
+            error={errors[network]}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
+type SocialForm = Record<SocialNetwork, string>;
 
 function StackInput({ value, onChange }: { value: string[]; onChange: (stack: string[]) => void }) {
   const { colors } = useTheme();
@@ -140,7 +274,14 @@ function EditForm({ profile }: { profile: MyProfile }) {
   const update = useUpdateProfile();
   const toast = useToast();
   const { t } = useT();
+  const [uploading, setUploading] = useState(false);
+  const [social, setSocial] = useState<SocialForm>(
+    () => Object.fromEntries(SOCIAL_NETWORK_KEYS.map((key) => [key, profile.social_links?.[key] ?? ''])) as SocialForm,
+  );
+  const [socialErrors, setSocialErrors] = useState<Partial<Record<SocialNetwork, string>>>({});
   const [form, setForm] = useState({
+    avatar_url: profile.avatar_url,
+    banner_url: profile.banner_url,
     display_name: profile.display_name,
     bio: profile.bio,
     location: profile.location,
@@ -157,8 +298,19 @@ function EditForm({ profile }: { profile: MyProfile }) {
   const accent = PROFILE_COLORS[form.accent_color].hex;
 
   const save = async () => {
+    if (uploading) return;
+    const parsed = socialLinksSchema.safeParse(social);
+    if (!parsed.success) {
+      setSocialErrors(
+        Object.fromEntries(parsed.error.issues.map((issue) => [issue.path[0], issue.message])) as Partial<Record<SocialNetwork, string>>,
+      );
+      toast(t('common.error'), 'error');
+      return;
+    }
+    setSocialErrors({});
     try {
-      await update.mutateAsync(form);
+      // Les réseaux vides sont envoyés vides : l'API les retire.
+      await update.mutateAsync({ ...form, social_links: social });
       toast(t('edit.saved'));
       router.back();
     } catch (error) {
@@ -171,11 +323,30 @@ function EditForm({ profile }: { profile: MyProfile }) {
       <Header
         title={t('edit.title')}
         close
-        right={<Button label={t('common.save')} size="sm" loading={update.isPending} onPress={save} style={styles.save} />}
+        right={
+          <Button
+            label={uploading ? t('edit.uploading') : t('common.save')}
+            size="sm"
+            loading={update.isPending}
+            disabled={uploading}
+            onPress={save}
+            style={styles.save}
+          />
+        }
       />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <Group title={t('edit.media')} index={0}>
+          <MediaPicker
+            color={accent}
+            name={form.display_name || profile.username}
+            avatarUrl={form.avatar_url}
+            bannerUrl={form.banner_url}
+            onChange={(changes) => setForm((current) => ({ ...current, ...changes }))}
+            onBusyChange={setUploading}
+          />
+        </Group>
+
         <Group title={t('settings.appearance.title')} index={0}>
-          <BannerPreview color={accent} name={form.display_name || profile.username} avatar={profile.avatar_url} />
           <Text variant="smallStrong">
             {t('edit.color')} <Text tone="muted">· {t(`color.${form.accent_color}` as Key)}</Text>
           </Text>
@@ -241,6 +412,13 @@ function EditForm({ profile }: { profile: MyProfile }) {
             autoCapitalize="none"
             keyboardType="url"
           />
+        </Group>
+
+        <Group title={t('edit.social')} index={2}>
+          <Text variant="caption" tone="muted">
+            {t('edit.social_hint')}
+          </Text>
+          <SocialFields value={social} errors={socialErrors} onChange={(network, url) => setSocial((current) => ({ ...current, [network]: url }))} />
         </Group>
 
         <Group title={t('profile.skills')} index={3}>
@@ -312,7 +490,7 @@ function EditForm({ profile }: { profile: MyProfile }) {
             {errorMessage(update.error)}
           </Text>
         ) : null}
-        <Button label={t('edit.save')} block loading={update.isPending} onPress={save} />
+        <Button label={uploading ? t('edit.uploading') : t('edit.save')} block loading={update.isPending} disabled={uploading} onPress={save} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -331,8 +509,32 @@ const styles = StyleSheet.create({
   groupTitle: { letterSpacing: 0.6 },
   gap: { gap: 10 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  banner: { height: 84, borderRadius: radius.lg, justifyContent: 'flex-end', padding: 10 },
-  bannerAvatar: { alignSelf: 'flex-start', padding: 3, borderRadius: 28 },
+  mediaWrap: { paddingBottom: 40 },
+  banner: { aspectRatio: 3, borderRadius: radius.lg, overflow: 'hidden' },
+  bannerBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  bannerAvatar: { position: 'absolute', left: 14, bottom: 0, padding: 4, borderRadius: 40 },
+  avatarBadge: {
+    position: 'absolute',
+    right: 2,
+    bottom: 2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  removeBanner: { alignSelf: 'flex-end' },
   colors: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   swatchRing: { padding: 2, borderRadius: 20, borderWidth: 2 },
   swatch: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },

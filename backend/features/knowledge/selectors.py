@@ -46,7 +46,13 @@ def semantic_search(
     """Recherche par le sens : un résultat par document, du plus proche au plus lointain."""
     if not query.strip():
         return []
-    vector = embeddings.embed_one(query, input_type="query")
+    try:
+        vector = embeddings.embed_one(query, input_type="query")
+    except embeddings.EmbeddingError:
+        # Voyage indisponible : pas de résultats plutôt qu'une erreur 500 (le RAG répond alors
+        # sans sources).
+        logger.warning("Embeddings indisponibles : recherche par le sens ignorée.")
+        return []
     chunks = Chunk.objects.select_related("document").filter(document__deleted_at__isnull=True)
     if source_types:
         chunks = chunks.filter(document__source_type__in=source_types)

@@ -68,9 +68,6 @@ const wo: LocaleMessages = {
   // ── Settings ──
   'settings.title': 'Parametar',
   'settings.subtitle': 'Saytu sa gën-gën yi, tëralinu données yi, kaarange ak yëg-yëg yi.',
-  'settings.badge': 'Gën-gën ak Configuration',
-  'settings.tab.general': 'Mbir yu amal ak Réseau',
-  'settings.tab.security': 'Kaarange ak Sessions',
   'settings.tab.notifications': 'Yëg-yëg',
   'settings.tab.privacy': 'Sutura ak API',
 

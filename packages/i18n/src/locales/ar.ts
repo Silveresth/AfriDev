@@ -68,9 +68,6 @@ const ar: LocaleMessages = {
   // ── Settings ──
   'settings.title': 'الإعدادات',
   'settings.subtitle': 'إدارة تفضيلات العرض وتوفير البيانات والأمان والإشعارات.',
-  'settings.badge': 'التفضيلات والتكوين',
-  'settings.tab.general': 'عام والشبكة',
-  'settings.tab.security': 'الأمان والجلسات',
   'settings.tab.notifications': 'الإشعارات',
   'settings.tab.privacy': 'الخصوصية وAPI',
 

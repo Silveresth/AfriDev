@@ -7,6 +7,7 @@ from .client import (
     complete,
     complete_json,
     groq_client,
+    is_configured,
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "complete",
     "complete_json",
     "groq_client",
+    "is_configured",
 ]

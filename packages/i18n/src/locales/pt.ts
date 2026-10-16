@@ -68,9 +68,6 @@ const pt: LocaleMessages = {
   // ── Settings ──
   'settings.title': 'Definições',
   'settings.subtitle': 'Gira preferências de visualização, poupança de dados, segurança e notificações.',
-  'settings.badge': 'Preferências e Configuração',
-  'settings.tab.general': 'Geral e Rede',
-  'settings.tab.security': 'Segurança e Sessões',
   'settings.tab.notifications': 'Notificações',
   'settings.tab.privacy': 'Privacidade e API',
 

@@ -10,6 +10,7 @@ export {
   type AfriDevClient,
   ApiError,
   createAfriDevClient,
+  type DirectUploadFile,
   errorMessage,
   networkError,
   toApiError,

@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { ArrowBigUp, MessageSquare } from 'lucide-react-native';
+import { ThumbsUp, MessageSquare } from 'lucide-react-native';
 import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -83,7 +83,7 @@ export const NewsRow = memo(function NewsRow({ item }: { item: NewsItem }) {
         <View style={styles.stats}>
           {item.score !== null ? (
             <View style={styles.stat}>
-              <ArrowBigUp size={16} color={colors.inkFaint} />
+              <ThumbsUp size={16} color={colors.inkFaint} />
               <Text variant="caption" tone="faint">
                 {formatCount(item.score)}
               </Text>

@@ -44,8 +44,10 @@ class FakeLLM:
 
 
 @pytest.fixture
-def fake_llm(monkeypatch):
+def fake_llm(monkeypatch, settings):
     fake = FakeLLM()
+    # Clé factice : les fonctions IA se croient configurées (_create est faux, aucun réseau).
+    settings.GROQ_API_KEY = "test-key"
     monkeypatch.setattr("integrations.llm.client._create", fake)
     return fake
 

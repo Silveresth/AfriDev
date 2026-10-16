@@ -1,6 +1,8 @@
 """Lectures. Seul point d'entrée en lecture pour les autres features."""
 
-from django.db.models import Count, Q, QuerySet
+from django.db.models import Count, Q, QuerySet, Sum
+
+from core.utils import keyset_before
 
 from .models import Issue, Project
 
@@ -47,6 +49,56 @@ def open_issue_counts(*, project_ids) -> dict:
         .annotate(total=Count("id"))
     )
     return {row["project_id"]: row["total"] for row in rows}
+
+
+def home_candidates(*, before=None, limit: int, author_ids=None) -> list[dict]:
+    """Projets open source récents pour le fil d'accueil (index -created_at)."""
+    projects = list_projects()
+    if author_ids is not None:
+        projects = projects.filter(owner_id__in=list(author_ids))
+    rows = keyset_before(projects, "created_at", before).only(
+        "id",
+        "name",
+        "description",
+        "tags",
+        "owner_id",
+        "created_at",
+        "stars",
+        "language",
+        "is_recruiting",
+        "repo_url",
+    )[:limit]
+    return [
+        {
+            "type": "project",
+            "id": p.id,
+            "title": p.name,
+            "excerpt": " ".join(p.description.split())[:220],
+            "tags": list(p.tags or []),
+            "author_id": p.owner_id,
+            "sort_at": p.created_at,
+            "url": f"/projects/{p.id}",
+            "popularity": p.stars,
+            "meta": {
+                "stars": p.stars,
+                "language": p.language,
+                "is_recruiting": p.is_recruiting,
+                "repo_url": p.repo_url,
+            },
+        }
+        for p in rows
+    ]
+
+
+def stars_received(*, owner_id) -> int:
+    """Étoiles GitHub cumulées de ses projets open-source (badge « Lead Contributor »)."""
+    total = (
+        Project.objects.alive()
+        .filter(owner_id=owner_id)
+        .exclude(repo_url="")
+        .aggregate(total=Sum("stars"))["total"]
+    )
+    return total or 0
 
 
 def project_stats(*, since) -> dict:

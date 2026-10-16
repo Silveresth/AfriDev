@@ -80,8 +80,9 @@ uv run python manage.py runserver
 *(Optionnel)* Pour lancer le worker Celery en local :
 ```bash
 cd backend
-uv run celery -A config worker -l info
+uv run celery -A config worker -l info -Q default,ai,sms,github
 ```
+Sans `-Q`, le worker n'écoute que la file `default` : les fonctions IA, les SMS et la synchro GitHub resteraient en attente.
 
 ### 3. Frontend Web et Mobile (depuis la racine)
 ```bash

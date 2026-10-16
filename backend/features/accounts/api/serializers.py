@@ -169,5 +169,21 @@ class OAuthInputSerializer(serializers.Serializer):
     redirect_uri = serializers.URLField(required=False)
 
 
+class UsernameStatusSerializer(serializers.Serializer):
+    available = serializers.BooleanField()
+    reason = serializers.CharField(allow_blank=True)
+    suggestion = serializers.CharField(allow_blank=True)
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField(max_length=64)
+    token = serializers.CharField(max_length=128)
+    password = serializers.CharField(write_only=True, min_length=8)
+
+
 class OAuthProvidersSerializer(serializers.Serializer):
     providers = serializers.ListField(child=serializers.ChoiceField(["github", "google", "gitlab"]))

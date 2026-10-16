@@ -1,5 +1,6 @@
 export type { Question } from './api';
 export { AskQuestionScreen } from './components/AskQuestionScreen';
+export { AuthorHelp } from './components/AuthorAnswers';
 export { AuthorQuestions } from './components/AuthorQuestions';
 export { QuestionDetail } from './components/QuestionDetail';
 export { HubQuestions } from './components/HubQuestions';

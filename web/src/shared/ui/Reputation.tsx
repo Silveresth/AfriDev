@@ -2,19 +2,22 @@ import { Award, Sparkles } from 'lucide-react';
 
 import { cn, formatCount } from '@/shared/lib';
 
-/** Karma compact (« ✦ 1,2 k »), avec le barème au survol. */
+/** Craft Score compact (« ✦ 1,2 k »), avec le barème au survol. */
 export function KarmaPill({ karma, className }: { karma: number; className?: string }) {
   return (
     <span
-      title={`${karma} points de karma (+5 par vote ↑, +15 par réponse acceptée, +10 par snippet enregistré)`}
+      title={`Craft Score : ${karma} points (Entraide : +5 par pouce levé sur une réponse, +15 par réponse acceptée · Création : +5 par pouce levé sur un post, +10 par snippet mis en favori)`}
       className={cn('inline-flex shrink-0 items-center gap-0.5 font-medium text-tertiary tabular-nums', className)}
     >
       <Sparkles className="size-3" aria-hidden />
       {formatCount(karma)}
-      <span className="sr-only">points de karma</span>
+      <span className="sr-only">points de Craft</span>
     </span>
   );
 }
+
+/** Alias explicite : le « karma » est devenu le Craft Score. */
+export const CraftPill = KarmaPill;
 
 /** Badge tech (« Expert Python », « Top 5 % Entraide »). */
 export function TechBadge({ label, className }: { label: string; className?: string }) {

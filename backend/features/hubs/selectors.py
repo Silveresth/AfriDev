@@ -24,6 +24,36 @@ def list_hubs(
     return hubs
 
 
+def suggested_hubs(*, tags, user_id=None, limit: int = 6) -> list[dict]:
+    """Hubs dont le nom, le slug ou la description évoque l'un des tags (les plus actifs
+    d'abord), hors hubs déjà rejoints ; à défaut, les plus populaires."""
+    hubs = Hub.objects.alive()
+    if user_id:
+        hubs = hubs.exclude(memberships__user_id=user_id)
+    matching = Q()
+    for tag in list(tags or [])[:12]:
+        matching |= Q(slug__icontains=tag) | Q(name__icontains=tag) | Q(description__icontains=tag)
+    picked = list(hubs.filter(matching).order_by("-member_count")[:limit]) if matching else []
+    if len(picked) < limit:
+        picked += list(
+            hubs.exclude(id__in=[hub.id for hub in picked]).order_by("-member_count")[
+                : limit - len(picked)
+            ]
+        )
+    return [
+        {
+            "id": hub.id,
+            "slug": hub.slug,
+            "name": hub.name,
+            "icon": hub.icon,
+            "description": hub.description[:140],
+            "member_count": hub.member_count,
+            "is_verified": hub.is_verified,
+        }
+        for hub in picked
+    ]
+
+
 def get_hub_by_slug(*, slug: str) -> Hub | None:
     return Hub.objects.alive().filter(slug=slug.lower()).first()
 

@@ -3,11 +3,10 @@
 import { ImageIcon, Play } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import { API_URL } from '@/shared/api/config';
 import { useDataSaver } from '@/shared/data-saver';
 import { cn, thumbhashToDataUrl } from '@/shared/lib';
 
-import type { MediaAsset } from './upload';
+import { absoluteMediaUrl as absolute, type MediaAsset } from './upload';
 
 /**
  * Affichage économe d'un média :
@@ -15,12 +14,6 @@ import type { MediaAsset } from './upload';
  * - en mode « Texte seul », rien n'est téléchargé avant un toucher explicite ;
  * - la vidéo ne démarre jamais seule et hls.js n'est chargé qu'au clic.
  */
-/** L'API sert les fichiers en chemins relatifs (/media/…) : ils vivent sur l'API, pas sur le site. */
-function absolute(url: string | null | undefined): string | undefined {
-  if (!url) return undefined;
-  return url.startsWith('/') ? `${API_URL}${url}` : url;
-}
-
 function withAbsoluteUrls(media: MediaAsset): MediaAsset {
   const urls = Object.fromEntries(Object.entries(media.urls).map(([key, url]) => [key, absolute(url)]));
   return { ...media, original_url: absolute(media.original_url) ?? media.original_url, urls: urls as MediaAsset['urls'] };

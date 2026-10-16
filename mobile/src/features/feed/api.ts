@@ -20,6 +20,8 @@ export interface FeedFilters {
   sort?: FeedSort;
   hub?: string;
   author?: string;
+  /** Seulement les posts portant une vidéo (onglet « Vidéos & Tutos » du profil). */
+  media?: 'video' | 'image';
 }
 
 export const feedKeys = {
@@ -29,9 +31,11 @@ export const feedKeys = {
   comments: (id: string) => ['feed', 'post', id, 'comments'] as const,
 };
 
-export function useFeed(filters: FeedFilters = {}) {
-  return useInfiniteList(feedKeys.list(filters), (cursor) =>
-    unwrap(api.GET('/api/feed/', { params: { query: { cursor, ...filters } } })),
+export function useFeed(filters: FeedFilters = {}, options: { enabled?: boolean } = {}) {
+  return useInfiniteList(
+    feedKeys.list(filters),
+    (cursor) => unwrap(api.GET('/api/feed/', { params: { query: { cursor, ...filters } } })),
+    options,
   );
 }
 
@@ -67,9 +71,32 @@ function replacePost(queryClient: QueryClient, post: Post) {
         }
       : data,
   );
+  // Fil d'accueil mixte : le post y est imbriqué dans { type: 'post', post }.
+  queryClient.setQueriesData<InfiniteData<Page<HomeItem>>>({ queryKey: ['feed', 'home'] }, (data) =>
+    data
+      ? {
+          ...data,
+          pages: data.pages.map((page) => ({
+            ...page,
+            results: page.results.map((item) => (item.type === 'post' && item.id === post.id ? { ...item, post } : item)),
+          })),
+        }
+      : data,
+  );
 }
 
-/** Vote ↑ (1), ↓ (-1) ou retrait (0) : affiché tout de suite, corrigé par la réponse. */
+export type HomeItem = Schemas['HomeItem'];
+export type HomeFilter = 'all' | 'posts' | 'questions' | 'snippets' | 'projects' | 'jobs';
+export type HomeScope = 'for_you' | 'following';
+
+/** Fil d'accueil mixte (posts, entraide, snippets, projets, offres), classé selon les préférences. */
+export function useHomeFeed(filter: HomeFilter, scope: HomeScope) {
+  return useInfiniteList(['feed', 'home', filter, scope], (cursor) =>
+    unwrap(api.GET('/api/feed/home/', { params: { query: { cursor, filter, scope } } })),
+  );
+}
+
+/** Pouce levé (1), baissé (-1) ou retrait (0) : affiché tout de suite, corrigé par la réponse. */
 export function useScoreVote(post: Post) {
   const queryClient = useQueryClient();
   return useMutation({

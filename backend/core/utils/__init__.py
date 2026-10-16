@@ -37,3 +37,16 @@ def normalize_tags(tags: Any, *, limit: int = 8) -> list[str]:
         if cleaned and cleaned not in seen:
             seen.append(cleaned)
     return seen[:limit]
+
+
+def keyset_before(queryset, field: str, before):
+    """Pagination par clé (date, id) : éléments situés après `before` = (date, id), du plus
+    récent au plus ancien. Contrairement à « date < x », deux lignes de même date ne sont
+    jamais sautées ni répétées en limite de page."""
+    from django.db.models import Q
+
+    ordered = queryset.order_by(f"-{field}", "-id")
+    if not before:
+        return ordered
+    at, pk = before
+    return ordered.filter(Q(**{f"{field}__lt": at}) | Q(**{field: at, "id__lt": pk}))

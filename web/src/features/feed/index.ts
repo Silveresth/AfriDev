@@ -1,7 +1,11 @@
 export type { Post, NewsItem, NewsFilter } from './api';
 export { AuthorPosts } from './components/AuthorPosts';
+export { AuthorVideos } from './components/AuthorVideos';
 export { CommunityNav, PopularCommunitiesCard, TrendingCard } from './components/Communities';
 export { FeedScreen } from './components/FeedScreen';
+export { HomeCard } from './components/HomeCard';
+export { NewsScreen } from './components/NewsScreen';
+export { TechNewsCard } from './components/TechNewsCard';
 export { HubPosts } from './components/HubPosts';
 export { PostCard } from './components/PostCard';
 export { PostDetail } from './components/PostDetail';

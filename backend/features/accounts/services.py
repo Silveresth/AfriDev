@@ -198,6 +198,70 @@ def login_with_oauth(*, provider: str, code: str, redirect_uri: str | None = Non
     return user, created
 
 
+# ── Pseudo disponible, mot de passe oublié ──
+
+
+def username_status(username: str) -> dict:
+    """Vérification en direct pendant l'inscription : {available, reason, suggestion}."""
+    try:
+        validate_username(username)
+    except ConflictError:
+        return {
+            "available": False,
+            "reason": "Ce nom d'utilisateur est déjà pris.",
+            "suggestion": _unique_username(username),
+        }
+    except DomainError as exc:
+        return {"available": False, "reason": exc.message, "suggestion": ""}
+    return {"available": True, "reason": "", "suggestion": ""}
+
+
+def request_password_reset(*, email: str) -> None:
+    """Envoie un lien signé (valable PASSWORD_RESET_TIMEOUT). Toujours silencieux : la réponse
+    ne révèle jamais si l'adresse correspond à un compte."""
+    from django.conf import settings
+    from django.contrib.auth.tokens import default_token_generator
+    from django.utils.encoding import force_bytes
+    from django.utils.http import urlsafe_base64_encode
+
+    from .tasks import send_password_reset_email
+
+    user = User.objects.filter(email__iexact=(email or "").strip(), is_active=True).first()
+    if user is None:
+        return
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    link = f"{settings.PUBLIC_WEB_URL.rstrip('/')}/reset-password?uid={uid}&token={token}"
+    transaction.on_commit(lambda: send_password_reset_email.delay(user.email, link))
+
+
+@transaction.atomic
+def reset_password(*, uid: str, token: str, password: str) -> User:
+    """Nouveau mot de passe ; toutes les sessions ouvertes sont révoquées."""
+    from django.contrib.auth.tokens import default_token_generator
+    from django.utils.encoding import force_str
+    from django.utils.http import urlsafe_base64_decode
+
+    from .security import revoke_other_sessions
+
+    try:
+        user = User.objects.filter(pk=force_str(urlsafe_base64_decode(uid))).first()
+    except (ValueError, DjangoValidationError):
+        user = None
+    if user is None or not default_token_generator.check_token(user, token):
+        raise DomainError("Lien invalide ou expiré. Refaites une demande.", code="invalid_reset")
+    try:
+        validate_password(password, user)
+    except DjangoValidationError as exc:
+        raise DomainError(
+            "Mot de passe trop faible.", code="weak_password", details={"password": exc.messages}
+        ) from exc
+    user.set_password(password)
+    user.save(update_fields=["password"])
+    revoke_other_sessions(user=user, current_sid=None)
+    return user
+
+
 # ── Back-office : gestion des membres ──
 
 

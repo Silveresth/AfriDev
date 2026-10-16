@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
 
 import { api, tokenStore, type Tokens, unwrap } from '@/shared/api';
+import { unsubscribeWebPush, WebPushSync } from '@/shared/push';
 
 type User = Schemas['User'];
 type MyProfile = Schemas['MyProfile'];
@@ -52,6 +53,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signOut = useCallback(() => {
+    void unsubscribeWebPush({ server: false });
     tokenStore.set(null);
     queryClient.clear(); // la copie locale contient des données personnelles
   }, [queryClient]);
@@ -67,7 +69,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }),
     [isAuthenticated, me.isPending, me.data, profile.isPending, profile.data, signIn, signOut],
   );
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+  return (
+    <SessionContext.Provider value={value}>
+      <WebPushSync enabled={isAuthenticated} />
+      {children}
+    </SessionContext.Provider>
+  );
 }
 
 export function useSession(): Session {

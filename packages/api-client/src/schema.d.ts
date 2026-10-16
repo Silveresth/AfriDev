@@ -141,7 +141,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Appli mobile : redirige vers GitHub / Google ; le retour passe par OAuthCallbackView. */
+        /**
+         * @description Web et mobile : redirige vers GitHub / Google ; le retour passe par OAuthCallbackView.
+         *
+         *     return_to : <site>/oauth/callback (web) ou afridev:// / exp:// (appli) ;
+         *     nonce : valeur aléatoire gardée par le site, renvoyée telle quelle au retour.
+         */
         get: operations["accounts_oauth_start_retrieve"];
         put?: never;
         post?: never;
@@ -194,6 +199,39 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["accounts_otp_verify_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/accounts/password/reset/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Toujours 202, que l'adresse existe ou non (pas d'énumération des comptes). */
+        post: operations["accounts_password_reset_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/accounts/password/reset/confirm/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["accounts_password_reset_confirm_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -311,6 +349,23 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["accounts_tokens_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/accounts/username-status/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Disponibilité d'un pseudo, vérifiée pendant la saisie du formulaire d'inscription. */
+        get: operations["accounts_username_status_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -661,6 +716,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/feed/home/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Fil d'accueil mixte : posts, questions, snippets, projets et offres (voir feed/home.py). */
+        get: operations["feed_home"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/feed/news/": {
         parameters: {
             query?: never;
@@ -962,6 +1034,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Envoi multipart historique : préférer presign-upload (le fichier ne passe pas par l'API). */
         post: operations["media_create"];
         delete?: never;
         options?: never;
@@ -980,6 +1053,40 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["media_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/media/{asset_id}/complete/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Étape 3 : le client confirme l'envoi ; l'API vérifie l'objet puis lance le traitement. */
+        post: operations["media_complete_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/media/presign-upload/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Étape 1 : réserve le média et délivre l'URL d'envoi direct vers R2. */
+        post: operations["media_presign_upload_create"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1082,6 +1189,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/notifications/devices/unregister/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Désinscrit un appareil mobile à la déconnexion. Sans session : la requête part même si
+         *     les jetons de connexion sont déjà effacés ou expirés, et connaître le jeton Expo ne permet
+         *     que de couper les notifications de cet appareil.
+         */
+        post: operations["notifications_devices_unregister_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/notifications/preferences/": {
         parameters: {
             query?: never;
@@ -1126,6 +1254,41 @@ export interface paths {
         get: operations["notifications_unread_count_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/web-push/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Notifications push du navigateur (Web Push / VAPID). */
+        get: operations["notifications_webpush_config"];
+        put?: never;
+        /** @description Notifications push du navigateur (Web Push / VAPID). */
+        post: operations["notifications_webpush_subscribe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/web-push/unsubscribe/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST plutôt que DELETE : le corps (endpoint) reste décrit dans le schéma OpenAPI. */
+        post: operations["notifications_webpush_unsubscribe"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1200,6 +1363,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/profiles/{username}/follow/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Suivre un membre (idempotent). */
+        post: operations["profiles_follow_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/profiles/{username}/followers/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["profiles_followers_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/profiles/{username}/following/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["profiles_following_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/profiles/{username}/github/": {
         parameters: {
             query?: never;
@@ -1227,6 +1439,23 @@ export interface paths {
         get: operations["profiles_qr.svg_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/profiles/{username}/unfollow/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Ne plus suivre un membre (idempotent). */
+        post: operations["profiles_unfollow_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1265,6 +1494,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/profiles/me/onboarding/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Catalogue de l'écran d'accueil (niveaux, objectifs, thématiques) et choix actuels. */
+        get: operations["profiles_me_onboarding_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/profiles/me/onboarding/skip/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["profiles_me_onboarding_skip_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/profiles/me/pinned/": {
         parameters: {
             query?: never;
@@ -1275,6 +1537,40 @@ export interface paths {
         get?: never;
         /** @description Remplace la liste des contenus épinglés (3 au plus, dans l'ordre donné). */
         put: operations["profiles_me_pinned_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/profiles/me/preferences/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Enregistre les préférences de l'accueil (modifiables ensuite depuis les réglages). */
+        put: operations["profiles_me_preferences_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/profiles/me/suggestions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Membres à suivre et hubs à rejoindre d'après des tags (dernière étape de l'accueil). */
+        get: operations["profiles_me_suggestions_retrieve"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -1354,6 +1650,23 @@ export interface paths {
             cookie?: never;
         };
         get: operations["projects_good_first_issues_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/qa/answers/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Réponses d'un membre (historique d'entraide affiché sur son profil). */
+        get: operations["qa_answers_by_author"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2051,6 +2364,21 @@ export interface components {
          * @enum {string}
          */
         ContractTypeEnum: "cdi" | "cdd" | "freelance" | "stage" | "alternance" | "temps_partiel";
+        /** @description Craft Score global et ses deux jauges (infobulle Entraide vs Création). */
+        Craft: {
+            score: number;
+            /** @description Entraide : votes ↑ sur réponses, réponses acceptées. */
+            help: components["schemas"]["CraftGauge"];
+            /** @description Création : votes ↑ sur posts, favoris de snippets. */
+            creation: components["schemas"]["CraftGauge"];
+            project_stars: number;
+        };
+        CraftGauge: {
+            score: number;
+            breakdown: {
+                [key: string]: number;
+            };
+        };
         CreatedAccessToken: {
             /** Format: uuid */
             id: string;
@@ -2077,6 +2405,13 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        CurrentPreferences: {
+            experience_level: string;
+            goals: string[];
+            topics: string[];
+            stack: string[];
+            learning: string[];
+        };
         Dashboard: {
             period_days: number;
             /** Format: date-time */
@@ -2093,6 +2428,9 @@ export interface components {
             token: string;
             /** @default  */
             platform: components["schemas"]["PlatformEnum"];
+        };
+        DeviceTokenRequest: {
+            token: string;
         };
         Endorsement: {
             skill: string;
@@ -2149,6 +2487,15 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description * `student` - student
+         *     * `junior` - junior
+         *     * `mid` - mid
+         *     * `senior` - senior
+         *     * `founder` - founder
+         * @enum {string}
+         */
+        ExperienceLevelEnum: "student" | "junior" | "mid" | "senior" | "founder";
         Facet: {
             value: string;
             count: number;
@@ -2156,6 +2503,26 @@ export interface components {
         Facets: {
             countries: components["schemas"]["Facet"][];
             technologies: components["schemas"]["Facet"][];
+        };
+        FollowListItem: {
+            /** Format: uuid */
+            id: string;
+            username: string;
+            display_name: string;
+            avatar_url: string;
+            location: string;
+            stack: string[];
+            karma: number;
+            badges: components["schemas"]["Badge"][];
+            /** Format: date-time */
+            followed_at: string;
+            /** @description Le visiteur connecté suit-il ce membre ? */
+            is_following: boolean;
+        };
+        FollowState: {
+            is_following: boolean;
+            followers_count: number;
+            following_count: number;
         };
         GitHubLanguage: {
             name: string;
@@ -2177,6 +2544,17 @@ export interface components {
             language: string;
             stars: number;
         };
+        /**
+         * @description * `learn` - learn
+         *     * `help` - help
+         *     * `job` - job
+         *     * `hire` - hire
+         *     * `collab` - collab
+         *     * `share` - share
+         *     * `watch` - watch
+         * @enum {string}
+         */
+        GoalsEnum: "learn" | "help" | "job" | "hire" | "collab" | "share" | "watch";
         /**
          * @description Sérialiseur de sortie : tous les champs en lecture seule.
          *
@@ -2218,6 +2596,48 @@ export interface components {
         GuideStatusEnum: "pending" | "ready" | "failed";
         Health: {
             status: string;
+        };
+        /** @description Réponse vue depuis le profil de son auteur (onglet « Q&A & Entraide »). */
+        HelpAnswer: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            question_id: string;
+            question_title: string;
+            question_is_resolved: boolean;
+            excerpt: string;
+            is_accepted: boolean;
+            score: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /** @description Question, snippet, projet ou offre, sous une forme commune pour le fil d'accueil. */
+        HomeCard: {
+            title: string;
+            excerpt: string;
+            tags: string[];
+            /** @description Chemin de la page du contenu sur le site. */
+            url: string;
+            author: components["schemas"]["Author"] | null;
+            /** @description question : is_resolved, answer_count · snippet : language, lines · project : stars, language, is_recruiting, repo_url · job : company, location, is_remote, contract_type, salary_range, apply_url */
+            meta: {
+                [key: string]: unknown;
+            };
+        };
+        HomeItem: {
+            type: components["schemas"]["TypeEnum"];
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            created_at: string;
+            /** @description Tags suivis par le visiteur (« Pour vous »). */
+            matched_tags: string[];
+            post: components["schemas"]["PostOutput"] | null;
+            card: components["schemas"]["HomeCard"] | null;
+        };
+        HomePage: {
+            next: string | null;
+            results: components["schemas"]["HomeItem"][];
         };
         HubInputRequest: {
             name: string;
@@ -2344,6 +2764,7 @@ export interface components {
          * @enum {string}
          */
         JobStatusEnum: "pending" | "done" | "failed";
+        /** @description Ancien format (déprécié) : préférer `craft`. */
         KarmaDetails: {
             /** @default 0 */
             upvotes: number;
@@ -2393,12 +2814,13 @@ export interface components {
             };
         };
         /**
-         * @description * `processing` - En traitement
+         * @description * `uploading` - Envoi en cours
+         *     * `processing` - En traitement
          *     * `ready` - Prêt
          *     * `failed` - Échec
          * @enum {string}
          */
-        MediaStatusEnum: "processing" | "ready" | "failed";
+        MediaStatusEnum: "uploading" | "processing" | "ready" | "failed";
         MediaUploadRequest: {
             kind: components["schemas"]["MediaKindEnum"];
             /** Format: binary */
@@ -2483,6 +2905,8 @@ export interface components {
             readonly display_name: string;
             readonly bio: string;
             readonly avatar_url: string;
+            readonly banner_url: string;
+            readonly social_links: components["schemas"]["SocialLinks"];
             readonly stack: string[];
             readonly github_username: string;
             readonly location: string;
@@ -2493,12 +2917,30 @@ export interface components {
             readonly daily_rate: string;
             readonly availability_note: string;
             readonly pinned: components["schemas"]["PinnedItem"][];
+            readonly craft_score: number;
+            readonly craft: components["schemas"]["Craft"];
             /** Format: int64 */
             readonly karma_score: number;
             readonly karma_details: components["schemas"]["KarmaDetails"];
             readonly badges: components["schemas"]["ProfileBadge"][];
+            /** Format: int64 */
+            readonly followers_count: number;
+            /** Format: int64 */
+            readonly following_count: number;
+            /** @description Le visiteur connecté suit-il ce membre ? (faux pour soi-même et les anonymes) */
+            readonly is_following: boolean;
             /** Format: date-time */
             readonly created_at: string;
+            readonly experience_level: string;
+            readonly goals: string[];
+            readonly interests: string[];
+            /** Format: date-time */
+            readonly onboarded_at: string | null;
+            /** @description Vrai tant que l'accueil n'est ni terminé ni passé (affiché sur web et mobile). */
+            readonly needs_onboarding: boolean;
+            readonly feed_mix: {
+                [key: string]: number;
+            };
             readonly ai_bio_suggestion: string;
             readonly ai_bio_status: components["schemas"]["AiBioStatusEnum"];
             /** Format: date-time */
@@ -2557,9 +2999,10 @@ export interface components {
          *     * `guide_ready` - Guide d'onboarding prêt
          *     * `application_received` - Nouvelle candidature
          *     * `application_answered` - Réponse à une candidature
+         *     * `new_follower` - Nouvel abonné
          * @enum {string}
          */
-        NotificationKindEnum: "new_comment" | "comment_reply" | "post_liked" | "new_answer" | "answer_accepted" | "ai_answer_ready" | "snippet_flagged" | "content_hidden" | "guide_ready" | "application_received" | "application_answered";
+        NotificationKindEnum: "new_comment" | "comment_reply" | "post_liked" | "new_answer" | "answer_accepted" | "ai_answer_ready" | "snippet_flagged" | "content_hidden" | "guide_ready" | "application_received" | "application_answered" | "new_follower";
         /** @enum {unknown} */
         NullEnum: null;
         OAuthInputRequest: {
@@ -2581,6 +3024,22 @@ export interface components {
             phone_number: string;
             code: string;
         };
+        /** @description Tout ce que l'écran d'accueil affiche : catalogue, choix actuels, stack GitHub détectée. */
+        Onboarding: {
+            base_mix: {
+                [key: string]: number;
+            };
+            levels: components["schemas"]["WeightedChoice"][];
+            goals: components["schemas"]["WeightedChoice"][];
+            topics: components["schemas"]["TopicItem"][];
+            current: components["schemas"]["CurrentPreferences"];
+            /** @description Technologies déduites des langages GitHub. */
+            github_stack: string[];
+        };
+        OnboardingSuggestions: {
+            people: components["schemas"]["SuggestedPerson"][];
+            hubs: components["schemas"]["SuggestedHub"][];
+        };
         /**
          * @description * `PUT` - PUT
          *     * `PATCH` - PATCH
@@ -2601,6 +3060,20 @@ export interface components {
             /** Format: uri */
             previous: string | null;
             results: components["schemas"]["EventOutput"][];
+        };
+        PaginatedFollowListItemList: {
+            /** Format: uri */
+            next: string | null;
+            /** Format: uri */
+            previous: string | null;
+            results: components["schemas"]["FollowListItem"][];
+        };
+        PaginatedHelpAnswerList: {
+            /** Format: uri */
+            next: string | null;
+            /** Format: uri */
+            previous: string | null;
+            results: components["schemas"]["HelpAnswer"][];
         };
         PaginatedHubOutputList: {
             /** Format: uri */
@@ -2686,6 +3159,15 @@ export interface components {
             previous: string | null;
             results: components["schemas"]["SnippetOutput"][];
         };
+        PasswordResetConfirmRequest: {
+            uid: string;
+            token: string;
+            password: string;
+        };
+        PasswordResetRequestRequest: {
+            /** Format: email */
+            email: string;
+        };
         PatchedCollectionUpdateRequest: {
             name?: string;
             description?: string;
@@ -2747,6 +3229,11 @@ export interface components {
             display_name?: string;
             bio?: string;
             avatar_url?: string;
+            banner_url?: string;
+            /** @description Réseaux acceptés : github, gitlab, linkedin, twitter, tiktok, instagram, youtube, facebook, dev, medium, portfolio. */
+            social_links?: {
+                [key: string]: string;
+            };
             stack?: string[];
             github_username?: string;
             location?: string;
@@ -2884,6 +3371,27 @@ export interface components {
             /** @description Types de notification réglables. */
             kinds: components["schemas"]["NotificationKind"][];
         };
+        PreferencesInputRequest: {
+            /** @default  */
+            experience_level: components["schemas"]["ExperienceLevelEnum"] | components["schemas"]["BlankEnum"];
+            goals?: components["schemas"]["GoalsEnum"][];
+            topics?: components["schemas"]["TopicsEnum"][];
+            stack?: string[];
+            learning?: string[];
+        };
+        PresignUploadInputRequest: {
+            kind: components["schemas"]["MediaKindEnum"];
+            mime_type: string;
+            size_bytes: number;
+            /** @default  */
+            filename: string;
+        };
+        PresignUploadOutput: {
+            /** Format: uuid */
+            asset_id: string;
+            upload: components["schemas"]["UploadInstruction"];
+            expires_in: number;
+        };
         ProfileBadge: {
             code: string;
             label: string;
@@ -2959,6 +3467,8 @@ export interface components {
             readonly display_name: string;
             readonly bio: string;
             readonly avatar_url: string;
+            readonly banner_url: string;
+            readonly social_links: components["schemas"]["SocialLinks"];
             readonly stack: string[];
             readonly github_username: string;
             readonly location: string;
@@ -2969,10 +3479,18 @@ export interface components {
             readonly daily_rate: string;
             readonly availability_note: string;
             readonly pinned: components["schemas"]["PinnedItem"][];
+            readonly craft_score: number;
+            readonly craft: components["schemas"]["Craft"];
             /** Format: int64 */
             readonly karma_score: number;
             readonly karma_details: components["schemas"]["KarmaDetails"];
             readonly badges: components["schemas"]["ProfileBadge"][];
+            /** Format: int64 */
+            readonly followers_count: number;
+            /** Format: int64 */
+            readonly following_count: number;
+            /** @description Le visiteur connecté suit-il ce membre ? (faux pour soi-même et les anonymes) */
+            readonly is_following: boolean;
             /** Format: date-time */
             readonly created_at: string;
         };
@@ -3235,6 +3753,31 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
         };
+        /** @description Liens publics par réseau ; seuls les réseaux renseignés sont présents. */
+        SocialLinks: {
+            /** Format: uri */
+            github?: string;
+            /** Format: uri */
+            gitlab?: string;
+            /** Format: uri */
+            linkedin?: string;
+            /** Format: uri */
+            twitter?: string;
+            /** Format: uri */
+            tiktok?: string;
+            /** Format: uri */
+            instagram?: string;
+            /** Format: uri */
+            youtube?: string;
+            /** Format: uri */
+            facebook?: string;
+            /** Format: uri */
+            dev?: string;
+            /** Format: uri */
+            medium?: string;
+            /** Format: uri */
+            portfolio?: string;
+        };
         /**
          * @description * `hackernews` - hackernews
          *     * `devto` - devto
@@ -3249,6 +3792,25 @@ export interface components {
          * @enum {string}
          */
         SourceTypeEnum: "snippet" | "question" | "project";
+        SuggestedHub: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            name: string;
+            icon: string;
+            description: string;
+            member_count: number;
+            is_verified: boolean;
+        };
+        SuggestedPerson: {
+            /** Format: uuid */
+            id: string;
+            username: string;
+            display_name: string;
+            avatar_url: string;
+            craft_score: number;
+            shared_stack: string[];
+        };
         SummaryOutput: {
             /** Format: uuid */
             post_id: string;
@@ -3330,6 +3892,27 @@ export interface components {
             access: string;
             refresh: string;
         };
+        TopicItem: {
+            id: string;
+            label: string;
+            suggest: string[];
+        };
+        /**
+         * @description * `web` - web
+         *     * `backend` - backend
+         *     * `mobile` - mobile
+         *     * `devops` - devops
+         *     * `data_ai` - data_ai
+         *     * `fintech` - fintech
+         *     * `offline` - offline
+         *     * `security` - security
+         *     * `opensource` - opensource
+         *     * `career` - career
+         *     * `startup` - startup
+         *     * `design` - design
+         * @enum {string}
+         */
+        TopicsEnum: "web" | "backend" | "mobile" | "devops" | "data_ai" | "fintech" | "offline" | "security" | "opensource" | "career" | "startup" | "design";
         TotalNew: {
             total: number;
             new: number;
@@ -3368,6 +3951,15 @@ export interface components {
          * @enum {string}
          */
         TranslationStatusEnum: "pending" | "ready" | "failed";
+        /**
+         * @description * `post` - post
+         *     * `question` - question
+         *     * `snippet` - snippet
+         *     * `project` - project
+         *     * `job` - job
+         * @enum {string}
+         */
+        TypeEnum: "post" | "question" | "snippet" | "project" | "job";
         UnansweredQuestion: {
             /** Format: uuid */
             id: string;
@@ -3381,6 +3973,13 @@ export interface components {
         };
         UploadInputRequest: {
             operations: components["schemas"]["CrudOperationRequest"][];
+        };
+        UploadInstruction: {
+            method: string;
+            url: string;
+            headers: {
+                [key: string]: string;
+            };
         };
         UploadOutput: {
             applied: number;
@@ -3420,6 +4019,11 @@ export interface components {
             readonly is_superuser: boolean;
             readonly two_factor_enabled: boolean;
         };
+        UsernameStatus: {
+            available: boolean;
+            reason: string;
+            suggestion: string;
+        };
         /**
          * @description * `-1` - -1
          *     * `0` - 0
@@ -3444,6 +4048,32 @@ export interface components {
              *     * `1` - 1
              */
             value: components["schemas"]["ValueEnum"];
+        };
+        WebPushConfig: {
+            /** @description Clé VAPID publique (applicationServerKey) ; null : désactivé. */
+            public_key: string | null;
+        };
+        WebPushKeysRequest: {
+            p256dh: string;
+            auth: string;
+        };
+        /** @description Forme de PushSubscription.toJSON() côté navigateur. */
+        WebPushSubscribeRequest: {
+            /** Format: uri */
+            endpoint: string;
+            keys: components["schemas"]["WebPushKeysRequest"];
+        };
+        WebPushUnsubscribeRequest: {
+            /** Format: uri */
+            endpoint: string;
+        };
+        WeightedChoice: {
+            id: string;
+            label: string;
+            /** @description Poids ajoutés au fil par type de contenu. */
+            weights: {
+                [key: string]: number;
+            };
         };
         /**
          * @description * `cdi_remote` - CDI en télétravail
@@ -3652,6 +4282,7 @@ export interface operations {
     accounts_oauth_start_retrieve: {
         parameters: {
             query: {
+                nonce?: string;
                 return_to: string;
             };
             header?: never;
@@ -3727,6 +4358,55 @@ export interface operations {
                 "application/json": components["schemas"]["OTPVerifyInputRequest"];
                 "application/x-www-form-urlencoded": components["schemas"]["OTPVerifyInputRequest"];
                 "multipart/form-data": components["schemas"]["OTPVerifyInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthResponse"];
+                };
+            };
+        };
+    };
+    accounts_password_reset_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PasswordResetRequestRequest"];
+                "multipart/form-data": components["schemas"]["PasswordResetRequestRequest"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accounts_password_reset_confirm_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetConfirmRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PasswordResetConfirmRequest"];
+                "multipart/form-data": components["schemas"]["PasswordResetConfirmRequest"];
             };
         };
         responses: {
@@ -3909,6 +4589,27 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    accounts_username_status_retrieve: {
+        parameters: {
+            query: {
+                username: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsernameStatus"];
+                };
             };
         };
     };
@@ -4486,6 +5187,8 @@ export interface operations {
                 /** @description Slug ou UUID du hub */
                 hub?: string;
                 kind?: string;
+                /** @description Seulement les posts avec une vidéo (ou une image) */
+                media?: "image" | "video";
                 /** @description 20 par défaut, 50 maximum */
                 page_size?: number;
                 /** @description hot = populaires (défaut), new = nouveaux, top = mieux notés */
@@ -4699,6 +5402,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Community"][];
+                };
+            };
+        };
+    };
+    feed_home: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                filter?: "all" | "jobs" | "posts" | "projects" | "questions" | "snippets";
+                /** @description for_you (défaut) ou following : seulement les membres suivis */
+                scope?: "following" | "for_you";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomePage"];
                 };
             };
         };
@@ -5346,6 +6073,52 @@ export interface operations {
             };
         };
     };
+    media_complete_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaOutput"];
+                };
+            };
+        };
+    };
+    media_presign_upload_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresignUploadInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PresignUploadInputRequest"];
+                "multipart/form-data": components["schemas"]["PresignUploadInputRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresignUploadOutput"];
+                };
+            };
+        };
+    };
     moderation_reports_list: {
         parameters: {
             query?: {
@@ -5551,6 +6324,30 @@ export interface operations {
             };
         };
     };
+    notifications_devices_unregister_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceTokenRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DeviceTokenRequest"];
+                "multipart/form-data": components["schemas"]["DeviceTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     notifications_preferences_retrieve: {
         parameters: {
             query?: never;
@@ -5630,6 +6427,73 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["UnreadCount"];
                 };
+            };
+        };
+    };
+    notifications_webpush_config: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebPushConfig"];
+                };
+            };
+        };
+    };
+    notifications_webpush_subscribe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebPushSubscribeRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["WebPushSubscribeRequest"];
+                "multipart/form-data": components["schemas"]["WebPushSubscribeRequest"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    notifications_webpush_unsubscribe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebPushUnsubscribeRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["WebPushUnsubscribeRequest"];
+                "multipart/form-data": components["schemas"]["WebPushUnsubscribeRequest"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -5799,6 +6663,79 @@ export interface operations {
             };
         };
     };
+    profiles_follow_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowState"];
+                };
+            };
+        };
+    };
+    profiles_followers_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Curseur de la page suivante */
+                cursor?: string;
+                /** @description 20 par défaut, 50 maximum */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedFollowListItemList"];
+                };
+            };
+        };
+    };
+    profiles_following_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Curseur de la page suivante */
+                cursor?: string;
+                /** @description 20 par défaut, 50 maximum */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedFollowListItemList"];
+                };
+            };
+        };
+    };
     profiles_github_retrieve: {
         parameters: {
             query?: never;
@@ -5837,6 +6774,27 @@ export interface operations {
                 };
                 content: {
                     "image/svg+xml": string;
+                };
+            };
+        };
+    };
+    profiles_unfollow_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowState"];
                 };
             };
         };
@@ -5904,6 +6862,44 @@ export interface operations {
             };
         };
     };
+    profiles_me_onboarding_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Onboarding"];
+                };
+            };
+        };
+    };
+    profiles_me_onboarding_skip_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyProfile"];
+                };
+            };
+        };
+    };
     profiles_me_pinned_update: {
         parameters: {
             query?: never;
@@ -5925,6 +6921,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MyProfile"];
+                };
+            };
+        };
+    };
+    profiles_me_preferences_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PreferencesInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PreferencesInputRequest"];
+                "multipart/form-data": components["schemas"]["PreferencesInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyProfile"];
+                };
+            };
+        };
+    };
+    profiles_me_suggestions_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Tags séparés par des virgules */
+                tags?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingSuggestions"];
                 };
             };
         };
@@ -6113,6 +7156,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaginatedIssueList"];
+                };
+            };
+        };
+    };
+    qa_answers_by_author: {
+        parameters: {
+            query: {
+                accepted?: boolean;
+                /** @description UUID de l'auteur */
+                author: string;
+                /** @description Curseur de la page suivante */
+                cursor?: string;
+                /** @description 20 par défaut, 50 maximum */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedHelpAnswerList"];
                 };
             };
         };

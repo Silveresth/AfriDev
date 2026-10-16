@@ -5,7 +5,7 @@ from features.profiles import selectors, services
 pytestmark = pytest.mark.django_db(transaction=True)
 
 
-def _karma(user):
+def _profile(user):
     return selectors.get_profile_for_user(user_id=user.id)
 
 
@@ -17,10 +17,10 @@ def test_upvotes_accepted_answers_and_saves(auth_client, client_for, user, other
     kofi.post(f"/api/feed/{post['id']}/score/", {"value": 1}, format="json")
     fatou.post(f"/api/feed/{post['id']}/score/", {"value": 1}, format="json")
     auth_client.post(f"/api/feed/{post['id']}/score/", {"value": 1}, format="json")  # soi-même
-    assert _karma(user).karma_score == 10  # 2 votes ↑ d'autres membres × 5
+    assert _profile(user).karma_score == 10  # 2 votes ↑ d'autres membres × 5
 
     fatou.post(f"/api/feed/{post['id']}/score/", {"value": 0}, format="json")
-    assert _karma(user).karma_score == 5  # vote retiré : le karma baisse
+    assert _profile(user).karma_score == 5  # vote retiré : le score baisse
 
     question = kofi.post(
         "/api/qa/questions/",
@@ -31,7 +31,7 @@ def test_upvotes_accepted_answers_and_saves(auth_client, client_for, user, other
         f"/api/qa/questions/{question['id']}/answers/", {"body": "Avec squash."}, format="json"
     ).data
     kofi.post(f"/api/qa/answers/{answer['id']}/accept/")
-    profile = _karma(user)
+    profile = _profile(user)
     assert profile.karma_details["accepted_answers"] == 1
     assert profile.karma_score == 5 + 15
 
@@ -45,14 +45,38 @@ def test_upvotes_accepted_answers_and_saves(auth_client, client_for, user, other
         {"target_type": "snippet", "target_id": snippet["id"]},
         format="json",
     )
-    assert _karma(user).karma_score == 5 + 15 + 10
+    assert _profile(user).karma_score == 5 + 15 + 10
 
     card = auth_client.get(f"/api/feed/{post['id']}/").data["author"]
     assert card["karma"] == 30
 
     public = auth_client.get("/api/profiles/amina/").data
+    # Rétrocompatibilité : anciens champs toujours exposés.
     assert public["karma_score"] == 30
     assert public["karma_details"] == {"upvotes": 1, "accepted_answers": 1, "snippet_saves": 1}
+    # Craft Score : deux jauges.
+    assert public["craft_score"] == 30
+    assert public["craft"] == {
+        "score": 30,
+        "help": {"score": 15, "breakdown": {"answer_upvotes": 0, "accepted_answers": 1}},
+        "creation": {"score": 15, "breakdown": {"post_upvotes": 1, "snippet_saves": 1}},
+        "project_stars": 0,
+    }
+
+
+def test_answer_upvotes_feed_help_gauge(auth_client, client_for, user, other_user):
+    kofi = client_for(other_user)
+    question = kofi.post(
+        "/api/qa/questions/",
+        {"title": "Pourquoi mon build casse ?", "body": "…", "tags": ["ci"]},
+        format="json",
+    ).data
+    answer = auth_client.post(
+        f"/api/qa/questions/{question['id']}/answers/", {"body": "Cache."}, format="json"
+    ).data
+    kofi.post(f"/api/qa/answers/{answer['id']}/vote/", {"value": 1}, format="json")
+    profile = _profile(user)
+    assert (profile.craft_help, profile.craft_creation) == (5, 0)
 
 
 def test_badges(client_for, make_user):
@@ -70,13 +94,34 @@ def test_badges(client_for, make_user):
         ).data
         asker_client.post(f"/api/qa/answers/{answer['id']}/accept/")
 
-    badges = {b["code"]: b for b in _karma(expert).badges}
+    badges = {b["code"]: b for b in _profile(expert).badges}
     assert badges["expert-python"]["label"] == "Expert Python"
-    assert "top-5-entraide" in badges  # seul membre avec des réponses acceptées
+    assert "top-5-entraide" in badges  # seul membre avec une jauge Entraide
+    assert "mentor-communautaire" not in badges  # 3 réponses acceptées sur 10 requises
     assert "contributeur-majeur" not in badges  # 45 points
 
     first_award = badges["expert-python"]["awarded_at"]
     services.recompute_reputation(user_id=expert.id)
-    assert {b["code"]: b for b in _karma(expert).badges}["expert-python"]["awarded_at"] == (
+    assert {b["code"]: b for b in _profile(expert).badges}["expert-python"]["awarded_at"] == (
         first_award
     )  # la date d'obtention est conservée
+
+
+def test_mentor_and_lead_contributor(monkeypatch, user):
+    from features.profiles import reputation
+
+    def fake_details(*, user_id):
+        return {
+            "answer_upvotes": 4,
+            "accepted_answers": 12,
+            "post_upvotes": 0,
+            "snippet_saves": 0,
+            "project_stars": 80,
+            "upvotes": 4,
+        }
+
+    monkeypatch.setattr(reputation, "craft_details", fake_details)
+    profile = services.recompute_reputation(user_id=user.id)
+    codes = [badge["code"] for badge in profile.badges]
+    assert codes[:3] == ["mentor-communautaire", "lead-contributor", "top-5-entraide"]
+    assert profile.craft_help == 4 * 5 + 12 * 15

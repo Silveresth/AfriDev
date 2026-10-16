@@ -56,3 +56,14 @@ def index_project(*, project_id) -> None:
 
 def remove(*, source_type: str, source_id) -> None:
     indexer.remove_document(source_type=source_type, source_id=source_id)
+
+
+def reembed_all(*, batch_size: int = 100):
+    """Recalcule les embeddings de tous les documents, par lots (mémoire bornée) ; produit
+    (documents traités, morceaux écrits) après chaque document."""
+    documents = Document.objects.alive().only("id", "content").order_by("id")
+    done = chunks = 0
+    for document in documents.iterator(chunk_size=batch_size):
+        chunks += indexer.reembed_document(document)
+        done += 1
+        yield done, chunks

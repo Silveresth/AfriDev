@@ -12,6 +12,7 @@ from features.matchmaking.events import application_answered, application_submit
 from features.moderation.events import content_hidden
 from features.onboarding_agent.events import guide_finished
 from features.profiles import selectors as profile_selectors
+from features.profiles.events import user_followed
 from features.qa.events import ai_answer_ready, answer_accepted, answer_created
 from features.snippets.events import snippet_flagged
 
@@ -60,6 +61,19 @@ def on_post_liked(sender, post_id, author_id, user_id, **kwargs):
         kind=Kind.POST_LIKED,
         title=f"{_name(user_id)} aime votre post",
         data={"type": "post", "id": str(post_id)},
+    )
+
+
+@receiver(user_followed)
+def on_user_followed(sender, follower_id, followed_id, **kwargs):
+    card = profile_selectors.author_cards(user_ids=[follower_id]).get(follower_id)
+    if card is None:
+        return
+    notify(
+        recipient_id=followed_id,
+        kind=Kind.NEW_FOLLOWER,
+        title=f"{card['display_name']} vous suit désormais",
+        data={"type": "profile", "id": card["username"]},
     )
 
 

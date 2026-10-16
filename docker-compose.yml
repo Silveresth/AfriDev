@@ -52,6 +52,8 @@ services:
         condition: service_healthy
 
   backend:
+    # Image construite par la CI (deploy.yml) ; « build » sert au développement local.
+    image: ${IMAGE_BACKEND:-ghcr.io/silveresth/afridev-backend:latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -69,7 +71,8 @@ services:
     env_file:
       - .env
     environment:
-      DJANGO_SETTINGS_MODULE: config.settings.dev
+      # Production : DJANGO_SETTINGS_MODULE=config.settings.prod dans le .env du VPS (voir CONFIGURATION.md).
+      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.dev}
       DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-afridev}}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
@@ -87,22 +90,49 @@ services:
         condition: service_started
 
   celery:
+    # Image construite par la CI (deploy.yml) ; « build » sert au développement local.
+    image: ${IMAGE_BACKEND:-ghcr.io/silveresth/afridev-backend:latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
       additional_contexts:
         security-guard: ./packages/validation/src/security-guard
     restart: unless-stopped
-    command: ["sh", "-c", "until python -c 'import psycopg, os; psycopg.connect(os.environ.get(\"DATABASE_URL\"))' 2>/dev/null; do echo 'Attente de la base de données pour Celery...'; sleep 2; done; exec celery -A config worker -l info"]
+    mem_limit: 512m
+    # Files rapides et critiques (OTP par SMS, transcodage, GitHub). L'IA a son worker dédié.
+    command: ["sh", "-c", "until python -c 'import psycopg, os; psycopg.connect(os.environ.get(\"DATABASE_URL\"))' 2>/dev/null; do echo 'Attente de la base de données pour Celery...'; sleep 2; done; exec celery -A config worker -n main@%h -l info -Q sms,default,github --concurrency=2 --max-tasks-per-child=200"]
     env_file:
       - .env
-    environment:
-      DJANGO_SETTINGS_MODULE: config.settings.dev
+    environment: &celery-env
+      # Production : DJANGO_SETTINGS_MODULE=config.settings.prod dans le .env du VPS (voir CONFIGURATION.md).
+      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.dev}
       DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-afridev}}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       MEILISEARCH_URL: http://meilisearch:7700
       MEILISEARCH_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKey}
+    depends_on:
+      backend:
+        condition: service_started
+      redis:
+        condition: service_started
+
+  # Worker IA (Groq, Whisper, embeddings) : un seul processus, les appels attendent surtout
+  # le réseau. Isolé, il ne peut pas retarder un SMS d'OTP ; limites de durée : AI_TASK_SOFT_TIME_LIMIT.
+  celery-ai:
+    # Image construite par la CI (deploy.yml) ; « build » sert au développement local.
+    image: ${IMAGE_BACKEND:-ghcr.io/silveresth/afridev-backend:latest}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      additional_contexts:
+        security-guard: ./packages/validation/src/security-guard
+    restart: unless-stopped
+    mem_limit: 320m
+    command: ["sh", "-c", "until python -c 'import psycopg, os; psycopg.connect(os.environ.get(\"DATABASE_URL\"))' 2>/dev/null; do echo 'Attente de la base de données pour Celery IA...'; sleep 2; done; exec celery -A config worker -n ai@%h -l info -Q ai --concurrency=1 --max-tasks-per-child=100"]
+    env_file:
+      - .env
+    environment: *celery-env
     depends_on:
       backend:
         condition: service_started

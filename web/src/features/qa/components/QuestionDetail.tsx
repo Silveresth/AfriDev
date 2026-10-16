@@ -1,7 +1,7 @@
 'use client';
 
 import { answerSchema } from '@afridev/validation';
-import { ArrowBigDown, ArrowBigUp, ArrowLeft, CheckCircle2, RefreshCw, Send, Sparkles, Trash2 } from 'lucide-react';
+import { ThumbsDown, ThumbsUp, ArrowLeft, CheckCircle2, RefreshCw, Send, Sparkles, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -299,7 +299,7 @@ function AnswerCard({ answer, questionId, canAccept }: { answer: Answer; questio
             onClick={() => vote.mutate({ answerId: answer.id, value: 1 })}
             className="flex size-8 items-center justify-center rounded-md text-ink-muted hover:bg-primary-soft hover:text-primary disabled:opacity-40 disabled:hover:bg-transparent"
           >
-            <ArrowBigUp className="size-5" aria-hidden />
+            <ThumbsUp className="size-5" aria-hidden />
           </button>
           <span className="py-0.5 text-body-sm font-semibold text-ink tabular-nums">{answer.score}</span>
           <button
@@ -309,7 +309,7 @@ function AnswerCard({ answer, questionId, canAccept }: { answer: Answer; questio
             onClick={() => vote.mutate({ answerId: answer.id, value: -1 })}
             className="flex size-8 items-center justify-center rounded-md text-ink-muted hover:bg-downvote-soft hover:text-downvote disabled:opacity-40 disabled:hover:bg-transparent"
           >
-            <ArrowBigDown className="size-5" aria-hidden />
+            <ThumbsDown className="size-5" aria-hidden />
           </button>
         </div>
         <div className="min-w-0 flex-1 space-y-2">

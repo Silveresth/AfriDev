@@ -58,7 +58,7 @@ function TokensSection() {
             </Text>
             <View style={styles.inline}>
               <Button
-                label={t('sec.copy')}
+                label={t('priv.copy')}
                 icon={Copy}
                 size="sm"
                 onPress={async () => {

@@ -13,7 +13,7 @@ import { useState } from 'react';
 
 import { errorMessage } from '@/shared/api';
 import { useSession } from '@/shared/session';
-import { Button, CopyButton, Skeleton, StatusBadge, Switch, TimeAgo, useToast } from '@/shared/ui';
+import { Button, Card, CardHeader, CopyButton, Skeleton, StatusBadge, Switch, TimeAgo, useToast } from '@/shared/ui';
 
 import { downloadMyData, useAccessTokenActions, useAccessTokens } from '../api';
 
@@ -55,20 +55,14 @@ function TokensCard() {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-card shadow-xs">
-      <div className="border-b border-line bg-container-low/40 p-5">
-        <div className="flex items-center gap-2.5">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-zinc-800 text-zinc-200">
-            <KeyRound className="size-4.5" />
-          </span>
-          <div>
-            <h2 className="text-sm font-bold text-ink">Jetons d&apos;accès personnels (API Keys)</h2>
-            <p className="text-xs text-ink-muted">Pour vos scripts d&apos;automatisation, CLI et pipelines CI/CD</p>
-          </div>
-        </div>
-      </div>
+    <Card className="space-y-5 p-5">
+      <CardHeader
+        icon={<KeyRound className="size-4" />}
+        title="Jetons d'accès personnels"
+        subtitle="Pour vos scripts, la CLI et vos pipelines CI/CD"
+      />
 
-      <div className="p-5 space-y-5">
+      <div className="space-y-5">
         {/* Affichage du jeton fraîchement généré */}
         {created && (
           <div className="space-y-2.5 rounded-xl border border-tertiary/30 bg-tertiary-soft/50 p-4 animate-in fade-in">
@@ -192,7 +186,7 @@ function TokensCard() {
           )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -217,36 +211,22 @@ function ExportCard() {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-card shadow-xs">
-      <div className="border-b border-line bg-container-low/40 p-5">
-        <div className="flex items-center gap-2.5">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-zinc-800 text-zinc-200">
-            <FileJson className="size-4.5" />
-          </span>
-          <div>
-            <h2 className="text-sm font-bold text-ink">Exportation & Portabilité des données (RGPD)</h2>
-            <p className="text-xs text-ink-muted">Téléchargez une archive complète de votre activité au format JSON lisible</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="p-5 space-y-4">
-        <p className="text-xs text-ink-muted leading-relaxed">
-          Comprend vos discussions, questions, réponses, snippets de code réutilisables, commentaires, collections et paramètres de profil.
-          Les secrets sensibles (mots de passe, clés de double authentification) ne sont jamais inclus dans l&apos;export.
-        </p>
-
-        <div className="flex items-center justify-between rounded-xl border border-line bg-container-low/40 p-4">
-          <div className="flex items-center gap-2 text-xs text-ink-muted">
-            <ShieldCheck className="size-4 text-secondary" />
-            <span>Format JSON standardisé et interopérable</span>
-          </div>
-
+    <Card className="space-y-4 p-5">
+      <CardHeader
+        icon={<FileJson className="size-4" />}
+        title="Exporter mes données"
+        subtitle="Archive JSON complète de votre activité (droit à la portabilité)"
+        action={
           <Button variant="outline" size="sm" onClick={download} loading={loading}>
-            <Download className="size-3.5 mr-1" /> Télécharger mon archive (JSON)
+            <Download className="size-4" aria-hidden /> Télécharger
           </Button>
-        </div>
-      </div>
-    </div>
+        }
+      />
+      <p className="flex items-start gap-2.5 rounded-xl bg-container-low px-4 py-3 text-body-sm text-ink-muted">
+        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-secondary" aria-hidden />
+        Posts, questions, réponses, snippets, commentaires, collections et profil. Les secrets (mot de passe,
+        clés de double authentification) ne sont jamais inclus.
+      </p>
+    </Card>
   );
 }

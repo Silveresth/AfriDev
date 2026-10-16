@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { router, Tabs } from 'expo-router';
 import { Home, type LucideIcon, MessagesSquare, Newspaper, UserRound, UsersRound } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useT } from '@/shared/i18n';
 import { haptic, SPRING } from '@/shared/motion';
+import { useSession } from '@/shared/session';
 import { useTheme } from '@/shared/theme';
 
 /** Icône d'onglet : à l'activation, petit saut et pastille teintée qui s'élargit dessous. */
@@ -43,6 +44,13 @@ export default function TabsLayout() {
   const { colors } = useTheme();
   const { t } = useT();
   const insets = useSafeAreaInsets();
+  const { profile } = useSession();
+  const needsOnboarding = Boolean(profile?.needs_onboarding);
+
+  // Compte tout neuf (e-mail, SMS, Google, GitHub) : l'accueil s'ouvre une fois par compte.
+  useEffect(() => {
+    if (needsOnboarding) router.push('/onboarding');
+  }, [needsOnboarding]);
   return (
     <Tabs
       screenListeners={{ tabPress: () => haptic.select() }}

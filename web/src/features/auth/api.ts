@@ -1,18 +1,25 @@
 'use client';
 
 import type { Schemas } from '@afridev/api-client';
+import { useQuery } from '@tanstack/react-query';
 
-import { api, GITHUB_CLIENT_ID, GITLAB_CLIENT_ID, GITLAB_URL, GOOGLE_CLIENT_ID, unwrap } from '@/shared/api';
+import { api, API_URL, unwrap } from '@/shared/api';
 
 export type AuthResponse = Schemas['AuthResponse'];
 export type OAuthProvider = 'github' | 'gitlab' | 'google';
+export type UsernameStatus = Schemas['UsernameStatus'];
 
 const PHONE_KEY = 'afridev.otp-phone';
-const STATE_KEY = 'afridev.oauth-state';
+const NONCE_KEY = 'afridev.oauth-nonce';
 const NEXT_KEY = 'afridev.after-login';
 const MFA_KEY = 'afridev.mfa';
 
 export const authApi = {
+  usernameStatus: (username: string) =>
+    unwrap(api.GET('/api/accounts/username-status/', { params: { query: { username } } })),
+  requestPasswordReset: (email: string) => unwrap(api.POST('/api/accounts/password/reset/', { body: { email } })),
+  confirmPasswordReset: (uid: string, token: string, password: string) =>
+    unwrap(api.POST('/api/accounts/password/reset/confirm/', { body: { uid, token, password } })),
   login: (identifier: string, password: string) =>
     unwrap(api.POST('/api/accounts/login/', { body: { identifier, password } })),
   register: (body: Schemas['RegisterInputRequest']) =>
@@ -83,61 +90,44 @@ export const afterLogin = {
   },
 };
 
-export function oauthAvailable(provider: OAuthProvider): boolean {
-  if (provider === 'github') return Boolean(GITHUB_CLIENT_ID);
-  if (provider === 'google') return Boolean(GOOGLE_CLIENT_ID);
-  return Boolean(GITLAB_CLIENT_ID);
+/** Fournisseurs réellement configurés côté serveur : on n'affiche que des boutons qui marchent. */
+export function useOAuthProviders() {
+  return useQuery({
+    queryKey: ['auth', 'providers'],
+    queryFn: async () => (await unwrap(api.GET('/api/accounts/oauth/providers/'))).providers as OAuthProvider[],
+    staleTime: 10 * 60_000,
+    retry: false,
+    meta: { persist: false },
+  });
 }
 
-export const oauthRedirectUri = () => `${window.location.origin}/oauth/callback`;
-
-/** Redirige vers GitHub / Google / GitLab ; le paramètre state protège contre la falsification (CSRF). */
+/**
+ * Connexion Google / GitHub : l'API redirige vers le fournisseur puis rebondit vers
+ * /oauth/callback avec le code. Les identifiants OAuth restent sur le serveur ; le nonce,
+ * gardé dans cet onglet, prouve au retour que la connexion a bien été lancée d'ici (anti-CSRF).
+ */
 export function startOAuth(provider: OAuthProvider) {
-  const state = `${provider}:${crypto.randomUUID()}`;
-  sessionStorage.setItem(STATE_KEY, state);
-  const redirect = encodeURIComponent(oauthRedirectUri());
-  let url = '';
-  if (provider === 'github') {
-    url = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${redirect}&scope=read:user%20user:email&state=${encodeURIComponent(state)}`;
-  } else if (provider === 'google') {
-    url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${redirect}&response_type=code&scope=openid%20email%20profile&state=${encodeURIComponent(state)}`;
-  } else {
-    url = `${GITLAB_URL}/oauth/authorize?client_id=${GITLAB_CLIENT_ID}&redirect_uri=${redirect}&response_type=code&scope=read_user&state=${encodeURIComponent(state)}`;
-  }
+  const nonce = crypto.randomUUID();
+  sessionStorage.setItem(NONCE_KEY, `${provider}:${nonce}`);
+  const query = new URLSearchParams({ return_to: `${window.location.origin}/oauth/callback`, nonce });
+  // Navigation vers l'API (autre origine en production), pas vers une page Next.js.
   // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-  window.location.href = url;
+  window.location.assign(`${API_URL}/api/accounts/oauth/${provider}/start/?${query}`);
 }
 
-/** Vérifie le state renvoyé par le fournisseur et en déduit lequel il est. */
-export function consumeOAuthState(state: string | null): OAuthProvider | null {
-  const expected = sessionStorage.getItem(STATE_KEY);
-  sessionStorage.removeItem(STATE_KEY);
-  if (!state || state !== expected) return null;
-  const provider = state.split(':')[0];
-  return provider === 'github' || provider === 'google' || provider === 'gitlab' ? provider : null;
+/** Vérifie le retour (nonce, fournisseur) ; renvoie de quoi échanger le code, ou null. */
+export function consumeOAuthReturn(params: URLSearchParams): { provider: OAuthProvider; code: string; redirectUri: string } | null {
+  const expected = sessionStorage.getItem(NONCE_KEY);
+  sessionStorage.removeItem(NONCE_KEY);
+  const provider = params.get('provider') as OAuthProvider | null;
+  const code = params.get('code');
+  const redirectUri = params.get('redirect_uri');
+  if (!provider || !code || !redirectUri || expected !== `${provider}:${params.get('nonce')}`) return null;
+  return { provider, code, redirectUri };
 }
 
-export const COUNTRIES = [
-  { code: '+228', label: 'TG', name: 'Togo', flag: '🇹🇬' },
-  { code: '+225', label: 'CI', name: "Côte d'Ivoire", flag: '🇨🇮' },
-  { code: '+221', label: 'SN', name: 'Sénégal', flag: '🇸🇳' },
-  { code: '+229', label: 'BJ', name: 'Bénin', flag: '🇧🇯' },
-  { code: '+237', label: 'CM', name: 'Cameroun', flag: '🇨🇲' },
-  { code: '+226', label: 'BF', name: 'Burkina Faso', flag: '🇧🇫' },
-  { code: '+223', label: 'ML', name: 'Mali', flag: '🇲🇱' },
-  { code: '+227', label: 'NE', name: 'Niger', flag: '🇳🇪' },
-  { code: '+234', label: 'NG', name: 'Nigeria', flag: '🇳🇬' },
-  { code: '+233', label: 'GH', name: 'Ghana', flag: '🇬🇭' },
-  { code: '+243', label: 'CD', name: 'RD Congo', flag: '🇨🇩' },
-  { code: '+242', label: 'CG', name: 'Congo', flag: '🇨🇬' },
-  { code: '+250', label: 'RW', name: 'Rwanda', flag: '🇷🇼' },
-  { code: '+254', label: 'KE', name: 'Kenya', flag: '🇰🇪' },
-  { code: '+212', label: 'MA', name: 'Maroc', flag: '🇲🇦' },
-  { code: '+216', label: 'TN', name: 'Tunisie', flag: '🇹🇳' },
-  { code: '+213', label: 'DZ', name: 'Algérie', flag: '🇩🇿' },
-  { code: '+261', label: 'MG', name: 'Madagascar', flag: '🇲🇬' },
-  { code: '+33', label: 'FR', name: 'France', flag: '🇫🇷' },
-];
+/** Indicatifs de la connexion par SMS (liste partagée avec le mobile). */
+export { PHONE_COUNTRIES as COUNTRIES } from '@afridev/validation';
 
 export function maskPhone(phone: string): string {
   return phone.length > 6 ? `${phone.slice(0, 6)} •• •• ${phone.slice(-2)}` : phone;

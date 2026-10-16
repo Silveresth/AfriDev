@@ -1,4 +1,4 @@
-import { ArrowBigDown, ArrowBigUp } from 'lucide-react-native';
+import { ThumbsDown, ThumbsUp } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
@@ -26,7 +26,7 @@ function Arrow({ up, active, color, onPress }: { up: boolean; active: boolean; c
   const pop = useSharedValue(1);
   const lift = useSharedValue(0);
   const style = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }, { translateY: lift.value }] }));
-  const Icon = up ? ArrowBigUp : ArrowBigDown;
+  const Icon = up ? ThumbsUp : ThumbsDown;
   const { t } = useT();
   return (
     <Pressable
@@ -35,7 +35,7 @@ function Arrow({ up, active, color, onPress }: { up: boolean; active: boolean; c
       accessibilityState={{ selected: active }}
       hitSlop={4}
       onPress={() => {
-        // La flèche bondit dans son sens puis retombe.
+        // Le pouce bondit dans son sens puis retombe.
         pop.value = withSequence(withTiming(1.35, { duration: 110 }), withSpring(1, { damping: 6, stiffness: 240 }));
         lift.value = withSequence(withTiming(up ? -4 : 4, { duration: 110 }), withSpring(0, { damping: 8 }));
         onPress();
@@ -43,13 +43,13 @@ function Arrow({ up, active, color, onPress }: { up: boolean; active: boolean; c
       style={styles.arrow}
     >
       <Animated.View style={style}>
-        <Icon size={20} color={color} fill={active ? color : 'transparent'} strokeWidth={1.8} />
+        <Icon size={18} color={color} fill={active ? color : 'transparent'} strokeWidth={1.8} />
       </Animated.View>
     </Pressable>
   );
 }
 
-/** Capsule ↑ score ↓ : terre cuite pour ↑, violet pour ↓ ; retoucher la même flèche retire le vote. */
+/** Capsule 👍 score 👎 : terre cuite pour le pouce levé, violet pour le pouce baissé ; retoucher le même pouce retire le vote. */
 export function VoteCapsule({ post }: { post: Post }) {
   const { colors } = useTheme();
   const requireAuth = useRequireAuth();

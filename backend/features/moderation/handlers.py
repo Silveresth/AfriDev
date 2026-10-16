@@ -6,12 +6,14 @@ from django.dispatch import receiver
 from features.discussions.events import comment_created
 from features.feed.events import post_published
 from features.qa.events import answer_created, question_created
+from integrations import llm
 
 from .tasks import ai_screen_content
 
 
 def _screen(target_type: str, target_id, text: str) -> None:
-    if settings.MODERATION_SCREEN_NEW_CONTENT and text:
+    # Sans clé Groq, chaque publication ferait passer une tâche vouée à l'échec par Redis.
+    if settings.MODERATION_SCREEN_NEW_CONTENT and text and llm.is_configured():
         ai_screen_content.delay(target_type, str(target_id), text)
 
 

@@ -34,7 +34,7 @@ export function VerifyTwoFactorScreen() {
       if (!response.tokens) throw new Error('Connexion incomplète, recommencez.');
       pendingMfa.clear();
       signIn(response.tokens);
-      router.replace(challenge.created ? '/profile?welcome=1' : afterLogin.take());
+      router.replace(afterLogin.take());
     } catch (e) {
       setError(errorMessage(e));
       setCode('');

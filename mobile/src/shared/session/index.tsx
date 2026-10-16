@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
 
 import { api, type Schemas, tokenStore, type Tokens, unwrap } from '@/shared/api';
+import { unregisterPush } from '@/shared/push';
 
 type User = Schemas['User'];
 type MyProfile = Schemas['MyProfile'];
@@ -48,6 +49,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signOut = useCallback(() => {
+    unregisterPush();
     tokenStore.set(null);
     queryClient.clear();
   }, [queryClient]);

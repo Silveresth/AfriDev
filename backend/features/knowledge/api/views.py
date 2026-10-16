@@ -5,6 +5,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.throttling import SemanticSearchThrottle
+
 from .. import selectors
 from .serializers import SearchHitSerializer
 
@@ -30,6 +32,10 @@ class SearchView(APIView):
         query = request.query_params.get("q", "")[:300]
         source_type = request.query_params.get("type") or None
         if request.query_params.get("mode") == "semantic":
+            # Seul le mode « semantic » a un coût (embedding) : lui seul est limité.
+            throttle = SemanticSearchThrottle()
+            if not throttle.allow_request(request, self):
+                self.throttled(request, throttle.wait())
             hits = selectors.semantic_search(
                 query=query, limit=10, source_types=[source_type] if source_type else None
             )

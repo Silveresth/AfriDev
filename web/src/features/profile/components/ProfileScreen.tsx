@@ -1,46 +1,42 @@
 'use client';
 
 import {
-  Activity,
-  CalendarDays,
   Check,
   CheckCircle2,
   Circle,
+  Clapperboard,
   Code2,
   Download,
   FolderGit2,
-  Github,
   Globe,
-  Link2,
-  MapPin,
-  MessagesSquare,
+  HandHelping,
+  LayoutGrid,
   Newspaper,
   PartyPopper,
   Pencil,
   QrCode,
   RefreshCw,
-  Share2,
   Sparkles,
 } from 'lucide-react';
 import { useState } from 'react';
 
-import { AuthorPosts } from '@/features/feed';
+import { AuthorPosts, AuthorVideos } from '@/features/feed';
 import { OwnerProjects } from '@/features/projects';
-import { AuthorQuestions } from '@/features/qa';
+import { AuthorHelp } from '@/features/qa';
 import { AuthorSnippets } from '@/features/snippets';
 import { errorMessage } from '@/shared/api';
 import { TwoColumns } from '@/shared/layout';
-import { formatCount } from '@/shared/lib';
 import { useSession } from '@/shared/session';
-import { Avatar, Button, Card, CardSkeleton, ErrorNotice, profileColorHex, Segmented, SideCard, TechBadge, useToast } from '@/shared/ui';
+import { Button, Card, CardSkeleton, ErrorNotice, FilterChips, profileColorHex, SideCard, Tabs } from '@/shared/ui';
 
 import { type MyProfile, type PublicProfile, qrCodeUrl, useAiBio, usePublicProfile, useUpdateProfile } from '../api';
+import { CraftTab } from './CraftTab';
 import { EditProfileDialog } from './EditProfileDialog';
-import { BadgesCard, Endorsements, GitHubSection, OpenToWork, PinnedSection } from './ProSections';
+import { ProfileHeader } from './ProfileHeader';
+import { PinnedSection } from './ProSections';
 
-type Tab = 'snippets' | 'posts' | 'questions' | 'projects';
-
-const SINCE = new Intl.DateTimeFormat('fr', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+type Tab = 'creations' | 'videos' | 'help' | 'craft';
+type Creation = 'posts' | 'snippets' | 'projects';
 
 export function ProfileScreen({ username, initial, welcome = false }: { username: string; initial?: PublicProfile; welcome?: boolean }) {
   const publicProfile = usePublicProfile(username, initial);
@@ -64,24 +60,10 @@ export function ProfileScreen({ username, initial, welcome = false }: { username
 }
 
 function ProfileView({ profile, me, welcome }: { profile: PublicProfile; me?: MyProfile; welcome: boolean }) {
-  const toast = useToast();
   const [editing, setEditing] = useState(false);
-  const [tab, setTab] = useState<Tab>('posts');
+  const [tab, setTab] = useState<Tab>('creations');
   const name = profile.display_name || profile.username;
   const accent = profileColorHex(profile.username, profile.accent_color);
-
-  async function share() {
-    const url = `${window.location.origin}/u/${profile.username}`;
-    try {
-      if (navigator.share) await navigator.share({ url, title: `${name} sur AfriDev Exchange` });
-      else {
-        await navigator.clipboard.writeText(url);
-        toast('Lien du profil copié.');
-      }
-    } catch {
-      // partage annulé
-    }
-  }
 
   return (
     <TwoColumns
@@ -102,150 +84,26 @@ function ProfileView({ profile, me, welcome }: { profile: PublicProfile; me?: My
         </Card>
       ) : null}
 
-      <Card className="overflow-hidden">
-        {/* Bannière : la couleur du membre, une trame de points discrète, rien d'autre. */}
-        <div className="relative h-28 sm:h-36" style={{ backgroundColor: accent }} aria-hidden>
-          <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.2)_1px,transparent_1.2px)] bg-[length:14px_14px] [mask-image:linear-gradient(105deg,transparent_10%,black_75%)]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-black/15" />
-        </div>
-        <div className="px-5 pb-5 sm:px-6">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <Avatar
-              name={name}
-              src={profile.avatar_url}
-              color={accent}
-              size={112}
-              className="-mt-12 text-[2.25rem] ring-4 ring-card sm:-mt-14"
-            />
-            <div className="flex gap-2 pt-3">
-              {me ? (
-                <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-                  <Pencil className="size-4" aria-hidden /> Modifier le profil
-                </Button>
-              ) : null}
-              <Button variant="outline" size="sm" onClick={share}>
-                <Share2 className="size-4" aria-hidden /> Partager
-              </Button>
-            </div>
-          </div>
+      <ProfileHeader profile={profile} isMe={Boolean(me)} accent={accent} onEdit={() => setEditing(true)} />
 
-          <div className="mt-3 space-y-1">
-            <h1 className="flex flex-wrap items-center gap-2 text-headline-xl text-ink">
-              {name}
-              {profile.badges?.slice(0, 2).map((badge) => (
-                <TechBadge key={badge.code} label={badge.label} className="h-6 text-label-md" />
-              ))}
-            </h1>
-            <p className="text-body-md text-ink-muted">
-              @{profile.username}
-              {profile.stack?.length ? (
-                <>
-                  <span className="mx-2 text-ink-faint" aria-hidden>
-                    /
-                  </span>
-                  <span className="text-ink">Développeur·se {profile.stack.slice(0, 3).join(', ')}</span>
-                </>
-              ) : null}
-            </p>
-          </div>
+      {me ? <AiBioCard profile={me} /> : null}
 
-          <ul className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-body-sm text-ink-muted">
-            {profile.location ? (
-              <li className="flex items-center gap-1.5">
-                <MapPin className="size-4 text-ink-faint" aria-hidden /> {profile.location}
-              </li>
-            ) : null}
-            <li className="flex items-center gap-1.5">
-              <CalendarDays className="size-4 text-ink-faint" aria-hidden /> Membre depuis {SINCE.format(new Date(profile.created_at))}
-            </li>
-            {profile.github_username ? (
-              <li>
-                <a
-                  href={`https://github.com/${profile.github_username}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 font-medium text-ink hover:underline"
-                >
-                  <Github className="size-4 text-ink-faint" aria-hidden /> {profile.github_username}
-                </a>
-              </li>
-            ) : null}
-            {profile.website ? (
-              <li>
-                <a
-                  href={profile.website}
-                  target="_blank"
-                  rel="noopener noreferrer nofollow"
-                  className="flex items-center gap-1.5 font-medium text-ink hover:underline"
-                >
-                  <Link2 className="size-4 text-ink-faint" aria-hidden /> {profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-                </a>
-              </li>
-            ) : null}
-          </ul>
-          <OpenToWork profile={profile} />
-        </div>
-
-        {/* Chiffres clés de la réputation. */}
-        <dl className="grid grid-cols-2 border-t border-line sm:grid-cols-4" title="+5 par vote reçu, +15 par réponse acceptée, +10 par snippet enregistré">
-          {[
-            { label: 'Karma', value: profile.karma_score ?? 0, strong: true },
-            { label: 'Votes reçus', value: profile.karma_details?.upvotes ?? 0 },
-            { label: 'Réponses acceptées', value: profile.karma_details?.accepted_answers ?? 0 },
-            { label: 'Snippets enregistrés', value: profile.karma_details?.snippet_saves ?? 0 },
-          ].map((stat, index) => (
-            <div
-              key={stat.label}
-              className={`px-5 py-3.5 sm:px-6 ${index % 2 ? 'border-l border-line' : ''} ${index > 1 ? 'border-t border-line sm:border-t-0' : ''} ${index === 2 ? 'sm:border-l' : ''}`}
-            >
-              <dt className="text-label-md text-ink-faint">{stat.label}</dt>
-              <dd className="text-headline-md text-ink tabular-nums" style={stat.strong ? { color: accent } : undefined}>
-                {formatCount(Number(stat.value ?? 0))}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </Card>
-
-      <PinnedSection profile={profile} me={me} />
-
-      <Card className="space-y-4 p-5 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-headline-md text-ink">À propos</h2>
-          {me ? <AiBioButton /> : null}
-        </div>
-        {profile.bio ? (
-          <p className="max-w-prose text-body-lg whitespace-pre-line text-ink">{profile.bio}</p>
-        ) : (
-          <p className="text-body-md text-ink-muted">{me ? 'Ajoutez une bio ou laissez l’IA vous en proposer une.' : 'Pas encore de bio.'}</p>
-        )}
-        {me ? <AiBioSuggestion profile={me} /> : null}
-        <Endorsements profile={profile} isMe={Boolean(me)} />
-      </Card>
-
-      <GitHubSection profile={profile} />
-      <BadgesCard profile={profile} />
-
-      <section aria-labelledby="activity" className="space-y-3 pt-2">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="activity" className="flex items-center gap-2 text-headline-md text-ink">
-            <Activity className="size-5 text-ink-faint" aria-hidden /> Activité
-          </h2>
-          <Segmented<Tab>
-            value={tab}
-            onChange={setTab}
-            options={[
-              { value: 'posts', label: 'Publications', icon: <Newspaper aria-hidden /> },
-              { value: 'questions', label: 'Questions', icon: <MessagesSquare aria-hidden /> },
-              { value: 'snippets', label: 'Snippets', icon: <Code2 aria-hidden /> },
-              { value: 'projects', label: 'Projets', icon: <FolderGit2 aria-hidden /> },
-            ]}
-          />
-        </div>
-        {tab === 'snippets' ? <AuthorSnippets authorId={profile.id} /> : null}
-        {tab === 'posts' ? <AuthorPosts authorId={profile.id} /> : null}
-        {tab === 'questions' ? <AuthorQuestions authorId={profile.id} /> : null}
-        {tab === 'projects' ? <OwnerProjects ownerId={profile.id} /> : null}
+      <section aria-label="Contenus du profil" className="space-y-4">
+        <Tabs<Tab>
+          value={tab}
+          onChange={setTab}
+          className="sticky top-16 z-10 -mx-1 bg-surface/90 px-1 backdrop-blur-md"
+          options={[
+            { value: 'creations', label: 'Snippets & Posts', icon: <LayoutGrid className="size-4" aria-hidden /> },
+            { value: 'videos', label: 'Vidéos & Tutos', icon: <Clapperboard className="size-4" aria-hidden /> },
+            { value: 'help', label: 'Q&A & Entraide', icon: <HandHelping className="size-4" aria-hidden /> },
+            { value: 'craft', label: 'Craft & Stack', icon: <Sparkles className="size-4" aria-hidden /> },
+          ]}
+        />
+        {tab === 'creations' ? <CreationsTab profile={profile} me={me} /> : null}
+        {tab === 'videos' ? <AuthorVideos authorId={profile.id} /> : null}
+        {tab === 'help' ? <AuthorHelp authorId={profile.id} /> : null}
+        {tab === 'craft' ? <CraftTab profile={profile} isMe={Boolean(me)} accent={accent} /> : null}
       </section>
 
       {me ? <EditProfileDialog profile={me} open={editing} onClose={() => setEditing(false)} /> : null}
@@ -253,14 +111,37 @@ function ProfileView({ profile, me, welcome }: { profile: PublicProfile; me?: My
   );
 }
 
+/** Onglet 1 : épinglés, puis publications, snippets ou projets. */
+function CreationsTab({ profile, me }: { profile: PublicProfile; me?: MyProfile }) {
+  const [view, setView] = useState<Creation>('posts');
+  return (
+    <div className="space-y-4">
+      <PinnedSection profile={profile} me={me} />
+      <FilterChips<Creation>
+        value={view}
+        onChange={setView}
+        options={[
+          { value: 'posts', label: 'Publications', icon: <Newspaper className="size-4" aria-hidden /> },
+          { value: 'snippets', label: 'Snippets', icon: <Code2 className="size-4" aria-hidden /> },
+          { value: 'projects', label: 'Projets', icon: <FolderGit2 className="size-4" aria-hidden /> },
+        ]}
+      />
+      {view === 'posts' ? <AuthorPosts authorId={profile.id} /> : null}
+      {view === 'snippets' ? <AuthorSnippets authorId={profile.id} /> : null}
+      {view === 'projects' ? <OwnerProjects ownerId={profile.id} /> : null}
+    </div>
+  );
+}
+
 /** Mon profil uniquement : ce qu'il reste à renseigner pour un profil complet. */
 function CompletionCard({ profile, onEdit }: { profile: MyProfile; onEdit: () => void }) {
   const steps = [
-    { label: 'Nom affiché', done: Boolean(profile.display_name) },
+    { label: 'Photo de profil', done: Boolean(profile.avatar_url) },
+    { label: 'Bannière', done: Boolean(profile.banner_url) },
     { label: 'Bio', done: Boolean(profile.bio) },
     { label: 'Stack technique', done: profile.stack.length > 0 },
     { label: 'Ville et pays', done: Boolean(profile.location) },
-    { label: 'Compte GitHub', done: Boolean(profile.github_username) },
+    { label: 'Réseaux sociaux', done: Object.keys(profile.social_links ?? {}).length > 0 },
     { label: 'Contenus épinglés', done: profile.pinned.length > 0 },
   ];
   const done = steps.filter((step) => step.done).length;
@@ -275,11 +156,7 @@ function CompletionCard({ profile, onEdit }: { profile: MyProfile; onEdit: () =>
         <ul className="space-y-1.5">
           {steps.map((step) => (
             <li key={step.label} className={`flex items-center gap-2 text-body-sm ${step.done ? 'text-ink-faint line-through' : 'text-ink'}`}>
-              {step.done ? (
-                <Check className="size-4 text-secondary-ink" aria-hidden />
-              ) : (
-                <Circle className="size-4 text-ink-faint" aria-hidden />
-              )}
+              {step.done ? <Check className="size-4 text-secondary-ink" aria-hidden /> : <Circle className="size-4 text-ink-faint" aria-hidden />}
               {step.label}
             </li>
           ))}
@@ -320,15 +197,22 @@ function QrCard({ profile, name }: { profile: PublicProfile; name: string }) {
   );
 }
 
-function AiBioButton() {
+/** Mon profil : rédaction de la bio par l'IA (la bio elle-même s'affiche dans l'en-tête). */
+function AiBioCard({ profile }: { profile: MyProfile }) {
   const aiBio = useAiBio();
+  const hasSuggestion = profile.ai_bio_status === 'ready' && profile.ai_bio_suggestion && profile.ai_bio_suggestion !== profile.bio;
+  if (profile.bio && !hasSuggestion && profile.ai_bio_status !== 'failed') return null;
   return (
-    <div className="flex flex-col items-end gap-1">
-      <Button variant="subtle" size="sm" onClick={() => aiBio.mutate()} loading={aiBio.isPending}>
-        <Sparkles className="size-4 text-primary" aria-hidden /> Rédiger avec l&apos;IA
-      </Button>
+    <Card className="space-y-3 p-4 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-body-md text-ink-muted">{profile.bio ? 'Une nouvelle bio vous attend.' : 'Pas encore de bio : laissez l’IA vous en proposer une.'}</p>
+        <Button variant="subtle" size="sm" onClick={() => aiBio.mutate()} loading={aiBio.isPending}>
+          <Sparkles className="size-4 text-primary" aria-hidden /> Rédiger avec l&apos;IA
+        </Button>
+      </div>
       {aiBio.isError ? <p className="text-body-sm text-danger">{errorMessage(aiBio.error)}</p> : null}
-    </div>
+      <AiBioSuggestion profile={profile} />
+    </Card>
   );
 }
 

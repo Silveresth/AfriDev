@@ -3,6 +3,7 @@
 from django.db.models import Count, QuerySet
 
 from core.stats import count_per_day
+from core.utils import keyset_before
 
 from .models import PollVote, Post, PostLike
 
@@ -10,10 +11,24 @@ from .models import PollVote, Post, PostLike
 SORTS = {"hot": "-hot", "new": "-created_at", "top": "-top"}
 
 
+MEDIA_FILTERS = ("video", "image")
+
+
 def list_feed(
-    *, kind: str | None = None, author_id=None, tag: str | None = None, hub_id=None
+    *,
+    kind: str | None = None,
+    author_id=None,
+    tag: str | None = None,
+    hub_id=None,
+    media: str | None = None,
 ) -> QuerySet[Post]:
-    """Sans ordre : la pagination applique celui du tri (SORTS)."""
+    """Sans ordre : la pagination applique celui du tri (SORTS).
+
+    media = "video" | "image" : seulement les posts portant un média prêt de ce type
+    (onglet « Vidéos & Tutos » du profil), via une sous-requête sur features.media.
+    """
+    from features.media import selectors as media_selectors
+
     posts = Post.objects.alive()
     if hub_id:
         posts = posts.filter(hub_id=hub_id)
@@ -21,10 +36,34 @@ def list_feed(
         posts = posts.filter(kind=kind)
     if author_id:
         posts = posts.filter(author_id=author_id)
+    if media in MEDIA_FILTERS:
+        posts = posts.filter(
+            media_id__in=media_selectors.ready_asset_ids(kind=media, owner_id=author_id)
+        )
     if tag:
         # Recherche sur le texte JSON : portable PostgreSQL / SQLite (tests).
         posts = posts.filter(tags__icontains=f'"{tag.lower()}"')
     return posts
+
+
+def home_candidates(*, before=None, limit: int, author_ids=None) -> list[dict]:
+    """Posts récents pour le fil d'accueil mixte (index -created_at) ; `post` = l'objet complet,
+    présenté ensuite comme dans le fil classique (médias, sondages, vote du visiteur)."""
+    posts = Post.objects.alive()
+    if author_ids is not None:
+        posts = posts.filter(author_id__in=list(author_ids))
+    return [
+        {
+            "type": "post",
+            "id": post.id,
+            "tags": list(post.tags or []),
+            "author_id": post.author_id,
+            "sort_at": post.created_at,
+            "popularity": max(0, post.score) + post.comment_count,
+            "post": post,
+        }
+        for post in keyset_before(posts, "created_at", before)[:limit]
+    ]
 
 
 def get_post(*, post_id, include_hidden: bool = False) -> Post | None:

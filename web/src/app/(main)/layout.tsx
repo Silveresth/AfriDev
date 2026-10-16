@@ -1,3 +1,4 @@
+import { OnboardingGate } from '@/features/auth';
 import { HubNav } from '@/features/hubs';
 import { NotificationBell } from '@/features/notifications';
 import { CommandPalette } from '@/features/search';
@@ -8,6 +9,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   return (
     <AppShell notifications={<NotificationBell />} communities={<HubNav />} search={<CommandPalette />}>
       {children}
+      <OnboardingGate />
     </AppShell>
   );
 }

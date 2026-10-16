@@ -57,7 +57,7 @@ export function VerifyOtpScreen() {
         router.replace('/verify-2fa');
         return;
       }
-      router.replace(response.created ? '/profile?welcome=1' : afterLogin.take());
+      router.replace(afterLogin.take());
     } catch (e) {
       setError(errorMessage(e));
       setCode('');

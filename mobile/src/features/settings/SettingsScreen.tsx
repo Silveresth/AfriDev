@@ -14,7 +14,6 @@ import {
   Monitor,
   Moon,
   Palette,
-  ShieldCheck,
   Sun,
 } from 'lucide-react-native';
 import { useState } from 'react';
@@ -164,18 +163,6 @@ export function SettingsScreen() {
         ) : null}
 
         <Section index={1}>
-          <Row
-            icon={ShieldCheck}
-            label={t('set.security')}
-            detail={t('set.security_desc')}
-            right={
-              <View style={styles.inline}>
-                <Badge label={t(user?.two_factor_enabled ? 'set.2fa_on' : 'set.2fa_off')} tone={user?.two_factor_enabled ? 'success' : 'neutral'} />
-                <ForwardChevron size={18} color={colors.inkFaint} />
-              </View>
-            }
-            onPress={() => router.push('/settings/security')}
-          />
           <Row icon={Bell} label={t('nav.notifications')} detail={t('set.notifications_desc')} onPress={() => router.push('/settings/notifications')} />
           <Row icon={Lock} label={t('set.privacy')} detail={t('set.privacy_desc')} onPress={() => router.push('/settings/privacy')} last />
         </Section>
@@ -240,7 +227,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: StyleSheet.hairlineWidth * 2,
   },
-  inline: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   pad: { padding: 14 },
   gap: { gap: 12 },
   tiles: { flexDirection: 'row', gap: 10 },

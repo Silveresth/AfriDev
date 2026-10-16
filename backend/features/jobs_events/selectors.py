@@ -3,6 +3,8 @@
 from django.db.models import Count, Q, QuerySet
 from django.utils import timezone
 
+from core.utils import keyset_before
+
 from .models import JobOffer, TechEvent
 
 
@@ -41,6 +43,49 @@ def list_jobs(
             | Q(description__icontains=query)
         )
     return jobs
+
+
+def home_candidates(*, before=None, limit: int, author_ids=None) -> list[dict]:
+    """Offres actives récentes pour le fil d'accueil (index is_active, -created_at)."""
+    jobs = list_jobs()
+    if author_ids is not None:
+        jobs = jobs.filter(author_id__in=list(author_ids))
+    rows = keyset_before(jobs, "created_at", before).only(
+        "id",
+        "title",
+        "company",
+        "location",
+        "is_remote",
+        "contract_type",
+        "description",
+        "stack",
+        "salary_range",
+        "apply_url",
+        "author_id",
+        "created_at",
+    )[:limit]
+    return [
+        {
+            "type": "job",
+            "id": j.id,
+            "title": j.title,
+            "excerpt": " ".join(j.description.split())[:220],
+            "tags": list(j.stack or []),
+            "author_id": j.author_id,
+            "sort_at": j.created_at,
+            "url": "/jobs",
+            "popularity": 0,
+            "meta": {
+                "company": j.company,
+                "location": j.location,
+                "is_remote": j.is_remote,
+                "contract_type": j.contract_type,
+                "salary_range": j.salary_range,
+                "apply_url": j.apply_url,
+            },
+        }
+        for j in rows
+    ]
 
 
 def get_job(*, job_id) -> JobOffer | None:

@@ -3,6 +3,7 @@
 import logging
 
 from celery import shared_task
+from celery.exceptions import SoftTimeLimitExceeded
 
 from core import jobs
 from integrations import llm
@@ -26,7 +27,7 @@ def ai_answer_question(question_id: str, force: bool = False) -> None:
     except llm.LLMUnavailableError:
         services.store_ai_answer(question_id=question_id, answer=None, sources=[], disabled=True)
         return
-    except llm.LLMError:
+    except (llm.LLMError, SoftTimeLimitExceeded):
         logger.warning("Réponse IA impossible pour la question %s", question_id)
         text, sources = None, []
     services.store_ai_answer(question_id=question_id, answer=text, sources=sources)
@@ -54,7 +55,7 @@ def ai_tag_question(question_id: str) -> None:
 def ai_rephrase(*, job_id: str, title: str, body: str) -> None:
     try:
         jobs.finish_job(job_id, rephraser.rephrase(title=title, body=body))
-    except llm.LLMError as exc:
+    except (llm.LLMError, SoftTimeLimitExceeded) as exc:
         logger.warning("Reformulation impossible : %s", exc)
         jobs.fail_job(job_id, "La reformulation est indisponible pour le moment.")
 
@@ -66,5 +67,8 @@ def ai_transcribe_voice(*, job_id: str, media_id: str, language: str | None) -> 
         text = voice.transcribe_question(media_id=media_id, language=language)
     except voice.VoiceError as exc:
         jobs.fail_job(job_id, str(exc))
+        return
+    except SoftTimeLimitExceeded:
+        jobs.fail_job(job_id, "La transcription a pris trop de temps.")
         return
     jobs.finish_job(job_id, {"text": text})

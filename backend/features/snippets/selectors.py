@@ -2,6 +2,8 @@
 
 from django.db.models import Q, QuerySet
 
+from core.utils import keyset_before
+
 from .models import Snippet
 from .security_guard import SecretFinding, scan_for_secrets
 
@@ -48,6 +50,35 @@ def snippet_stats(*, since) -> dict:
         # Repassés en privé par le second étage du Security Guard (analyse IA).
         "flagged": snippets.filter(ai_review__risky=True, is_public=False).count(),
     }
+
+
+def home_candidates(*, before=None, limit: int, author_ids=None) -> list[dict]:
+    """Snippets publics récents pour le fil d'accueil (index is_public, -published_at)."""
+    snippets = list_public_snippets().filter(published_at__isnull=False)
+    if author_ids is not None:
+        snippets = snippets.filter(owner_id__in=list(author_ids))
+    rows = keyset_before(snippets, "published_at", before).only(
+        "id", "title", "language", "content", "tags", "owner_id", "published_at"
+    )[:limit]
+    result = []
+    for s in rows:
+        lines = s.content.splitlines()
+        result.append(
+            {
+                "type": "snippet",
+                "id": s.id,
+                "title": s.title,
+                # Aperçu : 8 premières lignes, le code complet reste sur la page du snippet.
+                "excerpt": "\n".join(lines[:8])[:600],
+                "tags": list(s.tags or []),
+                "author_id": s.owner_id,
+                "sort_at": s.published_at,
+                "url": f"/snippets/{s.id}",
+                "popularity": 0,
+                "meta": {"language": s.language, "lines": len(lines)},
+            }
+        )
+    return result
 
 
 def snippet_summaries(*, snippet_ids, viewer_id=None) -> dict:

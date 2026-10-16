@@ -8,6 +8,8 @@ import {
   StaleWhileRevalidate,
 } from 'serwist';
 
+import { notificationHref } from '@/shared/lib/notification-links';
+
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
     __SW_MANIFEST: (PrecacheEntry | string)[] | undefined;
@@ -158,6 +160,54 @@ const serwist = new Serwist({
 });
 
 serwist.addEventListeners();
+
+// ── Notifications push (Web Push) ──
+interface PushMessage {
+  title?: string;
+  body?: string;
+  tag?: string;
+  data?: Record<string, unknown>;
+}
+
+self.addEventListener('push', (event) => {
+  let message: PushMessage = {};
+  try {
+    message = (event.data?.json() ?? {}) as PushMessage;
+  } catch {
+    message = { body: event.data?.text() };
+  }
+  event.waitUntil(
+    (async () => {
+      // Onglet ouvert et au premier plan : la notification arrive déjà en direct (WebSocket).
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      if (windows.some((client) => client.focused && client.visibilityState === 'visible')) return;
+      await self.registration.showNotification(message.title || 'AfriDev Exchange', {
+        body: message.body,
+        tag: message.tag,
+        icon: '/icons/icon-192.png',
+        lang: 'fr',
+        data: { url: notificationHref(message.data) ?? '/notifications' },
+      });
+    })(),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data as { url?: string })?.url ?? '/', self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      const tab = windows.find((client) => new URL(client.url).origin === self.location.origin);
+      if (tab) {
+        await tab.focus();
+        await tab.navigate(url).catch(() => undefined);
+      } else {
+        await self.clients.openWindow(url);
+      }
+    })(),
+  );
+});
 
 // Nettoyage automatique des anciens caches corrompus lors de l'activation
 self.addEventListener('activate', (event) => {

@@ -16,7 +16,7 @@ type Block =
   | { type: 'quote'; text: string }
   | { type: 'paragraph'; text: string };
 
-function parseBlocks(source: string): Block[] {
+function parseBlocks(source: string, breaks = false): Block[] {
   const lines = source.replace(/\r\n/g, '\n').split('\n');
   const blocks: Block[] = [];
   let index = 0;
@@ -73,7 +73,7 @@ function parseBlocks(source: string): Block[] {
       paragraph.push(lines[index] ?? '');
       index += 1;
     }
-    blocks.push({ type: 'paragraph', text: paragraph.join(' ') });
+    blocks.push({ type: 'paragraph', text: paragraph.join(breaks ? '\n' : ' ') });
   }
   return blocks;
 }
@@ -136,15 +136,18 @@ export function Markdown({
   source,
   className,
   citeHref,
+  breaks = false,
 }: {
   source: string;
   className?: string;
   /** Lien d'une citation numérotée [n] (sources de la réponse IA). */
   citeHref?: (n: number) => string | undefined;
+  /** Conserve les retours à la ligne simples (bio du profil). */
+  breaks?: boolean;
 }) {
   return (
-    <div className={cn('prose-afri text-body-md text-ink', className)}>
-      {parseBlocks(source).map((block, i) => {
+    <div className={cn('prose-afri text-body-md text-ink', breaks && '[&_p]:whitespace-pre-line', className)}>
+      {parseBlocks(source, breaks).map((block, i) => {
         switch (block.type) {
           case 'code':
             return <CodeBlock key={i} code={block.code} language={block.language || undefined} />;

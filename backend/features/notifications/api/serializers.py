@@ -22,6 +22,32 @@ class DeviceInputSerializer(serializers.Serializer):
     )
 
 
+class DeviceTokenSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=200)
+
+
+class WebPushKeysSerializer(serializers.Serializer):
+    p256dh = serializers.CharField(max_length=120)
+    auth = serializers.CharField(max_length=40)
+
+
+class WebPushSubscribeSerializer(serializers.Serializer):
+    """Forme de PushSubscription.toJSON() côté navigateur."""
+
+    endpoint = serializers.URLField(max_length=1000)
+    keys = WebPushKeysSerializer()
+
+
+class WebPushUnsubscribeSerializer(serializers.Serializer):
+    endpoint = serializers.URLField(max_length=1000)
+
+
+class WebPushConfigSerializer(serializers.Serializer):
+    public_key = serializers.CharField(
+        allow_null=True, help_text="Clé VAPID publique (applicationServerKey) ; null : désactivé."
+    )
+
+
 class NotificationKindSerializer(serializers.Serializer):
     value = serializers.CharField()
     label = serializers.CharField()

@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowBigDown, ArrowBigUp, Check, CheckCircle2, SendHorizontal, Sparkles } from 'lucide-react-native';
+import { ThumbsDown, ThumbsUp, Check, CheckCircle2, SendHorizontal, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -77,11 +77,11 @@ function AnswerRow({ answer, question }: { answer: Answer; question: Question })
     <View style={[styles.answer, { borderBottomColor: colors.line }]}>
       <View style={styles.voteCol}>
         <Pressable hitSlop={6} accessibilityLabel={t('feed.upvote')} onPress={() => requireAuth(() => vote.mutate({ answerId: answer.id, value: 1 }))}>
-          <ArrowBigUp size={24} color={colors.inkMuted} strokeWidth={1.8} />
+          <ThumbsUp size={24} color={colors.inkMuted} strokeWidth={1.8} />
         </Pressable>
         <Text variant="bodyStrong">{answer.score}</Text>
         <Pressable hitSlop={6} accessibilityLabel={t('feed.downvote')} onPress={() => requireAuth(() => vote.mutate({ answerId: answer.id, value: -1 }))}>
-          <ArrowBigDown size={24} color={colors.inkMuted} strokeWidth={1.8} />
+          <ThumbsDown size={24} color={colors.inkMuted} strokeWidth={1.8} />
         </Pressable>
         {answer.is_accepted ? <CheckCircle2 size={22} color={colors.secondary} style={styles.accepted} /> : null}
       </View>

@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowBigUp, ExternalLink, Globe, MessageSquare, Share2 } from 'lucide-react-native';
+import { ThumbsUp, ExternalLink, Globe, MessageSquare, Share2 } from 'lucide-react-native';
 import { ScrollView, Share, StyleSheet, View } from 'react-native';
 
 import { TranslateBar } from '@/features/translation';
@@ -100,7 +100,7 @@ export function NewsDetailScreen() {
           <View style={styles.statsRow}>
             {item.score !== null ? (
               <View style={styles.stat}>
-                <ArrowBigUp size={16} color={colors.primary} />
+                <ThumbsUp size={16} color={colors.primary} />
                 <Text variant="smallStrong" tone="primary">
                   {tp('poll.votes', item.score)}
                 </Text>

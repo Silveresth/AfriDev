@@ -83,11 +83,13 @@ def exchange_github_code(code: str, redirect_uri: str | None = None) -> OAuthIde
 
     with _github(token) as client:
         user = _get(client, "/user")
-        email = user.get("email") or ""
-        if not email:
-            emails = _get(client, "/user/emails") or []
-            primary = next((e for e in emails if e.get("primary") and e.get("verified")), None)
-            email = primary["email"] if primary else ""
+        if not user:
+            raise GitHubError("Profil GitHub introuvable.")
+        # Toujours l'adresse principale *vérifiée* : un e-mail non vérifié ne doit jamais
+        # rattacher un compte AfriDev existant (prise de contrôle de compte).
+        emails = _get(client, "/user/emails") or []
+        primary = next((e for e in emails if e.get("primary") and e.get("verified")), None)
+        email = primary["email"] if primary else ""
     return OAuthIdentity(
         provider="github",
         uid=str(user["id"]),
