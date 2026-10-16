@@ -24,6 +24,7 @@ from .serializers import (
     PollVoteInputSerializer,
     PostInputSerializer,
     PostOutputSerializer,
+    PostPinInputSerializer,
     PostUpdateSerializer,
     VoteInputSerializer,
     present_home,
@@ -40,6 +41,32 @@ def _get_post(post_id):
 
 def _one(post, request):
     return present_posts([post], viewer=request.user)[0]
+
+
+def _paginated_feed(request, posts, *, hub_id=None):
+    """Page du fil selon le tri demandé. Fil d'un hub : les posts épinglés (3 au plus) en tête
+    de la 1re page, puis exclus de la suite pour ne jamais apparaître deux fois."""
+    pinned = []
+    if hub_id:
+        if not request.query_params.get("cursor"):
+            pinned = list(posts.filter(is_pinned=True).order_by("-updated_at"))
+        posts = posts.filter(is_pinned=False)
+    paginator = CursorPagination()
+    paginator.ordering = selectors.SORTS.get(request.query_params.get("sort", "hot"), "-hot")
+    page = paginator.paginate_queryset(posts, request)
+    return paginator.get_paginated_response(present_posts([*pinned, *page], viewer=request.user))
+
+
+class PostPinView(APIView):
+    """Épingler ou détacher un post du hub (réservé aux modérateurs du hub)."""
+
+    @extend_schema(request=PostPinInputSerializer, responses=PostOutputSerializer)
+    def post(self, request, post_id):
+        data = PostPinInputSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        pinned = data.validated_data.get("pinned", True)
+        post = services.pin_post(post=_get_post(post_id), user=request.user, pinned=pinned)
+        return Response(_one(post, request))
 
 
 class FeedView(APIView):
@@ -82,10 +109,7 @@ class FeedView(APIView):
         )
         if hub and hub_id is None:
             posts = posts.none()
-        paginator = CursorPagination()
-        paginator.ordering = selectors.SORTS.get(request.query_params.get("sort", "hot"), "-hot")
-        page = paginator.paginate_queryset(posts, request)
-        return paginator.get_paginated_response(present_posts(page, viewer=request.user))
+        return _paginated_feed(request, posts, hub_id=hub_id)
 
     @extend_schema(request=PostInputSerializer, responses={201: PostOutputSerializer})
     def post(self, request):
@@ -258,7 +282,4 @@ class HubFeedView(APIView):
         if hub is None:
             raise NotFound("Hub introuvable.")
         posts = selectors.list_feed(kind=request.query_params.get("kind"), hub_id=hub.id)
-        paginator = CursorPagination()
-        paginator.ordering = selectors.SORTS.get(request.query_params.get("sort", "hot"), "-hot")
-        page = paginator.paginate_queryset(posts, request)
-        return paginator.get_paginated_response(present_posts(page, viewer=request.user))
+        return _paginated_feed(request, posts, hub_id=hub.id)

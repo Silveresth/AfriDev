@@ -155,9 +155,40 @@ def update_post(
 
 
 def delete_post(*, post: Post, user) -> None:
-    if post.author_id != user.id and not user.is_staff:
-        raise PermissionDeniedError("Seul l'auteur peut supprimer ce post.")
+    is_allowed = post.author_id == user.id or user.is_staff
+    if not is_allowed and post.hub_id:
+        from features.hubs import selectors as hub_selectors
+
+        is_allowed = hub_selectors.is_hub_moderator(hub_id=post.hub_id, user=user)
+    if not is_allowed:
+        raise PermissionDeniedError("Vous n'êtes pas autorisé à supprimer ce post.")
     post.soft_delete()
+
+
+MAX_PINNED_PER_HUB = 3
+
+
+def pin_post(*, post: Post, user, pinned: bool = True) -> Post:
+    if not post.hub_id:
+        raise DomainError("Seul un post rattaché à un hub peut être épinglé.", code="not_in_hub")
+    from features.hubs import selectors as hub_selectors
+
+    if not hub_selectors.is_hub_moderator(hub_id=post.hub_id, user=user):
+        raise PermissionDeniedError("Seul un modérateur du hub peut épingler un post.")
+    if (
+        pinned
+        and not post.is_pinned
+        and Post.objects.alive().filter(hub_id=post.hub_id, is_pinned=True).count()
+        >= MAX_PINNED_PER_HUB
+    ):
+        raise DomainError(
+            f"{MAX_PINNED_PER_HUB} posts épinglés au maximum par hub : détachez-en un d'abord.",
+            code="too_many_pinned",
+        )
+    if post.is_pinned != pinned:
+        post.is_pinned = pinned
+        post.save(update_fields=["is_pinned", "updated_at"])
+    return post
 
 
 def hide_post(*, post_id) -> bool:

@@ -116,8 +116,13 @@ def update_question(*, question: Question, user, title=None, body=None, tags=Non
 
 
 def delete_question(*, question: Question, user) -> None:
-    if question.author_id != user.id and not user.is_staff:
-        raise PermissionDeniedError("Seul l'auteur peut supprimer cette question.")
+    is_allowed = question.author_id == user.id or user.is_staff
+    if not is_allowed and question.hub_id:
+        from features.hubs import selectors as hub_selectors
+
+        is_allowed = hub_selectors.is_hub_moderator(hub_id=question.hub_id, user=user)
+    if not is_allowed:
+        raise PermissionDeniedError("Vous n'êtes pas autorisé à supprimer cette question.")
     question.soft_delete()
 
 

@@ -30,7 +30,12 @@ def test_poll_vote_and_like_through_api(auth_client, client_for, other_user):
     other = client_for(other_user)
     voted = other.post(f"/api/feed/{poll['id']}/vote/", {"option": 1}, format="json")
     assert voted.data["poll_results"] == [0, 1]
-    assert voted.data["viewer"] == {"post_vote": 0, "liked": False, "vote": 1}
+    assert voted.data["viewer"] == {
+        "post_vote": 0,
+        "liked": False,
+        "vote": 1,
+        "can_moderate": False,
+    }
 
     # Ancienne API « j'aime » (app mobile) : un vote ↑.
     liked = other.post(f"/api/feed/{poll['id']}/like/", {"liked": True}, format="json")

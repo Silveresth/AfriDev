@@ -21,7 +21,7 @@ def test_create_join_and_leave(api_client, auth_client, client_for, other_user):
     assert hub["slug"] == "python-senegal"
     assert hub["rules"] == ["Soyez bienveillants"]
     assert hub["member_count"] == 1
-    assert hub["viewer"] == {"is_member": True, "role": "moderator"}
+    assert hub["viewer"] == {"is_member": True, "role": "moderator", "is_creator": True}
     assert [m["username"] for m in hub["moderators"]] == ["amina"]
 
     taken = auth_client.post(
@@ -127,3 +127,73 @@ def test_move_post_out_of_hub(auth_client):
     assert moved.data["hub"] is None
     untouched = auth_client.patch(f"/api/feed/{post['id']}/", {"title": "Renommé"}, format="json")
     assert untouched.data["hub"] is None and untouched.data["title"] == "Renommé"
+
+
+def test_moderators_pin_and_delete_hub_posts(api_client, auth_client, client_for, other_user):
+    hub = _hub(auth_client)
+    kofi = client_for(other_user)
+    kofi.post(f"/api/hubs/{hub['slug']}/join/")
+    posts = [
+        kofi.post(
+            "/api/feed/", {"title": f"Post {i}", "body": "…", "hub_id": hub["id"]}, format="json"
+        ).data
+        for i in range(5)
+    ]
+    first = posts[0]["id"]
+
+    # Un simple membre ne peut ni épingler ni supprimer le post d'un autre.
+    assert kofi.post(f"/api/feed/{posts[1]['id']}/pin/").status_code in (403, 400)
+    pinned = auth_client.post(f"/api/feed/{first}/pin/", {"pinned": True}, format="json")
+    assert pinned.status_code == 200 and pinned.data["is_pinned"] is True
+    assert pinned.data["viewer"]["can_moderate"] is True
+
+    # Épinglé : en tête de la 1re page (même trié par nouveauté), sans doublon ensuite.
+    feed = api_client.get(f"/api/hubs/{hub['slug']}/feed/", {"sort": "new", "page_size": 2})
+    assert _ids(feed)[0] == str(first)
+    following = api_client.get(feed.data["next"])
+    assert str(first) not in _ids(following)
+
+    for post in posts[1:3]:
+        auth_client.post(f"/api/feed/{post['id']}/pin/")
+    too_many = auth_client.post(f"/api/feed/{posts[3]['id']}/pin/")
+    assert too_many.status_code == 400 and too_many.data["error"]["code"] == "too_many_pinned"
+
+    # Le créateur du hub supprime le post d'un membre ; le membre voit son rôle absent.
+    assert auth_client.delete(f"/api/feed/{posts[4]['id']}/").status_code == 204
+    hub_post = auth_client.post(
+        "/api/feed/", {"title": "Annonce", "body": "…", "hub_id": hub["id"]}, format="json"
+    ).data
+    assert hub_post["author_role"] == "creator"
+    assert posts[1]["author_role"] is None
+
+
+def test_hub_moderator_management(auth_client, client_for, other_user):
+    hub = _hub(auth_client)
+    slug = hub["slug"]
+
+    # auth_client is creator, assigns other_user (kofi) as moderator
+    assign_res = auth_client.post(
+        f"/api/hubs/{slug}/moderators/",
+        {"username": other_user.username},
+        format="json",
+    )
+    assert assign_res.status_code == 200
+    assert any(m["username"] == other_user.username for m in assign_res.data["moderators"])
+
+    # Non-creator (kofi) cannot assign or revoke moderators
+    kofi = client_for(other_user)
+    forbidden = kofi.post(
+        f"/api/hubs/{slug}/moderators/",
+        {"username": other_user.username},
+        format="json",
+    )
+    assert forbidden.status_code == 403
+
+    # Creator revokes moderator
+    remove_res = auth_client.delete(
+        f"/api/hubs/{slug}/moderators/",
+        {"username": other_user.username},
+        format="json",
+    )
+    assert remove_res.status_code == 200
+    assert all(m["username"] != other_user.username for m in remove_res.data["moderators"])

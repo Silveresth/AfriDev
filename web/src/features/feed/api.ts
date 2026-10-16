@@ -125,7 +125,12 @@ export function useScoreVote(post: Post) {
       replacePost(queryClient, {
         ...post,
         score: (post.score ?? post.like_count ?? 0) - previous + value,
-        viewer: { post_vote: value, liked: value === 1, vote: post.viewer?.vote ?? null },
+        viewer: {
+          post_vote: value,
+          liked: value === 1,
+          vote: post.viewer?.vote ?? null,
+          can_moderate: post.viewer?.can_moderate ?? false,
+        },
       });
     },
     onSuccess: (updated) => replacePost(queryClient, updated),
@@ -147,6 +152,20 @@ export function useDeletePost() {
   return useMutation({
     mutationFn: (id: string) => unwrap(api.DELETE('/api/feed/{post_id}/', { params: { path: { post_id: id } } })),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: feedKeys.all }),
+  });
+}
+
+/** Épingler / détacher un post en tête de son hub (modérateurs du hub). */
+export function usePinPost() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) =>
+      unwrap(api.POST('/api/feed/{post_id}/pin/', { params: { path: { post_id: id } }, body: { pinned } })),
+    onSuccess: (post) => {
+      replacePost(queryClient, post);
+      // L'ordre du fil du hub change (épinglés en tête) : recharge des listes.
+      void queryClient.invalidateQueries({ queryKey: ['feed', 'list'] });
+    },
   });
 }
 

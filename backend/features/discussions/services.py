@@ -87,6 +87,7 @@ def delete_comment(*, comment: Comment, user) -> None:
         post = feed_selectors.get_post(post_id=comment.post_id)
         if post and post.hub_id:
             from features.hubs import selectors as hub_selectors
+
             is_allowed = hub_selectors.is_hub_moderator(hub_id=post.hub_id, user=user)
 
     if not is_allowed:
@@ -94,8 +95,6 @@ def delete_comment(*, comment: Comment, user) -> None:
             "Seul l'auteur ou un modérateur du hub peut supprimer ce commentaire."
         )
     _soft_delete(comment)
-
-
 
 
 def hide_comment(*, comment_id) -> bool:

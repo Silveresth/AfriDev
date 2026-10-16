@@ -132,7 +132,13 @@ def unpublish_snippet(*, snippet: Snippet) -> Snippet:
 
 @transaction.atomic
 def delete_snippet(*, snippet: Snippet, user) -> None:
-    _check_owner(snippet, user)
+    is_allowed = snippet.owner_id == user.id or user.is_staff
+    if not is_allowed and snippet.hub_id:
+        from features.hubs import selectors as hub_selectors
+
+        is_allowed = hub_selectors.is_hub_moderator(hub_id=snippet.hub_id, user=user)
+    if not is_allowed:
+        raise PermissionDeniedError("Vous n'êtes pas autorisé à supprimer ce snippet.")
     was_public = snippet.is_public
     snippet.soft_delete()
     if was_public:
@@ -207,9 +213,11 @@ def add_comment(*, snippet: Snippet, author, body: str, parent_id=None) -> Snipp
     """Ajoute un commentaire à un snippet public avec incrément atomique de comment_count."""
     parent = None
     if parent_id:
-        parent = SnippetComment.objects.alive().filter(
-            id=parent_id, snippet=snippet, parent__isnull=True
-        ).first()
+        parent = (
+            SnippetComment.objects.alive()
+            .filter(id=parent_id, snippet=snippet, parent__isnull=True)
+            .first()
+        )
 
     comment = SnippetComment.objects.create(
         snippet=snippet,
@@ -230,6 +238,7 @@ def delete_comment(*, comment: SnippetComment, user) -> None:
         snippet = Snippet.objects.alive().filter(id=comment.snippet_id).first()
         if snippet and snippet.hub_id:
             from features.hubs import selectors as hub_selectors
+
             is_allowed = hub_selectors.is_hub_moderator(hub_id=snippet.hub_id, user=user)
 
     if not is_allowed:
@@ -242,5 +251,3 @@ def delete_comment(*, comment: SnippetComment, user) -> None:
             default=Value(0),
         )
     )
-
-

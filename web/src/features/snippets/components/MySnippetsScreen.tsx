@@ -19,7 +19,7 @@ import {
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
-import { ContextTabs, PageHeader, Toolbar, TwoColumns } from '@/shared/layout';
+import { ContextTabs, PageHeader, TwoColumns } from '@/shared/layout';
 import { formatBytes, utf8Size } from '@/shared/lib';
 import { useOutbox, useStorageEstimate } from '@/shared/offline';
 import {
@@ -31,7 +31,6 @@ import {
   ErrorNotice,
   FilterChips,
   SearchField,
-  Segmented,
   SideCard,
   StatusBadge,
 } from '@/shared/ui';

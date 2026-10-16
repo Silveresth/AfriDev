@@ -111,21 +111,51 @@ def list_moderators(*, hub_id) -> list:
     )
 
 
+def author_hub_roles(*, pairs: set[tuple]) -> dict:
+    """pairs : {(hub_id, user_id), ...} -> {(hub_id, user_id): "creator" | "moderator"}."""
+    clean_pairs = {(h, u) for h, u in pairs if h and u}
+    if not clean_pairs:
+        return {}
+    hub_ids = {h for h, _ in clean_pairs}
+    user_ids = {u for _, u in clean_pairs}
+    creators = dict(Hub.objects.alive().filter(id__in=hub_ids).values_list("id", "creator_id"))
+    mods = set(
+        HubMembership.objects.filter(
+            hub_id__in=hub_ids, user_id__in=user_ids, role=HubMembership.Role.MODERATOR
+        ).values_list("hub_id", "user_id")
+    )
+    result = {}
+    for hub_id, user_id in clean_pairs:
+        if creators.get(hub_id) == user_id:
+            result[(hub_id, user_id)] = "creator"
+        elif (hub_id, user_id) in mods:
+            result[(hub_id, user_id)] = "moderator"
+    return result
+
+
+def moderated_hub_ids(*, hub_ids, user) -> set:
+    """Parmi `hub_ids`, ceux que l'utilisateur peut modérer (créateur, modérateur ou staff) :
+    deux requêtes au plus, quel que soit le nombre de hubs (listes de posts, de snippets…)."""
+    hub_ids = {hub_id for hub_id in hub_ids if hub_id}
+    if not hub_ids or not user or not user.is_authenticated:
+        return set()
+    alive = set(Hub.objects.alive().filter(id__in=hub_ids).values_list("id", "creator_id"))
+    if getattr(user, "is_staff", False):
+        return {hub_id for hub_id, _ in alive}
+    created = {hub_id for hub_id, creator_id in alive if creator_id == user.id}
+    others = {hub_id for hub_id, _ in alive} - created
+    if not others:
+        return created
+    return created | set(
+        HubMembership.objects.filter(
+            hub_id__in=others, user=user, role=HubMembership.Role.MODERATOR
+        ).values_list("hub_id", flat=True)
+    )
+
+
 def is_hub_moderator(*, hub_id, user) -> bool:
     """Vérifie si l'utilisateur est créateur du hub, modérateur ou staff."""
-    if not user or not user.is_authenticated or not hub_id:
-        return False
-    if getattr(user, "is_staff", False):
-        return True
-    hub = Hub.objects.alive().filter(id=hub_id).first()
-    if not hub:
-        return False
-    if hub.creator_id == user.id:
-        return True
-    return HubMembership.objects.filter(
-        hub_id=hub_id, user=user, role=HubMembership.Role.MODERATOR
-    ).exists()
-
+    return hub_id in moderated_hub_ids(hub_ids={hub_id}, user=user)
 
 
 def export_for_user(*, user_id) -> dict:

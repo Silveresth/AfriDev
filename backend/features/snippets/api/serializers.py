@@ -61,6 +61,11 @@ class PublicSnippetSerializer(serializers.Serializer):
     published_at = serializers.DateTimeField()
     comment_count = serializers.IntegerField(default=0)
     author = AuthorSerializer(allow_null=True)
+    author_role = serializers.CharField(
+        allow_null=True,
+        required=False,
+        help_text="Rôle de l'auteur dans le hub : 'creator', 'moderator' ou null.",
+    )
 
 
 class SnippetVersionSerializer(ReadOnlyModelSerializer):
@@ -93,4 +98,3 @@ class SnippetCommentSerializer(serializers.Serializer):
     updated_at = serializers.DateTimeField()
     parent_id = serializers.UUIDField(allow_null=True)
     author = AuthorSerializer(allow_null=True)
-

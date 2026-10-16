@@ -107,7 +107,12 @@ export function useScoreVote(post: Post) {
       replacePost(queryClient, {
         ...post,
         score: post.score - previous + value,
-        viewer: { post_vote: value, liked: value === 1, vote: post.viewer?.vote ?? null },
+        viewer: {
+          post_vote: value,
+          liked: value === 1,
+          vote: post.viewer?.vote ?? null,
+          can_moderate: post.viewer?.can_moderate ?? false,
+        },
       });
     },
     onSuccess: (updated) => replacePost(queryClient, updated),

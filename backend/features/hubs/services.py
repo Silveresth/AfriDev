@@ -174,4 +174,3 @@ def remove_moderator(*, hub: Hub, admin_user, target_user) -> HubMembership:
     membership.role = HubMembership.Role.MEMBER
     membership.save(update_fields=["role", "updated_at"])
     return membership
-

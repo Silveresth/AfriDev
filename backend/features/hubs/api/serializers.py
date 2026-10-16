@@ -40,7 +40,6 @@ class HubModeratorActionSerializer(serializers.Serializer):
 
 
 class HubOutputSerializer(serializers.Serializer):
-
     id = serializers.UUIDField()
     slug = serializers.CharField()
     name = serializers.CharField()
@@ -87,19 +86,14 @@ def present_hubs(hubs, *, viewer, detail: bool = False) -> list[dict]:
                     "is_member": hub.id in roles,
                     "is_creator": bool(
                         viewer
-                        and (
-                            hub.creator_id == viewer.id
-                            or getattr(viewer, "is_staff", False)
-                        )
+                        and (hub.creator_id == viewer.id or getattr(viewer, "is_staff", False))
                     ),
                     "role": roles.get(hub.id),
                 }
                 if authenticated
                 else None
             ),
-
             "created_at": hub.created_at,
         }
         for hub in hubs
     ]
-

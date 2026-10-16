@@ -10,7 +10,10 @@ import {
   Ellipsis,
   Link2,
   MessageSquare,
+  Pin,
+  PinOff,
   Share2,
+  ShieldCheck,
   Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -19,6 +22,7 @@ import { useRouter } from 'next/navigation';
 import { BookmarkButton } from '@/features/bookmarks';
 import { ReportButton } from '@/features/moderation';
 import { TranslateButton } from '@/features/translation';
+import { errorMessage } from '@/shared/api';
 import { cn, formatCount } from '@/shared/lib';
 import { type MediaAsset, MediaView } from '@/shared/media';
 import { useSession } from '@/shared/session';
@@ -39,7 +43,9 @@ import {
   useToast,
 } from '@/shared/ui';
 
-import { type Post, useDeletePost, useScoreVote, useVote } from '../api';
+import { type Post, useDeletePost, usePinPost, useScoreVote, useVote } from '../api';
+
+const ROLE_LABELS: Record<string, string> = { creator: 'Créateur du hub', moderator: 'Modérateur' };
 
 /**
  * Carte de post / discussion, façon Dev.to : carte encadrée et cliquable.
@@ -56,6 +62,9 @@ export function PostCard({ post, detail = false, community: showCommunity = true
   const toast = useToast();
   const name = post.author?.display_name || post.author?.username || 'Membre';
   const mine = Boolean(user && post.author?.id === user.id);
+  // Modérateur du hub (ou staff) : épingler, supprimer le post d'un autre membre.
+  const moderator = Boolean(post.viewer?.can_moderate);
+  const pin = usePinPost();
   const postTags = Array.isArray(post.tags) ? post.tags : [];
   const [community, ...rest] = postTags;
   // Rangé dans un hub : tous les tags sont affichés ; sinon le premier tient lieu de communauté.
@@ -115,6 +124,11 @@ export function PostCard({ post, detail = false, community: showCommunity = true
               ) : (
                 <span className="truncate text-body-sm font-semibold text-ink">{name}</span>
               )}
+              {post.author_role && ROLE_LABELS[post.author_role] ? (
+                <span className="inline-flex items-center gap-1 rounded-md bg-secondary-soft px-1.5 py-0.5 text-[0.6875rem] font-semibold text-on-secondary-soft">
+                  <ShieldCheck className="size-3" aria-hidden /> {ROLE_LABELS[post.author_role]}
+                </span>
+              ) : null}
               <AuthorBadges location={post.author?.location} stack={post.author?.stack} />
               {badgeLabel ? <TechBadge label={badgeLabel} /> : null}
             </div>
@@ -140,6 +154,11 @@ export function PostCard({ post, detail = false, community: showCommunity = true
             </div>
           </div>
           <span className="flex shrink-0 items-center gap-1">
+            {post.is_pinned ? (
+              <StatusBadge tone="primary" dot={false}>
+                <Pin className="size-3.5" aria-hidden /> Épinglé
+              </StatusBadge>
+            ) : null}
             {post.kind === 'poll' ? (
               <StatusBadge tone="warning" dot={false}>
                 <BarChart3 className="size-3.5" aria-hidden /> Sondage
@@ -150,7 +169,7 @@ export function PostCard({ post, detail = false, community: showCommunity = true
                 <Clapperboard className="size-3.5" aria-hidden /> Vidéo
               </StatusBadge>
             ) : null}
-            {mine ? (
+            {mine || moderator ? (
               <Menu
                 className="w-52"
                 trigger={(props) => (
@@ -167,10 +186,26 @@ export function PostCard({ post, detail = false, community: showCommunity = true
                 <MenuItem onSelect={() => void navigator.clipboard.writeText(`${window.location.origin}${href}`).then(() => toast('Lien copié.'))}>
                   <Link2 aria-hidden /> Copier le lien
                 </MenuItem>
+                {moderator && post.hub ? (
+                  <MenuItem
+                    onSelect={() =>
+                      pin.mutate(
+                        { id: post.id, pinned: !post.is_pinned },
+                        {
+                          onSuccess: (updated) => toast(updated.is_pinned ? 'Post épinglé en tête du hub.' : 'Post détaché.'),
+                          onError: (error) => toast(errorMessage(error), 'error'),
+                        },
+                      )
+                    }
+                  >
+                    {post.is_pinned ? <PinOff aria-hidden /> : <Pin aria-hidden />}
+                    {post.is_pinned ? 'Détacher' : 'Épingler dans le hub'}
+                  </MenuItem>
+                ) : null}
                 <MenuItem
                   danger
                   onSelect={() => {
-                    if (!window.confirm('Supprimer ce post ?')) return;
+                    if (!window.confirm(mine ? 'Supprimer ce post ?' : 'Supprimer ce post en tant que modérateur ?')) return;
                     remove.mutate(post.id, { onSuccess: () => detail && router.push('/feed') });
                   }}
                 >

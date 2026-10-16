@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.pagination import CursorPagination
+from core.permissions import ReadOnlyOrAuthenticated
 from core.schema import CURSOR_PARAMETERS, paginated
 from features.hubs import selectors as hub_selectors
 from features.profiles import selectors as profile_selectors
@@ -37,6 +38,9 @@ def _present_public(snippets) -> list[dict]:
     snippets = list(snippets)
     authors = profile_selectors.author_cards(user_ids={s.owner_id for s in snippets})
     hubs = hub_selectors.hub_cards(hub_ids={s.hub_id for s in snippets})
+    author_roles = hub_selectors.author_hub_roles(
+        pairs={(s.hub_id, s.owner_id) for s in snippets if s.hub_id}
+    )
     return [
         {
             "id": s.id,
@@ -48,10 +52,10 @@ def _present_public(snippets) -> list[dict]:
             "published_at": s.published_at,
             "comment_count": s.comment_count,
             "author": authors.get(s.owner_id),
+            "author_role": author_roles.get((s.hub_id, s.owner_id)),
         }
         for s in snippets
     ]
-
 
 
 class SnippetListCreateView(APIView):
@@ -148,7 +152,7 @@ class PublicSnippetListView(APIView):
 
 
 class PublicSnippetDetailView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [ReadOnlyOrAuthenticated]
 
     @extend_schema(responses=PublicSnippetSerializer)
     def get(self, request, snippet_id):
@@ -156,6 +160,14 @@ class PublicSnippetDetailView(APIView):
         if snippet is None:
             raise NotFound("Snippet introuvable.")
         return Response(_present_public([snippet])[0])
+
+    @extend_schema(responses={204: None})
+    def delete(self, request, snippet_id):
+        snippet = selectors.get_public_snippet(snippet_id=snippet_id)
+        if snippet is None:
+            raise NotFound("Snippet introuvable.")
+        services.delete_snippet(snippet=snippet, user=request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class SecretScanView(APIView):
@@ -246,5 +258,3 @@ class SnippetCommentDeleteView(APIView):
             raise NotFound("Commentaire introuvable.")
         services.delete_comment(comment=comment, user=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-

@@ -133,11 +133,7 @@ def export_for_user(*, user_id) -> dict:
 
 def list_comments(*, snippet_id) -> QuerySet:
     """Commentaires non supprimés d'un snippet, ordonnés chronologiquement."""
-    return (
-        SnippetComment.objects.alive()
-        .filter(snippet_id=snippet_id)
-        .order_by("created_at")
-    )
+    return SnippetComment.objects.alive().filter(snippet_id=snippet_id).order_by("created_at")
 
 
 def get_comment(*, comment_id, author=None) -> SnippetComment | None:
@@ -146,4 +142,3 @@ def get_comment(*, comment_id, author=None) -> SnippetComment | None:
     if author is not None:
         qs = qs.filter(author=author)
     return qs.first()
-

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 import { BookmarkButton } from '@/features/bookmarks';
-import { ContextTabs, PageHeader, Toolbar, TwoColumns } from '@/shared/layout';
+import { ContextTabs, PageHeader, TwoColumns } from '@/shared/layout';
 import { cn } from '@/shared/lib';
 import { useOutbox } from '@/shared/offline';
 import { useSession } from '@/shared/session';
@@ -23,7 +23,6 @@ import {
   HubLink,
   KarmaPill,
   SearchField,
-  Segmented,
   StatusBadge,
   Tag,
   TimeAgo,

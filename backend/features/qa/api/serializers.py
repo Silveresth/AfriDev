@@ -44,6 +44,11 @@ class QuestionOutputSerializer(serializers.Serializer):
     is_resolved = serializers.BooleanField()
     answer_count = serializers.IntegerField()
     author = AuthorSerializer(allow_null=True)
+    author_role = serializers.CharField(
+        allow_null=True,
+        required=False,
+        help_text="Rôle de l'auteur dans le hub : 'creator', 'moderator' ou null.",
+    )
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
 
@@ -119,6 +124,9 @@ def present_questions(questions) -> list[dict]:
     questions = list(questions)
     authors = profile_selectors.author_cards(user_ids={q.author_id for q in questions})
     hubs = hub_selectors.hub_cards(hub_ids={q.hub_id for q in questions})
+    author_roles = hub_selectors.author_hub_roles(
+        pairs={(q.hub_id, q.author_id) for q in questions if q.hub_id}
+    )
     return [
         {
             "id": q.id,
@@ -133,6 +141,7 @@ def present_questions(questions) -> list[dict]:
             "is_resolved": q.is_resolved,
             "answer_count": q.answer_count,
             "author": authors.get(q.author_id),
+            "author_role": author_roles.get((q.hub_id, q.author_id)),
             "created_at": q.created_at,
             "updated_at": q.updated_at,
         }

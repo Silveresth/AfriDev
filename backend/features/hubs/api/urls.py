@@ -12,4 +12,3 @@ urlpatterns = [
     path("<slug:slug>/join/", HubJoinView.as_view(), name="join"),
     path("<slug:slug>/moderators/", HubModeratorsView.as_view(), name="moderators"),
 ]
-

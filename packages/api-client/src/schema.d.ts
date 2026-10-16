@@ -667,6 +667,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/feed/{post_id}/pin/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Épingler ou détacher un post du hub (réservé aux modérateurs du hub). */
+        post: operations["feed_pin_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/feed/{post_id}/score/": {
         parameters: {
             query?: never;
@@ -828,6 +845,24 @@ export interface paths {
         post: operations["hubs_join_create"];
         /** @description POST : rejoindre (idempotent) ; DELETE : quitter. */
         delete: operations["hubs_join_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/hubs/{slug}/moderators/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST : nommer un modérateur ; DELETE : révoquer un modérateur (créateur du hub). */
+        post: operations["hubs_moderators_create"];
+        /** @description POST : nommer un modérateur ; DELETE : révoquer un modérateur (créateur du hub). */
+        delete: operations["hubs_moderators_destroy"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1868,6 +1903,49 @@ export interface paths {
         patch: operations["snippets_partial_update"];
         trace?: never;
     };
+    "/api/snippets/{snippet_id}/comments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description GET : liste publique des commentaires d'un snippet.
+         *
+         *     POST : ajouter un commentaire (authentification requise).
+         */
+        get: operations["snippets_comments_list"];
+        put?: never;
+        /**
+         * @description GET : liste publique des commentaires d'un snippet.
+         *
+         *     POST : ajouter un commentaire (authentification requise).
+         */
+        post: operations["snippets_comments_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/snippets/{snippet_id}/comments/{comment_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Suppression douce d'un commentaire par son auteur ou le modérateur du hub. */
+        delete: operations["snippets_comments_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/snippets/{snippet_id}/publish/": {
         parameters: {
             query?: never;
@@ -1942,7 +2020,7 @@ export interface paths {
         get: operations["snippets_public_retrieve"];
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["snippets_public_destroy"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2649,6 +2727,9 @@ export interface components {
             rules?: string[];
             target_country?: string;
         };
+        HubModeratorActionRequest: {
+            username: string;
+        };
         HubOutput: {
             /** Format: uuid */
             id: string;
@@ -2678,6 +2759,8 @@ export interface components {
         };
         HubViewer: {
             is_member: boolean;
+            /** @default false */
+            is_creator: boolean;
             /** @description member, moderator ou null */
             role: string | null;
         };
@@ -3152,6 +3235,13 @@ export interface components {
             previous: string | null;
             results: components["schemas"]["QuestionOutput"][];
         };
+        PaginatedSnippetCommentList: {
+            /** Format: uri */
+            next: string | null;
+            /** Format: uri */
+            previous: string | null;
+            results: components["schemas"]["SnippetComment"][];
+        };
         PaginatedSnippetOutputList: {
             /** Format: uri */
             next: string | null;
@@ -3342,15 +3432,23 @@ export interface components {
             media: unknown;
             tags: string[];
             hub: components["schemas"]["HubSummary"] | null;
+            /** @default false */
+            is_pinned: boolean;
             score: number;
             like_count: number;
             comment_count: number;
             author: components["schemas"]["Author"] | null;
+            /** @description Rôle de l'auteur dans le hub : 'creator', 'moderator' ou null. */
+            author_role?: string | null;
             viewer: components["schemas"]["ViewerState"] | null;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        PostPinInputRequest: {
+            /** @default true */
+            pinned: boolean;
         };
         PostStats: {
             total: number;
@@ -3505,7 +3603,11 @@ export interface components {
             hub: components["schemas"]["HubSummary"] | null;
             /** Format: date-time */
             published_at: string;
+            /** @default 0 */
+            comment_count: number;
             author: components["schemas"]["Author"] | null;
+            /** @description Rôle de l'auteur dans le hub : 'creator', 'moderator' ou null. */
+            author_role?: string | null;
         };
         QaStats: {
             questions: number;
@@ -3551,6 +3653,8 @@ export interface components {
             is_resolved: boolean;
             answer_count: number;
             author: components["schemas"]["Author"] | null;
+            /** @description Rôle de l'auteur dans le hub : 'creator', 'moderator' ou null. */
+            author_role?: string | null;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -3691,6 +3795,24 @@ export interface components {
             /** Format: double */
             score: number;
         };
+        /** @description Commentaire public avec auteur enrichi. */
+        SnippetComment: {
+            /** Format: uuid */
+            id: string;
+            body: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: uuid */
+            parent_id: string | null;
+            author: components["schemas"]["Author"] | null;
+        };
+        SnippetCommentInputRequest: {
+            body: string;
+            /** Format: uuid */
+            parent_id?: string | null;
+        };
         SnippetInputRequest: {
             /**
              * Format: uuid
@@ -3728,6 +3850,8 @@ export interface components {
             /** Format: date-time */
             readonly published_at: string | null;
             readonly ai_review: unknown;
+            /** Format: int64 */
+            readonly comment_count: number;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -4038,6 +4162,11 @@ export interface components {
             liked: boolean;
             /** @description Choix du sondage. */
             vote: number | null;
+            /**
+             * @description Vrai si le visiteur modère le hub du post (épingler, supprimer) ou est staff.
+             * @default false
+             */
+            can_moderate: boolean;
         };
         VoteInputRequest: {
             /**
@@ -5331,6 +5460,33 @@ export interface operations {
             };
         };
     };
+    feed_pin_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PostPinInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PostPinInputRequest"];
+                "multipart/form-data": components["schemas"]["PostPinInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostOutput"];
+                };
+            };
+        };
+    };
     feed_score_create: {
         parameters: {
             query?: never;
@@ -5662,6 +5818,54 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    hubs_moderators_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HubModeratorActionRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["HubModeratorActionRequest"];
+                "multipart/form-data": components["schemas"]["HubModeratorActionRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HubOutput"];
+                };
+            };
+        };
+    };
+    hubs_moderators_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HubOutput"];
+                };
             };
         };
     };
@@ -7635,6 +7839,80 @@ export interface operations {
             };
         };
     };
+    snippets_comments_list: {
+        parameters: {
+            query?: {
+                /** @description Curseur de la page suivante */
+                cursor?: string;
+                /** @description 20 par défaut, 50 maximum */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                snippet_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedSnippetCommentList"];
+                };
+            };
+        };
+    };
+    snippets_comments_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snippet_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SnippetCommentInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SnippetCommentInputRequest"];
+                "multipart/form-data": components["schemas"]["SnippetCommentInputRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnippetComment"];
+                };
+            };
+        };
+    };
+    snippets_comments_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+                snippet_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     snippets_publish_create: {
         parameters: {
             query?: never;
@@ -7746,6 +8024,26 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PublicSnippet"];
                 };
+            };
+        };
+    };
+    snippets_public_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snippet_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

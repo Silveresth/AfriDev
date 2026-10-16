@@ -20,9 +20,8 @@ from .serializers import (
     present_hubs,
 )
 
-
-
 # Tri de l'exploration : populaires (membres) ou récents.
+
 SORTS = {"popular": "-member_count", "new": "-created_at"}
 
 
@@ -138,4 +137,3 @@ class HubModeratorsView(APIView):
 
         services.remove_moderator(hub=hub, admin_user=request.user, target_user=user)
         return Response(_one(hub, request))
-

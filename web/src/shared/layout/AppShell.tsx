@@ -121,6 +121,7 @@ export function AppShell({
         </div>
       </div>
       {drawer ? <Drawer communities={communities} onClose={() => setDrawer(null)} openAuthModal={openAuthModal} /> : null}
+      {search}
       <BottomNav openAuthModal={openAuthModal} />
       <ShortcutsDialog open={help} onClose={() => setHelp(false)} />
       <AuthModal open={authModalOpen} onClose={() => setAuthModalOpen(false)} initialMode={authModalMode} />

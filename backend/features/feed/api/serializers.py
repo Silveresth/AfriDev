@@ -29,10 +29,18 @@ class PostUpdateSerializer(serializers.Serializer):
     hub_id = serializers.UUIDField(required=False, allow_null=True)
 
 
+class PostPinInputSerializer(serializers.Serializer):
+    pinned = serializers.BooleanField(default=True)
+
+
 class ViewerStateSerializer(serializers.Serializer):
     post_vote = serializers.IntegerField(help_text="Vote du membre sur le post : -1, 0 ou 1.")
     liked = serializers.BooleanField(help_text="Obsolète : équivaut à post_vote == 1.")
     vote = serializers.IntegerField(allow_null=True, help_text="Choix du sondage.")
+    can_moderate = serializers.BooleanField(
+        default=False,
+        help_text="Vrai si le visiteur modère le hub du post (épingler, supprimer) ou est staff.",
+    )
 
 
 class PostOutputSerializer(serializers.Serializer):
@@ -46,10 +54,16 @@ class PostOutputSerializer(serializers.Serializer):
     media = serializers.JSONField(allow_null=True)
     tags = serializers.ListField(child=serializers.CharField())
     hub = HubSummarySerializer(allow_null=True)
+    is_pinned = serializers.BooleanField(default=False)
     score = serializers.IntegerField()
     like_count = serializers.IntegerField()
     comment_count = serializers.IntegerField()
     author = AuthorSerializer(allow_null=True)
+    author_role = serializers.CharField(
+        allow_null=True,
+        required=False,
+        help_text="Rôle de l'auteur dans le hub : 'creator', 'moderator' ou null.",
+    )
     viewer = ViewerStateSerializer(allow_null=True)
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
@@ -80,33 +94,51 @@ def present_posts(posts, *, viewer, authors: dict | None = None) -> list[dict]:
     polls = selectors.poll_results(post_ids=[p.id for p in posts if p.kind == Post.Kind.POLL])
     states = selectors.viewer_state(post_ids=ids, user=viewer)
     hubs = hub_selectors.hub_cards(hub_ids={post.hub_id for post in posts})
+    author_roles = hub_selectors.author_hub_roles(
+        pairs={(post.hub_id, post.author_id) for post in posts if post.hub_id}
+    )
+    moderated = hub_selectors.moderated_hub_ids(
+        hub_ids={post.hub_id for post in posts}, user=viewer
+    )
 
-    return [
-        {
-            "id": post.id,
-            "kind": post.kind,
-            "title": post.title,
-            "body": post.body,
-            "poll_options": post.poll_options,
-            "poll_results": (
-                [polls.get(post.id, {}).get(i, 0) for i in range(len(post.poll_options))]
-                if post.kind == Post.Kind.POLL
-                else None
-            ),
-            "media_id": post.media_id,
-            "media": media.get(post.media_id),
-            "tags": post.tags,
-            "hub": hubs.get(post.hub_id),
-            "score": post.score,
-            "like_count": post.like_count,
-            "comment_count": post.comment_count,
-            "author": authors.get(post.author_id),
-            "viewer": states.get(post.id),
-            "created_at": post.created_at,
-            "updated_at": post.updated_at,
-        }
-        for post in posts
-    ]
+    results = []
+    for post in posts:
+        state = states.get(post.id)
+        if state:
+            # Droits de modération du hub (épingler, supprimer le post d'un autre) ; l'auteur
+            # peut toujours supprimer son propre post, sans être modérateur.
+            state["can_moderate"] = bool(
+                getattr(viewer, "is_staff", False) or (post.hub_id and post.hub_id in moderated)
+            )
+
+        results.append(
+            {
+                "id": post.id,
+                "kind": post.kind,
+                "title": post.title,
+                "body": post.body,
+                "poll_options": post.poll_options,
+                "poll_results": (
+                    [polls.get(post.id, {}).get(i, 0) for i in range(len(post.poll_options))]
+                    if post.kind == Post.Kind.POLL
+                    else None
+                ),
+                "media_id": post.media_id,
+                "media": media.get(post.media_id),
+                "tags": post.tags,
+                "hub": hubs.get(post.hub_id),
+                "is_pinned": post.is_pinned,
+                "score": post.score,
+                "like_count": post.like_count,
+                "comment_count": post.comment_count,
+                "author": authors.get(post.author_id),
+                "author_role": author_roles.get((post.hub_id, post.author_id)),
+                "viewer": state,
+                "created_at": post.created_at,
+                "updated_at": post.updated_at,
+            }
+        )
+    return results
 
 
 class HomeCardSerializer(serializers.Serializer):
