@@ -6,6 +6,9 @@ const withSerwist = withSerwistInit({
   swSrc: 'src/app/sw.ts',
   swDest: 'public/sw.js',
   disable: process.env.NODE_ENV === 'development',
+  // Page de secours mise en cache dès l'installation : sans elle, une navigation qui échoue
+  // (réseau coupé, serveur qui redémarre) finit sur une erreur brute du navigateur.
+  additionalPrecacheEntries: [{ url: '/offline', revision: `${Date.now()}` }],
 });
 
 const nextConfig: NextConfig = {

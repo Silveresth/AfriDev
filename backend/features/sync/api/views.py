@@ -2,6 +2,7 @@
 
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
+from rest_framework.exceptions import APIException
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,12 +17,23 @@ from .serializers import (
 )
 
 
+class SyncUnavailable(APIException):
+    """Copie hors ligne non configurée : 503 explicite au lieu d'une erreur serveur."""
+
+    status_code = 503
+    default_detail = "La synchronisation hors ligne n'est pas configurée sur ce serveur."
+    default_code = "sync_unavailable"
+
+
 class PowerSyncTokenView(APIView):
     """Jeton court que le client présente au service PowerSync (fetchCredentials)."""
 
     @extend_schema(responses=PowerSyncTokenSerializer)
     def get(self, request):
-        token, expires_at = tokens.issue_token(request.user)
+        try:
+            token, expires_at = tokens.issue_token(request.user)
+        except tokens.SyncUnavailableError as exc:
+            raise SyncUnavailable() from exc
         return Response({"token": token, "expires_at": expires_at})
 
 
@@ -33,7 +45,10 @@ class JWKSView(APIView):
 
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
-        response = Response(tokens.jwks())
+        try:
+            response = Response(tokens.jwks())
+        except tokens.SyncUnavailableError as exc:
+            raise SyncUnavailable() from exc
         response["Cache-Control"] = "public, max-age=3600"
         return response
 

@@ -21,6 +21,10 @@ AUDIENCE = "powersync"
 TOKEN_LIFETIME = timedelta(minutes=30)
 
 
+class SyncUnavailableError(Exception):
+    """Production sans POWERSYNC_JWT_PRIVATE_KEY : la copie hors ligne est désactivée."""
+
+
 def _generate_dev_key(path: Path) -> bytes:
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     pem = key.private_bytes(
@@ -38,7 +42,7 @@ def _private_key():
     pem = settings.POWERSYNC_JWT_PRIVATE_KEY.replace("\\n", "\n").encode()
     if not pem.strip():
         if not settings.POWERSYNC_ALLOW_DEV_KEY:
-            raise RuntimeError("POWERSYNC_JWT_PRIVATE_KEY est obligatoire en production.")
+            raise SyncUnavailableError("POWERSYNC_JWT_PRIVATE_KEY est obligatoire en production.")
         path = Path(settings.POWERSYNC_DEV_KEY_PATH)
         pem = path.read_bytes() if path.exists() else _generate_dev_key(path)
     return serialization.load_pem_private_key(pem, password=None)

@@ -44,5 +44,20 @@ def test_upload_matches_the_powersync_connector_payload(auth_client):
     assert auth_client.get(f"/api/feed/{post_id}/").data["body"] == "Envoyé au retour du réseau"
 
 
+def test_missing_key_in_production_is_a_clear_503(auth_client, api_client, settings):
+    from features.sync import tokens
+
+    settings.POWERSYNC_JWT_PRIVATE_KEY = ""
+    settings.POWERSYNC_ALLOW_DEV_KEY = False
+    tokens._private_key.cache_clear()
+    try:
+        response = auth_client.get("/api/sync/token/")
+        assert response.status_code == 503
+        assert response.data["error"]["code"] == "sync_unavailable"
+        assert api_client.get("/api/sync/jwks/").status_code == 503
+    finally:
+        tokens._private_key.cache_clear()
+
+
 def test_token_requires_login(api_client):
     assert api_client.get("/api/sync/token/").status_code == 401
