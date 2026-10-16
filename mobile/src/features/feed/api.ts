@@ -120,6 +120,20 @@ export function useScoreVote(post: Post) {
   });
 }
 
+/** Épingler / détacher un post en tête de son hub (modérateurs du hub). */
+export function usePinPost() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) =>
+      unwrap(api.POST('/api/feed/{post_id}/pin/', { params: { path: { post_id: id } }, body: { pinned } })),
+    onSuccess: (post) => {
+      replacePost(queryClient, post);
+      // Les épinglés passent en tête du fil du hub : listes rechargées.
+      void queryClient.invalidateQueries({ queryKey: ['feed', 'list'] });
+    },
+  });
+}
+
 export function usePollVote(post: Post) {
   const queryClient = useQueryClient();
   return useMutation({

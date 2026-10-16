@@ -25,8 +25,6 @@ const zu: MobileMessages = {
   'login.sub_login': 'Ngena ukuze uthumele, uvote futhi uphendule.',
   'login.sub_register': 'Yabelana, funda futhi uthole amaphrojekthi nabathuthukisi bezwekazi lonke.',
   'login.sub_mfa': 'Faka ikhodi enezinombolo ezi-6 evela ku-app yakho yokuqinisekisa.',
-  'login.github': 'Qhubeka nge-GitHub',
-  'login.google': 'Qhubeka nge-Google',
   'login.or_email': 'noma nge-imeyili yakho',
   'login.email': 'I-imeyili',
   'login.password_ph': 'Okungenani izinhlamvu ezi-8',

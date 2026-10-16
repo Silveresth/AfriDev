@@ -49,6 +49,9 @@ class QuestionOutputSerializer(serializers.Serializer):
         required=False,
         help_text="Rôle de l'auteur dans le hub : 'creator', 'moderator' ou null.",
     )
+    can_moderate = serializers.BooleanField(
+        default=False, help_text="Vrai si le visiteur modère le hub de la question (ou est staff)."
+    )
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
 
@@ -120,13 +123,15 @@ class TranscribeInputSerializer(serializers.Serializer):
     language = serializers.ChoiceField(choices=["fr", "en"], required=False, allow_null=True)
 
 
-def present_questions(questions) -> list[dict]:
+def present_questions(questions, *, viewer=None) -> list[dict]:
     questions = list(questions)
     authors = profile_selectors.author_cards(user_ids={q.author_id for q in questions})
     hubs = hub_selectors.hub_cards(hub_ids={q.hub_id for q in questions})
     author_roles = hub_selectors.author_hub_roles(
         pairs={(q.hub_id, q.author_id) for q in questions if q.hub_id}
     )
+    moderated = hub_selectors.moderated_hub_ids(hub_ids={q.hub_id for q in questions}, user=viewer)
+    is_staff = bool(getattr(viewer, "is_staff", False))
     return [
         {
             "id": q.id,
@@ -142,6 +147,7 @@ def present_questions(questions) -> list[dict]:
             "answer_count": q.answer_count,
             "author": authors.get(q.author_id),
             "author_role": author_roles.get((q.hub_id, q.author_id)),
+            "can_moderate": is_staff or bool(q.hub_id and q.hub_id in moderated),
             "created_at": q.created_at,
             "updated_at": q.updated_at,
         }

@@ -95,8 +95,8 @@ export function AppShell({
       {/* En-tête et colonne de gauche partagent le même fond : un seul cadre, sans filet entre eux. */}
       <header className="sticky top-0 z-30 bg-shell">
         <TopBar notifications={notifications} onMenu={() => setDrawer(pathname)} onHelp={openHelp} openAuthModal={openAuthModal} />
-        <ConnectivityStrip />
       </header>
+      <ConnectivityStrip />
       <div className="mx-auto flex w-full max-w-[1440px]">
         <aside
           className={cn(

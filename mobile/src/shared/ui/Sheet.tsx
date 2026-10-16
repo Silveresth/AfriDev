@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { t } from '@/shared/i18n';
@@ -9,7 +9,7 @@ import { radius, useTheme } from '@/shared/theme';
 import { Text } from './Text';
 
 /**
- * Feuille qui monte du bas (ressort) sur un voile qui s'assombrit ; à la fermeture elle
+ * Feuille qui monte du bas (glissement court) sur un voile qui s'assombrit ; à la fermeture elle
  * redescend avant de disparaître. Un toucher sur le voile la ferme.
  */
 export function Sheet({
@@ -32,7 +32,7 @@ export function Sheet({
   useEffect(() => {
     if (visible) {
       setMounted(true);
-      progress.value = withSpring(1, { damping: 20, stiffness: 190 });
+      progress.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) });
     } else if (mounted) {
       progress.value = withTiming(0, { duration: 220, easing: Easing.in(Easing.quad) }, (done) => {
         if (done) runOnJS(setMounted)(false);

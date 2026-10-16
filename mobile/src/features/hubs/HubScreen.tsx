@@ -6,24 +6,25 @@ import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { type Post, PostRow, useFeed } from '@/features/feed';
 import { QuestionRow, useQuestions } from '@/features/qa';
+import { type PublicSnippet, SnippetRow, useSnippetsByHub } from '@/features/snippets';
 import { absoluteUrl, errorMessage, type Schemas } from '@/shared/api';
 import { CreateButton } from '@/shared/layout/CreateButton';
 import { formatCount } from '@/shared/lib';
 import { type Key, useT } from '@/shared/i18n';
-import { AppearItem } from '@/shared/motion';
 import { useRequireAuth } from '@/shared/session';
 import { useTheme } from '@/shared/theme';
 import { Button, Chips, EmptyState, ErrorState, Header, HubIcon, ListFooter, Loading, Text } from '@/shared/ui';
 
 import { type Hub, useHub, useJoinHub } from './api';
 
-type Tab = 'hot' | 'new' | 'questions';
+type Tab = 'hot' | 'new' | 'questions' | 'snippets';
 type Question = Schemas['QuestionOutput'];
 
 const TABS: { value: Tab; label: Key }[] = [
   { value: 'hot', label: 'feed.sort_hot' },
   { value: 'new', label: 'feed.sort_new' },
   { value: 'questions', label: 'hubs.questions' },
+  { value: 'snippets', label: 'hubs.snippets' },
 ];
 
 function HubHeader({ hub, tab, onTab }: { hub: Hub; tab: Tab; onTab: (tab: Tab) => void }) {
@@ -91,9 +92,10 @@ export function HubScreen() {
   const { t } = useT();
   const hub = useHub(slug);
   const [tab, setTab] = useState<Tab>('hot');
-  const posts = useFeed({ hub: slug, sort: tab === 'new' ? 'new' : 'hot' });
+  const posts = useFeed({ hub: slug, sort: tab === 'new' ? 'new' : 'hot' }, { enabled: tab === 'hot' || tab === 'new' });
   const questions = useQuestions({ hub: slug }, { enabled: tab === 'questions' });
-  const list = tab === 'questions' ? questions : posts;
+  const snippets = useSnippetsByHub(slug, tab === 'snippets');
+  const list = tab === 'questions' ? questions : tab === 'snippets' ? snippets : posts;
 
   if (!hub.data) {
     return (
@@ -107,14 +109,18 @@ export function HubScreen() {
   return (
     <View style={[styles.flex, { backgroundColor: colors.background }]}>
       <Header title={`h/${hub.data.slug}`} back />
-      <FlatList<Post | Question>
-        data={list.items}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item, index }) => (
-          <AppearItem index={index}>
-            {tab === 'questions' ? <QuestionRow question={item as Question} /> : <PostRow post={item as Post} showHub={false} />}
-          </AppearItem>
-        )}
+      <FlatList<Post | Question | PublicSnippet>
+        data={list.items as (Post | Question | PublicSnippet)[]}
+        keyExtractor={(item) => `${tab}-${item.id}`}
+        renderItem={({ item }) =>
+          tab === 'questions' ? (
+            <QuestionRow question={item as Question} />
+          ) : tab === 'snippets' ? (
+            <SnippetRow snippet={item as PublicSnippet} />
+          ) : (
+            <PostRow post={item as Post} showHub={false} />
+          )
+        }
         ListHeaderComponent={<HubHeader hub={hub.data} tab={tab} onTab={setTab} />}
         onEndReached={list.loadMore}
         refreshControl={

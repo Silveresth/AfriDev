@@ -26,6 +26,7 @@ import {
   CommunityIcon,
   ErrorNotice,
   HubLink,
+  HubRoleBadge,
   Markdown,
   MarkdownEditor,
   pillAction,
@@ -98,6 +99,7 @@ function QuestionView({ question }: { question: Question }) {
               name
             )}
           </span>
+          <HubRoleBadge role={question.author_role} />
           <AuthorBadges location={question.author?.location} stack={question.author?.stack} />
           <Reputation karma={question.author?.karma} badges={question.author?.badges} />
           {question.hub ? (
@@ -138,11 +140,11 @@ function QuestionView({ question }: { question: Question }) {
           <BookmarkButton target={{ type: 'question', id: question.id }} title={question.title} />
           <TranslateButton text={`${question.title}\n\n${question.body}`} />
           <span className="ml-auto">
-            {mine ? (
+            {mine || question.can_moderate ? (
               <button
                 type="button"
                 onClick={async () => {
-                  if (!window.confirm('Supprimer cette question ?')) return;
+                  if (!window.confirm(mine ? 'Supprimer cette question ?' : 'Supprimer cette question en tant que modérateur ?')) return;
                   await remove.mutateAsync(question.id);
                   router.push('/questions');
                 }}

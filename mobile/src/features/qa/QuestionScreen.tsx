@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ThumbsDown, ThumbsUp, Check, CheckCircle2, SendHorizontal, Sparkles } from 'lucide-react-native';
+import { ThumbsDown, ThumbsUp, Check, CheckCircle2, SendHorizontal, Sparkles, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TranslateBar } from '@/features/translation';
@@ -10,9 +10,9 @@ import { useT } from '@/shared/i18n';
 import { openLink, timeAgo } from '@/shared/lib';
 import { useRequireAuth, useSession } from '@/shared/session';
 import { radius, typography, useTheme } from '@/shared/theme';
-import { Avatar, Button, ErrorState, Header, Loading, Markdown, TagRow, Text } from '@/shared/ui';
+import { Avatar, Button, ErrorState, Header, HubRoleBadge, IconButton, Loading, Markdown, TagRow, Text, useToast } from '@/shared/ui';
 
-import { type Answer, type Question, useAnswerActions, useAnswers, useQuestion } from './api';
+import { type Answer, type Question, useAnswerActions, useAnswers, useDeleteQuestion, useQuestion } from './api';
 
 function AiAnswer({ question }: { question: Question }) {
   const { colors } = useTheme();
@@ -169,6 +169,9 @@ export function QuestionScreen() {
   const { t, tp } = useT();
   const question = useQuestion(id);
   const answers = useAnswers(id);
+  const { user } = useSession();
+  const remove = useDeleteQuestion();
+  const toast = useToast();
 
   if (question.isPending) {
     return (
@@ -191,10 +194,35 @@ export function QuestionScreen() {
   const author = data.author;
   const name = author?.display_name || author?.username || t('member');
   const rows = answers.data ?? [];
+  const mine = Boolean(user && author?.id === user.id);
+  const confirmDelete = () =>
+    Alert.alert(t('common.delete'), mine ? undefined : t('mod.delete_confirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: () =>
+          remove.mutate(data.id, {
+            onSuccess: () => {
+              toast(t('mod.deleted'));
+              router.back();
+            },
+            onError: (error) => toast(errorMessage(error), 'error'),
+          }),
+      },
+    ]);
 
   return (
     <KeyboardAvoidingView behavior="padding" style={[styles.flex, { backgroundColor: colors.background }]}>
-      <Header title={data.hub ? `h/${data.hub.slug}` : t('qa.question')} back />
+      <Header
+        title={data.hub ? `h/${data.hub.slug}` : t('qa.question')}
+        back
+        right={
+          mine || data.can_moderate ? (
+            <IconButton icon={Trash2} label={t('common.delete')} color={colors.danger} onPress={confirmDelete} />
+          ) : null
+        }
+      />
       <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         <View style={[styles.question, { borderBottomColor: colors.line }]}>
           <View style={styles.byline}>
@@ -202,6 +230,7 @@ export function QuestionScreen() {
             <Text variant="caption" tone="muted" onPress={author ? () => router.push(`/u/${author.username}`) : undefined}>
               {name} · {timeAgo(data.created_at)}
             </Text>
+            <HubRoleBadge role={data.author_role} />
             {data.is_resolved ? (
               <View style={[styles.resolved, { backgroundColor: colors.secondarySoft }]}>
                 <Text variant="caption" tone="secondary">

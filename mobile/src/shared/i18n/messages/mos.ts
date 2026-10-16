@@ -25,8 +25,6 @@ const mos: MobileMessages = {
   'login.sub_login': 'Kẽ n gʋls, n tʋm vote la n leok sokre.',
   'login.sub_register': 'Bʋʋs y bãngr, zãms la y paam tʋʋm ne Afiriki porogaraam maandba.',
   'login.sub_mfa': 'Gʋls kood a 6 sẽn be y bɩɩsgã aplikasiõ pʋgẽ.',
-  'login.github': 'Kẽng ne GitHub',
-  'login.google': 'Kẽng ne Google',
   'login.or_email': 'bɩ ne y imeel',
   'login.email': 'Imeel',
   'login.password_ph': 'Sɛb 8 sẽn pa kaoose',

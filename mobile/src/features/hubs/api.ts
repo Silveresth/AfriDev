@@ -36,6 +36,20 @@ export function useHub(slug: string) {
   });
 }
 
+export type NewHub = Schemas['HubInputRequest'];
+
+/** Création d'un hub : le créateur en devient modérateur. */
+export function useCreateHub() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: NewHub) => unwrap(api.POST('/api/hubs/', { body })),
+    onSuccess: (hub) => {
+      queryClient.setQueryData(hubKeys.detail(hub.slug), hub);
+      void queryClient.invalidateQueries({ queryKey: ['hubs', 'list'] });
+    },
+  });
+}
+
 /** Rejoindre / quitter : la fiche et les listes sont mises à jour avec la réponse. */
 export function useJoinHub(slug: string) {
   const queryClient = useQueryClient();

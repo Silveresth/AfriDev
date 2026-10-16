@@ -25,8 +25,6 @@ const rw: MobileMessages = {
   'login.sub_login': 'Injira kugira ngo wandike, utore kandi usubize.',
   'login.sub_register': 'Sangiza, wige kandi ubone imishinga hamwe n’abakora porogaramu bo ku mugabane wose.',
   'login.sub_mfa': 'Andika kode y’imibare 6 iri muri porogaramu yawe y’igenzura.',
-  'login.github': 'Komeza na GitHub',
-  'login.google': 'Komeza na Google',
   'login.or_email': 'cyangwa ukoresheje imeyili yawe',
   'login.email': 'Imeyili',
   'login.password_ph': 'Nibura inyuguti 8',

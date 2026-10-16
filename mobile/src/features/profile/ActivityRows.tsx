@@ -1,49 +1,15 @@
-import { ChevronDown, CircleDot, FolderGit2, Star } from 'lucide-react-native';
-import { memo, useState } from 'react';
+import { CircleDot, FolderGit2, Star } from 'lucide-react-native';
+import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { useT } from '@/shared/i18n';
-import { formatCount, languageColor, openLink, timeAgo } from '@/shared/lib';
+import { formatCount, languageColor, openLink } from '@/shared/lib';
 import { PressableScale } from '@/shared/motion';
 import { useTheme } from '@/shared/theme';
-import { CodeBlock, Tag, TagRow, Text } from '@/shared/ui';
+import { Tag, TagRow, Text } from '@/shared/ui';
 
-import type { Project, PublicSnippet } from './api';
-
-/** Snippet public : aperçu des premières lignes, déplié d'un toucher. */
-export const SnippetRow = memo(function SnippetRow({ snippet }: { snippet: PublicSnippet }) {
-  const { colors } = useTheme();
-  const [open, setOpen] = useState(false);
-  const { t } = useT();
-  const lines = snippet.content.split('\n');
-  const preview = open ? snippet.content : lines.slice(0, 6).join('\n');
-  return (
-    <Animated.View layout={LinearTransition.springify().damping(18)} style={[styles.row, { borderBottomColor: colors.line }]}>
-      <PressableScale scaleTo={0.99} onPress={() => setOpen((v) => !v)} style={styles.gap}>
-        <View style={styles.inline}>
-          <View style={[styles.dot, { backgroundColor: languageColor(snippet.language) }]} />
-          <Text variant="caption" tone="muted">
-            {snippet.language} · {timeAgo(snippet.published_at)}
-          </Text>
-        </View>
-        <Text variant="bodyStrong">{snippet.title}</Text>
-        <CodeBlock code={preview} />
-        {lines.length > 6 ? (
-          <View style={styles.inline}>
-            <Animated.View style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }}>
-              <ChevronDown size={14} color={colors.inkMuted} />
-            </Animated.View>
-            <Text variant="caption" tone="muted">
-              {open ? t('snippet.collapse') : t('snippet.expand', { count: lines.length })}
-            </Text>
-          </View>
-        ) : null}
-        <TagRow tags={snippet.tags} />
-      </PressableScale>
-    </Animated.View>
-  );
-});
+import type { Project } from './api';
 
 /** Projet open source : ouvre le dépôt. */
 export const ProjectRow = memo(function ProjectRow({ project }: { project: Project }) {

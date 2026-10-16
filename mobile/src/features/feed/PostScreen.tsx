@@ -1,10 +1,10 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ImageIcon, MessageSquare, Share2, Trash2 } from 'lucide-react-native';
+import { ImageIcon, MessageSquare, Pin, PinOff, Share2, Trash2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Pressable, Share, StyleSheet, View } from 'react-native';
 
-import { absoluteUrl, PUBLIC_WEB_URL } from '@/shared/api';
+import { absoluteUrl, errorMessage, PUBLIC_WEB_URL } from '@/shared/api';
 import { TranslateBar } from '@/features/translation';
 import { useDataSaver } from '@/shared/data-saver';
 import { useT } from '@/shared/i18n';
@@ -12,9 +12,9 @@ import { formatCount } from '@/shared/lib';
 import { AppearItem } from '@/shared/motion';
 import { useSession } from '@/shared/session';
 import { radius, useTheme } from '@/shared/theme';
-import { EmptyState, ErrorState, Header, IconButton, ListFooter, Loading, Markdown, TagRow, Text } from '@/shared/ui';
+import { EmptyState, ErrorState, Header, IconButton, ListFooter, Loading, Markdown, TagRow, Text, useToast } from '@/shared/ui';
 
-import { type Comment, imageOf, type Post, useComments, useDeletePost, usePost } from './api';
+import { type Comment, imageOf, type Post, useComments, useDeletePost, usePinPost, usePost } from './api';
 import { CommentComposer, CommentRow, threadRows } from './Comments';
 import { Poll } from './Poll';
 import { PostByline } from './PostRow';
@@ -84,14 +84,29 @@ export function PostScreen() {
   const rows = useMemo(() => threadRows(comments.items), [comments.items]);
 
   const isMine = Boolean(user && post.data?.author?.id === user.id);
+  // Modérateur du hub (ou staff) : épingler, supprimer le post d'un autre membre.
+  const moderator = Boolean(post.data?.viewer?.can_moderate);
+  const pin = usePinPost();
+  const toast = useToast();
 
   const share = () => {
     if (!post.data) return;
     void Share.share({ message: `${post.data.title || tr('feed.share_default')} — ${PUBLIC_WEB_URL}/feed/${post.data.id}` });
   };
 
+  const togglePin = () => {
+    if (!post.data) return;
+    pin.mutate(
+      { id: post.data.id, pinned: !post.data.is_pinned },
+      {
+        onSuccess: (updated) => toast(tr(updated.is_pinned ? 'mod.pinned_toast' : 'mod.unpinned_toast')),
+        onError: (error) => toast(errorMessage(error), 'error'),
+      },
+    );
+  };
+
   const confirmDelete = () =>
-    Alert.alert(tr('feed.delete_title'), tr('feed.delete_body'), [
+    Alert.alert(tr('feed.delete_title'), isMine ? tr('feed.delete_body') : tr('mod.delete_confirm'), [
       { text: tr('common.cancel'), style: 'cancel' },
       {
         text: tr('common.delete'),
@@ -108,7 +123,16 @@ export function PostScreen() {
         right={
           <>
             <IconButton icon={Share2} label={tr('feed.share')} onPress={share} />
-            {isMine ? <IconButton icon={Trash2} label={tr('common.delete')} color={colors.danger} onPress={confirmDelete} /> : null}
+            {moderator && post.data?.hub ? (
+              <IconButton
+                icon={post.data.is_pinned ? PinOff : Pin}
+                label={tr(post.data.is_pinned ? 'mod.unpin' : 'mod.pin')}
+                onPress={togglePin}
+              />
+            ) : null}
+            {isMine || moderator ? (
+              <IconButton icon={Trash2} label={tr('common.delete')} color={colors.danger} onPress={confirmDelete} />
+            ) : null}
           </>
         }
       />

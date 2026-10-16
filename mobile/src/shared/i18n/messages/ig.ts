@@ -25,8 +25,6 @@ const ig: MobileMessages = {
   'login.sub_login': 'Banye ka ị bipụta, tụọ vootu ma zaa ajụjụ.',
   'login.sub_register': 'Kesaa, mụta ma chọta ọrụ ya na ndị mmepe sitere n’ofe kọntinent ahụ.',
   'login.sub_mfa': 'Tinye koodu nọmba 6 sitere na ngwa nkwenye gị.',
-  'login.github': 'Gaa n’ihu na GitHub',
-  'login.google': 'Gaa n’ihu na Google',
   'login.or_email': 'ma ọ bụ site na email gị',
   'login.email': 'Email',
   'login.password_ph': 'Opekata mpe mkpụrụedemede 8',

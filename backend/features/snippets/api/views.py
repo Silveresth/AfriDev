@@ -34,13 +34,15 @@ def _owned(request, snippet_id):
     return snippet
 
 
-def _present_public(snippets) -> list[dict]:
+def _present_public(snippets, *, viewer=None) -> list[dict]:
     snippets = list(snippets)
     authors = profile_selectors.author_cards(user_ids={s.owner_id for s in snippets})
     hubs = hub_selectors.hub_cards(hub_ids={s.hub_id for s in snippets})
     author_roles = hub_selectors.author_hub_roles(
         pairs={(s.hub_id, s.owner_id) for s in snippets if s.hub_id}
     )
+    moderated = hub_selectors.moderated_hub_ids(hub_ids={s.hub_id for s in snippets}, user=viewer)
+    is_staff = bool(getattr(viewer, "is_staff", False))
     return [
         {
             "id": s.id,
@@ -53,6 +55,7 @@ def _present_public(snippets) -> list[dict]:
             "comment_count": s.comment_count,
             "author": authors.get(s.owner_id),
             "author_role": author_roles.get((s.hub_id, s.owner_id)),
+            "can_moderate": is_staff or bool(s.hub_id and s.hub_id in moderated),
         }
         for s in snippets
     ]
@@ -148,7 +151,7 @@ class PublicSnippetListView(APIView):
             snippets = snippets.none()
         paginator = CursorPagination()
         page = paginator.paginate_queryset(snippets, request)
-        return paginator.get_paginated_response(_present_public(page))
+        return paginator.get_paginated_response(_present_public(page, viewer=request.user))
 
 
 class PublicSnippetDetailView(APIView):
@@ -159,7 +162,7 @@ class PublicSnippetDetailView(APIView):
         snippet = selectors.get_public_snippet(snippet_id=snippet_id)
         if snippet is None:
             raise NotFound("Snippet introuvable.")
-        return Response(_present_public([snippet])[0])
+        return Response(_present_public([snippet], viewer=request.user)[0])
 
     @extend_schema(responses={204: None})
     def delete(self, request, snippet_id):

@@ -174,6 +174,16 @@ export function useSnippetActions() {
   return { publish, remove };
 }
 
+/** Modérateur du hub : supprime le snippet public d'un autre membre. */
+export function useModerateDeleteSnippet() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      unwrap(api.DELETE('/api/snippets/public/{snippet_id}/', { params: { path: { snippet_id: id } } })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: snippetKeys.all }),
+  });
+}
+
 // ─── Comments ────────────────────────────────────────────────────────────────
 
 export interface SnippetComment {

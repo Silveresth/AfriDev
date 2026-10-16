@@ -21,6 +21,7 @@ import {
   EmptyState,
   ErrorNotice,
   HubLink,
+  HubRoleBadge,
   KarmaPill,
   SearchField,
   StatusBadge,
@@ -187,6 +188,7 @@ export function QuestionRow({ question, compact = false }: { question: Question;
               <span className="truncate text-body-sm font-medium text-ink">{name}</span>
             )}
           </span>
+          <HubRoleBadge role={question.author_role} />
           <AuthorBadges location={question.author?.location} stack={question.author?.stack} className="relative z-10" />
           {question.author?.karma ? <KarmaPill karma={question.author.karma} /> : null}
           <span aria-hidden>·</span>

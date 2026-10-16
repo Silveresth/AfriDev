@@ -21,7 +21,7 @@ const PROVIDERS: Record<OAuthProvider, { label: string; icon: typeof GoogleIcon 
 };
 
 const FIELD =
-  'h-11 w-full rounded-xl border border-line-strong bg-card px-3.5 text-body-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink/30 focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none aria-[invalid=true]:border-danger';
+  'h-10 w-full rounded-xl border border-line-strong bg-card px-3.5 text-body-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink/30 focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none aria-[invalid=true]:border-danger';
 
 /**
  * Formulaire de connexion / inscription partagé par la page /login et la fenêtre modale :
@@ -37,8 +37,9 @@ export function AuthPanel({
   onAuthenticated: (response: AuthResponse) => void;
 }) {
   return (
-    <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 sm:p-8 md:p-10">
-      <div role="tablist" aria-label="Connexion ou inscription" className="grid grid-cols-2 rounded-full bg-container p-1">
+    // Tient sans défilement dès ~600 px de haut ; en dessous seulement, la colonne défile.
+    <div className="flex min-h-0 flex-1 flex-col justify-center gap-4 overflow-y-auto p-5 sm:px-8 sm:py-7">
+      <div role="tablist" aria-label="Connexion ou inscription" className="mr-10 grid grid-cols-2 rounded-full bg-container p-1">
         {(['login', 'register'] as const).map((value) => (
           <button
             key={value}
@@ -56,8 +57,8 @@ export function AuthPanel({
         ))}
       </div>
 
-      <div className="space-y-1">
-        <h1 className="text-headline-xl text-ink">{mode === 'login' ? 'Content de vous revoir' : 'Rejoindre AfriDev'}</h1>
+      <div className="space-y-0.5">
+        <h1 className="text-headline-lg text-ink">{mode === 'login' ? 'Content de vous revoir' : 'Rejoindre AfriDev'}</h1>
         <p className="text-body-sm text-ink-muted">
           {mode === 'login' ? 'Reprenez là où vous vous étiez arrêté·e.' : 'Gratuit, sans publicité. Votre fil se règle juste après.'}
         </p>
@@ -67,40 +68,28 @@ export function AuthPanel({
 
       <EmailForm mode={mode} onAuthenticated={onAuthenticated} />
 
-      <p className="mt-auto text-center text-label-md text-ink-faint">
+      <p className="text-center text-label-md text-ink-faint">
         En continuant, vous acceptez les conditions d&apos;utilisation et la politique de confidentialité d&apos;AfriDev.
       </p>
     </div>
   );
 }
 
+/**
+ * Google et GitHub sont toujours proposés ; GitLab seulement s'il est configuré. Un fournisseur
+ * pas encore activé sur le serveur (clés absentes du .env) le dit au clic au lieu de disparaître.
+ */
 function OAuthButtons() {
   const providers = useOAuthProviders();
   const [pending, setPending] = useState<OAuthProvider | null>(null);
-
-  if (providers.isPending) {
-    return (
-      <div className="space-y-4">
-        <div className="grid gap-2.5 sm:grid-cols-2">
-          <div className="h-11 animate-pulse rounded-full bg-container" aria-hidden />
-          <div className="h-11 animate-pulse rounded-full bg-container" aria-hidden />
-        </div>
-        <div className="flex items-center gap-3 text-label-md text-ink-faint">
-          <span className="h-px flex-1 bg-line" />
-          ou
-          <span className="h-px flex-1 bg-line" />
-        </div>
-      </div>
-    );
-  }
-
-  const available = (providers.data ?? []).filter((provider) => provider in PROVIDERS);
-  if (!available.length) return null;
+  const [unavailable, setUnavailable] = useState<string | null>(null);
+  const configured = providers.data ?? [];
+  const shown: OAuthProvider[] = ['google', 'github', ...(configured.includes('gitlab') ? (['gitlab'] as const) : [])];
 
   return (
-    <div className="space-y-4">
-      <div className={cn('grid gap-2.5', available.length > 1 && 'sm:grid-cols-2')}>
-        {available.map((provider) => {
+    <div className="space-y-3">
+      <div className={cn('grid gap-2.5', shown.length === 3 ? 'grid-cols-3' : 'grid-cols-2')}>
+        {shown.map((provider) => {
           const { label, icon: Icon } = PROVIDERS[provider];
           return (
             <button
@@ -108,17 +97,27 @@ function OAuthButtons() {
               type="button"
               disabled={pending !== null}
               onClick={() => {
+                if (providers.isSuccess && !configured.includes(provider)) {
+                  setUnavailable(`La connexion avec ${label} n'est pas encore activée. Utilisez votre e-mail pour le moment.`);
+                  return;
+                }
+                setUnavailable(null);
                 setPending(provider);
                 startOAuth(provider);
               }}
-              className="flex h-11 items-center justify-center gap-2.5 rounded-full border border-line-strong bg-card px-4 text-body-sm font-semibold text-ink transition-all hover:-translate-y-px hover:border-ink/30 hover:shadow-sm disabled:opacity-60"
+              className="flex h-10 items-center justify-center gap-2 rounded-full border border-line-strong bg-card px-3 text-body-sm font-semibold text-ink transition-colors hover:border-ink/30 hover:bg-container-low disabled:opacity-60"
             >
               {pending === provider ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Icon />}
-              Continuer avec {label}
+              {label}
             </button>
           );
         })}
       </div>
+      {unavailable ? (
+        <p role="status" className="text-center text-label-md text-ink-muted">
+          {unavailable}
+        </p>
+      ) : null}
       <div className="flex items-center gap-3 text-label-md text-ink-faint">
         <span className="h-px flex-1 bg-line" />
         ou avec un e-mail
@@ -308,7 +307,7 @@ function EmailForm({ mode, onAuthenticated }: { mode: AuthMode; onAuthenticated:
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4" noValidate={false}>
+    <form onSubmit={submit} className="space-y-3" noValidate={false}>
       {error ? <ErrorBox message={error} /> : null}
       {mode === 'login' ? (
         <div className="space-y-1.5">
@@ -349,7 +348,7 @@ function EmailForm({ mode, onAuthenticated }: { mode: AuthMode; onAuthenticated:
       <button
         type="submit"
         disabled={loading}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 text-body-sm font-bold text-on-primary shadow-sm transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
+        className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 text-body-sm font-bold text-on-primary shadow-sm transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
       >
         {loading ? <Spinner className="size-4" /> : mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
       </button>

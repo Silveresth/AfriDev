@@ -25,8 +25,6 @@ const dyu: MobileMessages = {
   'login.sub_login': 'Don walisa ka sɛbɛn, ka kalata kɛ ani ka jaabi di.',
   'login.sub_register': 'Ka dɔnniya tila, ka kalan ani ka baaraw sɔrɔ ni Afiriki porogaramu dilabagaw ye.',
   'login.sub_mfa': 'Kood nimɔrɔ 6 sɛbɛn min bɛ i ka sɛgɛsɛgɛli aplikasiyɔn kɔnɔ.',
-  'login.github': 'Taa a fɛ ni GitHub ye',
-  'login.google': 'Taa a fɛ ni Google ye',
   'login.or_email': 'walima ni i ka imɛli ye',
   'login.email': 'Imɛli',
   'login.password_ph': 'Sɛbɛnni 8 dɔgɔya',

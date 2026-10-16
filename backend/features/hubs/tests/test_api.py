@@ -167,6 +167,37 @@ def test_moderators_pin_and_delete_hub_posts(api_client, auth_client, client_for
     assert posts[1]["author_role"] is None
 
 
+def test_moderators_delete_hub_questions_and_snippets(auth_client, client_for, other_user):
+    hub = _hub(auth_client)
+    kofi = client_for(other_user)
+    kofi.post(f"/api/hubs/{hub['slug']}/join/")
+    question = kofi.post(
+        "/api/qa/questions/",
+        {"title": "Comment migrer ma base ?", "body": "Django 5", "hub_id": hub["id"]},
+        format="json",
+    ).data
+    snippet = kofi.post(
+        "/api/snippets/",
+        {
+            "title": "Salut",
+            "language": "python",
+            "content": "print(1)",
+            "is_public": True,
+            "hub_id": hub["id"],
+        },
+        format="json",
+    ).data
+
+    # Vu par le créateur du hub : droits de modération ; vu par l'auteur : aucun.
+    assert auth_client.get(f"/api/qa/questions/{question['id']}/").data["can_moderate"] is True
+    assert kofi.get(f"/api/qa/questions/{question['id']}/").data["can_moderate"] is False
+    public = auth_client.get(f"/api/snippets/public/{snippet['id']}/").data
+    assert public["can_moderate"] is True and public["author_role"] is None
+
+    assert auth_client.delete(f"/api/qa/questions/{question['id']}/").status_code == 204
+    assert auth_client.delete(f"/api/snippets/public/{snippet['id']}/").status_code == 204
+
+
 def test_hub_moderator_management(auth_client, client_for, other_user):
     hub = _hub(auth_client)
     slug = hub["slug"]

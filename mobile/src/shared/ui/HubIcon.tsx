@@ -1,7 +1,55 @@
+import { type HubIconLucide, resolveHubIcon } from '@afridev/validation';
 import { Image } from 'expo-image';
+import {
+  BarChart3,
+  Bot,
+  Briefcase,
+  CalendarDays,
+  Cloud,
+  Code2,
+  Cpu,
+  Database,
+  Gamepad2,
+  GitBranch,
+  Globe,
+  GraduationCap,
+  type LucideIcon,
+  Palette,
+  Rocket,
+  Server,
+  ShieldCheck,
+  Smartphone,
+  Terminal,
+  Users,
+  Wallet,
+} from 'lucide-react-native';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { AVATAR_COLORS, radius, useTheme } from '@/shared/theme';
+import { AVATAR_COLORS, radius } from '@/shared/theme';
+
+/** Composants Lucide du catalogue partagé avec le web (packages/validation, HUB_ICONS). */
+export const HUB_ICON_COMPONENTS: Record<HubIconLucide, LucideIcon> = {
+  Code2,
+  Terminal,
+  Globe,
+  Smartphone,
+  Server,
+  Cloud,
+  Database,
+  BarChart3,
+  Bot,
+  ShieldCheck,
+  Wallet,
+  Palette,
+  Gamepad2,
+  Cpu,
+  GitBranch,
+  GraduationCap,
+  Briefcase,
+  Rocket,
+  Users,
+  CalendarDays,
+};
 
 function colorFor(seed: string) {
   let hash = 0;
@@ -9,11 +57,10 @@ function colorFor(seed: string) {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
-/** Icône d'un hub : émoji, image, ou initiale sur une couleur unie stable. */
+/** Icône d'un hub : pictogramme du catalogue sur sa couleur, image, ou initiale sur une couleur stable. */
 export function HubIcon({ icon, name, size = 40 }: { icon?: string | null; name: string; size?: number }) {
-  const { colors } = useTheme();
-  const isImage = Boolean(icon && /^https?:\/\//.test(icon));
-  const isEmoji = Boolean(icon && !isImage);
+  const resolved = resolveHubIcon(icon);
+  const Glyph = resolved.kind === 'icon' ? HUB_ICON_COMPONENTS[resolved.icon.lucide] : null;
   return (
     <View
       style={[
@@ -22,14 +69,15 @@ export function HubIcon({ icon, name, size = 40 }: { icon?: string | null; name:
           width: size,
           height: size,
           borderRadius: size > 48 ? radius.lg : radius.md,
-          backgroundColor: isEmoji ? colors.container : colorFor(name),
+          backgroundColor: resolved.kind === 'icon' ? resolved.icon.color : colorFor(name),
         },
       ]}
     >
-      <Text style={{ fontSize: isEmoji ? size * 0.55 : size * 0.45, fontWeight: '700', color: '#FFFFFF' }}>
-        {isEmoji ? icon : name.slice(0, 1).toUpperCase()}
-      </Text>
-      {isImage ? <Image source={{ uri: icon! }} style={StyleSheet.absoluteFill} contentFit="cover" /> : null}
+      {Glyph ? <Glyph size={size * 0.55} color="#FFFFFF" strokeWidth={2.2} /> : null}
+      {resolved.kind === 'initial' ? (
+        <Text style={{ fontSize: size * 0.45, fontWeight: '700', color: '#FFFFFF' }}>{name.slice(0, 1).toUpperCase()}</Text>
+      ) : null}
+      {resolved.kind === 'image' ? <Image source={{ uri: resolved.url }} style={StyleSheet.absoluteFill} contentFit="cover" /> : null}
     </View>
   );
 }

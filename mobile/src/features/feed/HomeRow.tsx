@@ -23,9 +23,10 @@ const LOOK: Record<CardType, { icon: LucideIcon; color: string }> = {
   job: { icon: BriefcaseBusiness, color: '#D97706' },
 };
 
-/** Les questions ont un écran dans l'appli ; snippets, projets et offres s'ouvrent sur le site. */
+/** Questions et snippets ont un écran dans l'appli ; projets et offres s'ouvrent sur le site. */
 function open(type: CardType, id: string, url: string) {
   if (type === 'question') router.push(`/question/${id}`);
+  else if (type === 'snippet') router.push(`/snippet/${id}`);
   else void openLink(`${PUBLIC_WEB_URL}${url}`);
 }
 

@@ -1,12 +1,60 @@
+import { type HubIconLucide, resolveHubIcon } from '@afridev/validation';
+import {
+  BarChart3,
+  Bot,
+  Briefcase,
+  CalendarDays,
+  Cloud,
+  Code2,
+  Cpu,
+  Database,
+  Gamepad2,
+  GitBranch,
+  Globe,
+  GraduationCap,
+  type LucideIcon,
+  Palette,
+  Rocket,
+  Server,
+  ShieldCheck,
+  Smartphone,
+  Terminal,
+  Users,
+  Wallet,
+} from 'lucide-react';
 import Link from 'next/link';
 
 import { cn } from '@/shared/lib';
 
 import { communityColor } from './Tag';
 
+/** Composants Lucide du catalogue partagé (packages/validation, HUB_ICONS). */
+export const HUB_ICON_COMPONENTS: Record<HubIconLucide, LucideIcon> = {
+  Code2,
+  Terminal,
+  Globe,
+  Smartphone,
+  Server,
+  Cloud,
+  Database,
+  BarChart3,
+  Bot,
+  ShieldCheck,
+  Wallet,
+  Palette,
+  Gamepad2,
+  Cpu,
+  GitBranch,
+  GraduationCap,
+  Briefcase,
+  Rocket,
+  Users,
+  CalendarDays,
+};
+
 /**
- * Icône d'un hub : émoji (0 octet réseau), image (masquée en mode « Texte seul »),
- * ou initiale sur une couleur stable.
+ * Icône d'un hub : pictogramme du catalogue sur sa couleur (0 octet réseau), image (masquée en
+ * mode « Texte seul »), ou initiale sur une couleur stable.
  */
 export function HubIcon({
   icon,
@@ -19,21 +67,28 @@ export function HubIcon({
   size?: number;
   className?: string;
 }) {
-  const isImage = Boolean(icon && /^https?:\/\//.test(icon));
+  const resolved = resolveHubIcon(icon);
+  const Glyph = resolved.kind === 'icon' ? HUB_ICON_COMPONENTS[resolved.icon.lucide] : null;
   return (
     <span
       aria-hidden
       className={cn(
         'relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-md font-semibold text-white uppercase',
-        icon && !isImage ? 'border border-line bg-container-low' : communityColor(name),
+        resolved.kind === 'initial' && communityColor(name),
         className,
       )}
-      style={{ width: size, height: size, fontSize: icon && !isImage ? size * 0.58 : Math.max(10, size * 0.45) }}
+      style={{
+        width: size,
+        height: size,
+        fontSize: Math.max(10, size * 0.45),
+        backgroundColor: resolved.kind === 'icon' ? resolved.icon.color : undefined,
+      }}
     >
-      {icon && !isImage ? icon : name.slice(0, 1)}
-      {isImage ? (
+      {Glyph ? <Glyph style={{ width: size * 0.58, height: size * 0.58 }} strokeWidth={2.2} /> : null}
+      {resolved.kind === 'initial' ? name.slice(0, 1) : null}
+      {resolved.kind === 'image' ? (
         // eslint-disable-next-line @next/next/no-img-element -- icône externe légère
-        <img src={icon!} alt="" data-media loading="lazy" className="absolute inset-0 size-full object-cover" />
+        <img src={resolved.url} alt="" data-media loading="lazy" className="absolute inset-0 size-full object-cover" />
       ) : null}
     </span>
   );

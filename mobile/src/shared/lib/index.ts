@@ -131,6 +131,10 @@ function normalizeInternalPath(pathname: string): string | null {
   const questionMatch = clean.match(/^\/(?:question|questions)\/([^/?#]+)/i);
   if (questionMatch) return `/question/${questionMatch[1]}`;
 
+  // Snippet : /snippets/[id] (route web) ou /snippet/[id] -> /snippet/[id]
+  const snippetMatch = clean.match(/^\/snippets?\/([0-9a-f-]{36})$/i);
+  if (snippetMatch) return `/snippet/${snippetMatch[1]}`;
+
   // Hub : /h/[slug] -> /h/[slug]
   const hubMatch = clean.match(/^\/h\/([^/?#]+)/i);
   if (hubMatch) return `/h/${hubMatch[1]}`;
@@ -160,6 +164,7 @@ export function notificationRoute(data: unknown): string | null {
   if (!id) return null;
   if (type === 'post') return `/post/${id}`;
   if (type === 'question') return `/question/${id}`;
+  if (type === 'snippet') return `/snippet/${id}`;
   if (type === 'profile') return `/u/${id}`;
   return null;
 }

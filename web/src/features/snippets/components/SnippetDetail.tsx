@@ -1,13 +1,16 @@
 'use client';
 
-import { CheckCircle2, Copy, GitBranch, History, Lock, Pencil, WifiOff } from 'lucide-react';
+import { CheckCircle2, Copy, GitBranch, History, Lock, Pencil, Trash2, WifiOff } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { useSession } from '@/shared/session';
 import { formatBytes, utf8Size } from '@/shared/lib';
 import {
   Avatar,
+  Button,
   ButtonLink,
+  HubRoleBadge,
   Card,
   CardSkeleton,
   CodeBlock,
@@ -19,7 +22,14 @@ import {
   buttonClasses,
 } from '@/shared/ui';
 
-import { type PublicSnippet, usePublicSnippet, useSnippet, useSnippetsByAuthor, useVersions } from '../api';
+import {
+  type PublicSnippet,
+  useModerateDeleteSnippet,
+  usePublicSnippet,
+  useSnippet,
+  useSnippetsByAuthor,
+  useVersions,
+} from '../api';
 import { SnippetComments } from './SnippetComments';
 
 interface ViewModel {
@@ -31,10 +41,14 @@ interface ViewModel {
   date: string | null;
   isPublic: boolean;
   author: PublicSnippet['author'];
+  authorRole?: string | null;
+  canModerate?: boolean;
 }
 
 export function SnippetDetail({ id, initial }: { id: string; initial?: PublicSnippet }) {
   const { isAuthenticated, profile } = useSession();
+  const router = useRouter();
+  const moderateDelete = useModerateDeleteSnippet();
   const publicSnippet = usePublicSnippet(id, initial);
   // Pas de version publique : c'est peut-être un snippet privé de mon coffre.
   const own = useSnippet(publicSnippet.isError && isAuthenticated ? id : undefined);
@@ -42,7 +56,18 @@ export function SnippetDetail({ id, initial }: { id: string; initial?: PublicSni
   let view: ViewModel | null = null;
   if (publicSnippet.data) {
     const s = publicSnippet.data;
-    view = { id: s.id, title: s.title, language: s.language, content: s.content, tags: s.tags, date: s.published_at, isPublic: true, author: s.author };
+    view = {
+      id: s.id,
+      title: s.title,
+      language: s.language,
+      content: s.content,
+      tags: s.tags,
+      date: s.published_at,
+      isPublic: true,
+      author: s.author,
+      authorRole: s.author_role,
+      canModerate: s.can_moderate,
+    };
   } else if (own.data) {
     const s = own.data;
     view = {
@@ -85,7 +110,8 @@ export function SnippetDetail({ id, initial }: { id: string; initial?: PublicSni
               <Link href={`/u/${view.author.username}`} className="font-semibold text-ink hover:underline">
                 {view.author.display_name}
               </Link>{' '}
-              <span className="text-body-sm text-ink-muted">@{view.author.username}</span>
+              <span className="text-body-sm text-ink-muted">@{view.author.username}</span>{' '}
+              <HubRoleBadge role={view.authorRole} />
               {view.date ? (
                 <p className="text-label-md text-ink-faint">
                   {view.isPublic ? 'Publié' : 'Modifié'} <TimeAgo date={view.date} />
@@ -104,6 +130,19 @@ export function SnippetDetail({ id, initial }: { id: string; initial?: PublicSni
             <ButtonLink href={`/snippets/${view.id}/edit`} variant="ghost">
               <Pencil className="size-4" aria-hidden /> Modifier
             </ButtonLink>
+          ) : null}
+          {!mine && view.canModerate ? (
+            <Button
+              variant="ghost"
+              className="text-danger hover:bg-danger-soft"
+              loading={moderateDelete.isPending}
+              onClick={() => {
+                if (!window.confirm('Supprimer ce snippet en tant que modérateur ?')) return;
+                moderateDelete.mutate(view.id, { onSuccess: () => router.push('/snippets') });
+              }}
+            >
+              <Trash2 className="size-4" aria-hidden /> Supprimer
+            </Button>
           ) : null}
         </div>
       </Card>

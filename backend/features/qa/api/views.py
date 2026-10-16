@@ -80,7 +80,7 @@ class QuestionListCreateView(APIView):
             questions = questions.none()
         paginator = CursorPagination()
         page = paginator.paginate_queryset(questions, request)
-        return paginator.get_paginated_response(present_questions(page))
+        return paginator.get_paginated_response(present_questions(page, viewer=request.user))
 
     @extend_schema(request=QuestionInputSerializer, responses={201: QuestionOutputSerializer})
     def post(self, request):
@@ -90,7 +90,9 @@ class QuestionListCreateView(APIView):
         question = services.create_question(
             author=request.user, question_id=values.pop("id", None), **values
         )
-        return Response(present_questions([question])[0], status=status.HTTP_201_CREATED)
+        return Response(
+            present_questions([question], viewer=request.user)[0], status=status.HTTP_201_CREATED
+        )
 
 
 class QuestionDetailView(APIView):
@@ -98,7 +100,7 @@ class QuestionDetailView(APIView):
 
     @extend_schema(responses=QuestionOutputSerializer)
     def get(self, request, question_id):
-        return Response(present_questions([_question(question_id)])[0])
+        return Response(present_questions([_question(question_id)], viewer=request.user)[0])
 
     @extend_schema(request=QuestionUpdateSerializer, responses=QuestionOutputSerializer)
     def patch(self, request, question_id):
@@ -107,7 +109,7 @@ class QuestionDetailView(APIView):
         question = services.update_question(
             question=_question(question_id), user=request.user, **data.validated_data
         )
-        return Response(present_questions([question])[0])
+        return Response(present_questions([question], viewer=request.user)[0])
 
     @extend_schema(responses={204: None})
     def delete(self, request, question_id):
@@ -121,7 +123,9 @@ class RegenerateAIAnswerView(APIView):
     @extend_schema(request=None, responses={202: QuestionOutputSerializer})
     def post(self, request, question_id):
         question = services.request_ai_answer(question=_question(question_id), user=request.user)
-        return Response(present_questions([question])[0], status=status.HTTP_202_ACCEPTED)
+        return Response(
+            present_questions([question], viewer=request.user)[0], status=status.HTTP_202_ACCEPTED
+        )
 
 
 class AnswerListCreateView(APIView):

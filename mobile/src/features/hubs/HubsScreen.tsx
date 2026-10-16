@@ -1,14 +1,14 @@
 import { router } from 'expo-router';
-import { BadgeCheck, Search, UsersRound } from 'lucide-react-native';
+import { BadgeCheck, Plus, Search, UsersRound } from 'lucide-react-native';
 import { memo, useEffect, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 
 import { useT } from '@/shared/i18n';
 import { formatCount } from '@/shared/lib';
 import { AppearItem } from '@/shared/motion';
-import { useSession } from '@/shared/session';
+import { useRequireAuth, useSession } from '@/shared/session';
 import { radius, typography, useTheme } from '@/shared/theme';
-import { Chips, EmptyState, ErrorState, Header, HubIcon, ListFooter, Loading, Text } from '@/shared/ui';
+import { Chips, EmptyState, ErrorState, Header, HubIcon, IconButton, ListFooter, Loading, Text } from '@/shared/ui';
 
 import { type Hub, HUB_SORTS, type HubSort, useHubs } from './api';
 
@@ -47,6 +47,7 @@ export function HubsScreen() {
   const { colors } = useTheme();
   const { t, tp } = useT();
   const { isAuthenticated } = useSession();
+  const requireAuth = useRequireAuth();
   const [sort, setSort] = useState<HubSort>('popular');
   const [draft, setDraft] = useState('');
   const [q, setQ] = useState('');
@@ -63,7 +64,11 @@ export function HubsScreen() {
 
   return (
     <View style={[styles.flex, { backgroundColor: colors.background }]}>
-      <Header title={t('nav.hubs')} large />
+      <Header
+        title={t('nav.hubs')}
+        large
+        right={<IconButton icon={Plus} label={t('hubs.create')} onPress={() => requireAuth(() => router.push('/compose/hub'))} />}
+      />
       <View style={styles.searchWrap}>
         <View style={[styles.search, { backgroundColor: colors.container }]}>
           <Search size={18} color={colors.inkFaint} />

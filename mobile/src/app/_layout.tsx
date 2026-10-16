@@ -30,7 +30,8 @@ const queryClient = new QueryClient({
   },
 });
 
-const MODAL = { presentation: 'modal', animation: 'slide_from_bottom' } as const;
+// Écrans de création : apparition sobre (fondu court) plutôt qu'un glissement plein écran.
+const MODAL = { presentation: 'modal', animation: 'fade_from_bottom', animationDuration: 200 } as const;
 
 /**
  * L'appli n'est accessible qu'une fois connecté : sans session, seul l'écran de connexion existe.
@@ -56,11 +57,14 @@ function Navigator() {
           <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
           <Stack.Screen name="compose/post" options={MODAL} />
           <Stack.Screen name="compose/question" options={MODAL} />
+          <Stack.Screen name="compose/snippet" options={MODAL} />
+          <Stack.Screen name="compose/hub" options={MODAL} />
           <Stack.Screen name="edit-profile" options={MODAL} />
           <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', gestureEnabled: false }} />
           <Stack.Screen name="post/[id]" />
           <Stack.Screen name="news/[id]" />
           <Stack.Screen name="question/[id]" />
+          <Stack.Screen name="snippet/[id]" />
           <Stack.Screen name="h/[slug]" />
           <Stack.Screen name="u/[username]" />
           <Stack.Screen name="notifications" />

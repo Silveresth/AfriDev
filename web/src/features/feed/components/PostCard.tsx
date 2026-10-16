@@ -13,7 +13,6 @@ import {
   Pin,
   PinOff,
   Share2,
-  ShieldCheck,
   Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -36,6 +35,7 @@ import {
   pillAction,
   StatusBadge,
   HubLink,
+  HubRoleBadge,
   KarmaPill,
   Tag,
   TechBadge,
@@ -44,8 +44,6 @@ import {
 } from '@/shared/ui';
 
 import { type Post, useDeletePost, usePinPost, useScoreVote, useVote } from '../api';
-
-const ROLE_LABELS: Record<string, string> = { creator: 'Créateur du hub', moderator: 'Modérateur' };
 
 /**
  * Carte de post / discussion, façon Dev.to : carte encadrée et cliquable.
@@ -124,11 +122,7 @@ export function PostCard({ post, detail = false, community: showCommunity = true
               ) : (
                 <span className="truncate text-body-sm font-semibold text-ink">{name}</span>
               )}
-              {post.author_role && ROLE_LABELS[post.author_role] ? (
-                <span className="inline-flex items-center gap-1 rounded-md bg-secondary-soft px-1.5 py-0.5 text-[0.6875rem] font-semibold text-on-secondary-soft">
-                  <ShieldCheck className="size-3" aria-hidden /> {ROLE_LABELS[post.author_role]}
-                </span>
-              ) : null}
+              <HubRoleBadge role={post.author_role} />
               <AuthorBadges location={post.author?.location} stack={post.author?.stack} />
               {badgeLabel ? <TechBadge label={badgeLabel} /> : null}
             </div>

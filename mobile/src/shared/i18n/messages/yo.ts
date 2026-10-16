@@ -25,8 +25,6 @@ const yo: MobileMessages = {
   'login.sub_login': 'Wọlé láti fi ránṣẹ́, dìbò àti dáhùn.',
   'login.sub_register': 'Pín, kọ́ ẹ̀kọ́ kí o sì rí àwọn iṣẹ́ pẹ̀lú àwọn olùgbéejáde káàkiri ilẹ̀ Áfíríkà.',
   'login.sub_mfa': 'Tẹ kóòdù oní-nọ́ńbà 6 láti inú ìṣàfilọ́lẹ̀ ìjẹ́rìísí rẹ.',
-  'login.github': 'Tẹ̀síwájú pẹ̀lú GitHub',
-  'login.google': 'Tẹ̀síwájú pẹ̀lú Google',
   'login.or_email': 'tàbí pẹ̀lú ímeèlì rẹ',
   'login.email': 'Ímeèlì',
   'login.password_ph': 'Ó kéré tán lẹ́tà 8',

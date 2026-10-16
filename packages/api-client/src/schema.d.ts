@@ -3608,6 +3608,11 @@ export interface components {
             author: components["schemas"]["Author"] | null;
             /** @description Rôle de l'auteur dans le hub : 'creator', 'moderator' ou null. */
             author_role?: string | null;
+            /**
+             * @description Vrai si le visiteur modère le hub du snippet (ou est staff).
+             * @default false
+             */
+            can_moderate: boolean;
         };
         QaStats: {
             questions: number;
@@ -3655,6 +3660,11 @@ export interface components {
             author: components["schemas"]["Author"] | null;
             /** @description Rôle de l'auteur dans le hub : 'creator', 'moderator' ou null. */
             author_role?: string | null;
+            /**
+             * @description Vrai si le visiteur modère le hub de la question (ou est staff).
+             * @default false
+             */
+            can_moderate: boolean;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */

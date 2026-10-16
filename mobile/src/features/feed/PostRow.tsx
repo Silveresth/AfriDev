@@ -9,7 +9,7 @@ import { useDataSaver } from '@/shared/data-saver';
 import { useT } from '@/shared/i18n';
 import { formatCount, plainText, timeAgo } from '@/shared/lib';
 import { radius, useTheme } from '@/shared/theme';
-import { Avatar, TagRow, Text } from '@/shared/ui';
+import { Avatar, HubRoleBadge, PinnedBadge, TagRow, Text } from '@/shared/ui';
 
 import { imageOf, type Post } from './api';
 import { VoteCapsule } from './VoteCapsule';
@@ -43,6 +43,8 @@ export function PostByline({ post, showHub = true }: { post: Post; showHub?: boo
           {` · ${timeAgo(post.created_at)}`}
         </Text>
       </Text>
+      <HubRoleBadge role={post.author_role} />
+      {post.is_pinned ? <PinnedBadge /> : null}
     </View>
   );
 }

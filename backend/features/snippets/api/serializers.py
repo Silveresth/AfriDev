@@ -66,6 +66,9 @@ class PublicSnippetSerializer(serializers.Serializer):
         required=False,
         help_text="Rôle de l'auteur dans le hub : 'creator', 'moderator' ou null.",
     )
+    can_moderate = serializers.BooleanField(
+        default=False, help_text="Vrai si le visiteur modère le hub du snippet (ou est staff)."
+    )
 
 
 class SnippetVersionSerializer(ReadOnlyModelSerializer):

@@ -73,6 +73,15 @@ export function useAskQuestion() {
   });
 }
 
+/** Suppression par l'auteur, ou par un modérateur du hub de la question. */
+export function useDeleteQuestion() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => unwrap(api.DELETE('/api/qa/questions/{question_id}/', { params: { path: { question_id: id } } })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['qa'] }),
+  });
+}
+
 export function useAnswerActions(questionId: string) {
   const queryClient = useQueryClient();
   const refresh = () => {

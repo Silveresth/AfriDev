@@ -25,8 +25,6 @@ const am: MobileMessages = {
   'login.sub_login': 'ለመለጠፍ፣ ድምፅ ለመስጠትና ለመመለስ ይግቡ።',
   'login.sub_register': 'ያጋሩ፣ ይማሩ እና ከመላው አህጉር ገንቢዎች ጋር ፕሮጀክቶችን ያግኙ።',
   'login.sub_mfa': 'ከማረጋገጫ መተግበሪያዎ ባለ 6 አሃዝ ኮዱን ያስገቡ።',
-  'login.github': 'በGitHub ይቀጥሉ',
-  'login.google': 'በGoogle ይቀጥሉ',
   'login.or_email': 'ወይም በኢሜይልዎ',
   'login.email': 'ኢሜይል',
   'login.password_ph': 'ቢያንስ 8 ቁምፊዎች',

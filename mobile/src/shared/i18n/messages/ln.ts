@@ -25,8 +25,6 @@ const ln: MobileMessages = {
   'login.sub_login': 'Kota mpo na kotinda, kopona mpe koyanola.',
   'login.sub_register': 'Kabola, yekola mpe zwa misala elongo na basali ya Afrika mobimba.',
   'login.sub_mfa': 'Koma kode ya mituya 6 oyo ezali na aplikasio na yo ya botaleli.',
-  'login.github': 'Kokoba na GitHub',
-  'login.google': 'Kokoba na Google',
   'login.or_email': 'to na imeyle na yo',
   'login.email': 'Imeyle',
   'login.password_ph': 'Ata mikanda 8',

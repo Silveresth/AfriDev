@@ -1,11 +1,11 @@
 import { router } from 'expo-router';
-import { type LucideIcon, MessageCircleQuestion, PenLine, Plus } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { Code2, type LucideIcon, MessageCircleQuestion, PenLine, Plus, UsersRound } from 'lucide-react-native';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { type Key, useT } from '@/shared/i18n';
-import { haptic, PressableScale, SPRING } from '@/shared/motion';
+import { haptic, PressableScale } from '@/shared/motion';
 import { useRequireAuth } from '@/shared/session';
 import { radius, useTheme } from '@/shared/theme';
 import { ForwardChevron, Sheet, Text } from '@/shared/ui';
@@ -15,28 +15,28 @@ interface Choice {
   title: Key;
   hint: Key;
   icon: LucideIcon;
+  /** Proposé seulement hors d'un hub (on ne crée pas un hub depuis un hub). */
+  outsideHub?: boolean;
 }
 
 const CHOICES: Choice[] = [
   { href: '/compose/post', title: 'publish.post', hint: 'publish.post_hint', icon: PenLine },
   { href: '/compose/question', title: 'publish.question', hint: 'publish.question_hint', icon: MessageCircleQuestion },
+  { href: '/compose/snippet', title: 'publish.snippet', hint: 'snippet.public_hint', icon: Code2 },
+  { href: '/compose/hub', title: 'hubs.create', hint: 'hubs.create_hint', icon: UsersRound, outsideHub: true },
 ];
 
 /**
- * Bouton rond « + » en bas à droite, à portée du pouce : il surgit à l'ouverture de l'écran et
- * pivote en « × » quand la feuille de choix est ouverte. `href` : action directe.
+ * Bouton rond « + » en bas à droite, à portée du pouce : ouvre le choix de ce qu'on publie
+ * (post, question, snippet, hub). `href` : action directe. Apparition en simple fondu.
  */
 export function CreateButton({ href, params }: { href?: string; params?: Record<string, string> }) {
   const { colors } = useTheme();
   const { t } = useT();
   const requireAuth = useRequireAuth();
   const [open, setOpen] = useState(false);
-  const turn = useSharedValue(0);
-
-  useEffect(() => {
-    turn.value = withSpring(open ? 1 : 0, SPRING);
-  }, [open, turn]);
-  const icon = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.value * 135}deg` }] }));
+  const inHub = Boolean(params?.hubId);
+  const choices = CHOICES.filter((choice) => !(inHub && choice.outsideHub));
 
   const go = (target: string) => {
     setOpen(false);
@@ -45,38 +45,34 @@ export function CreateButton({ href, params }: { href?: string; params?: Record<
 
   return (
     <>
-      <Animated.View entering={ZoomIn.springify().damping(12).delay(250)} style={styles.anchor}>
+      <Animated.View entering={FadeIn.duration(200)} style={styles.anchor}>
         <PressableScale
           accessibilityRole="button"
           accessibilityLabel={t('create.label')}
-          scaleTo={0.88}
+          scaleTo={0.94}
           onPress={() => {
             haptic.tap();
             requireAuth(() => (href ? go(href) : setOpen(true)));
           }}
           style={[styles.fab, { backgroundColor: colors.primary }]}
         >
-          <Animated.View style={icon}>
-            <Plus size={26} color={colors.onPrimary} strokeWidth={2.4} />
-          </Animated.View>
+          <Plus size={26} color={colors.onPrimary} strokeWidth={2.4} />
         </PressableScale>
       </Animated.View>
       <Sheet visible={open} onClose={() => setOpen(false)} title={t('create.label')}>
-        {CHOICES.map((choice, index) => (
-          <Animated.View key={choice.href} entering={FadeInDown.delay(80 + index * 70).duration(280)}>
-            <PressableScale onPress={() => go(choice.href)} scaleTo={0.98} style={styles.choice}>
-              <View style={[styles.choiceIcon, { backgroundColor: colors.primarySoft }]}>
-                <choice.icon size={20} color={colors.primaryInk} />
-              </View>
-              <View style={styles.flex}>
-                <Text variant="bodyStrong">{t(choice.title)}</Text>
-                <Text variant="small" tone="muted">
-                  {t(choice.hint)}
-                </Text>
-              </View>
-              <ForwardChevron size={18} color={colors.inkFaint} />
-            </PressableScale>
-          </Animated.View>
+        {choices.map((choice) => (
+          <PressableScale key={choice.href} onPress={() => go(choice.href)} scaleTo={0.99} style={styles.choice}>
+            <View style={[styles.choiceIcon, { backgroundColor: colors.primarySoft }]}>
+              <choice.icon size={20} color={colors.primaryInk} />
+            </View>
+            <View style={styles.flex}>
+              <Text variant="bodyStrong">{t(choice.title)}</Text>
+              <Text variant="small" tone="muted" numberOfLines={1}>
+                {t(choice.hint)}
+              </Text>
+            </View>
+            <ForwardChevron size={18} color={colors.inkFaint} />
+          </PressableScale>
         ))}
       </Sheet>
     </>

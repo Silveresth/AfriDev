@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 import { BookmarkButton } from '@/features/bookmarks';
 import { cn, formatBytes, utf8Size } from '@/shared/lib';
-import { AuthorBadges, Avatar, CodeBlock, HubLink, KarmaPill, Tag, TimeAgo } from '@/shared/ui';
+import { AuthorBadges, Avatar, CodeBlock, HubLink, HubRoleBadge, KarmaPill, Tag, TimeAgo } from '@/shared/ui';
 
 type Author = Schemas['Author'];
 type HubSummary = Schemas['HubSummary'];
@@ -20,6 +20,8 @@ export interface SnippetCardData {
   date: string;
   dateLabel?: string;
   author?: Author | null;
+  /** Rôle de l'auteur dans le hub du snippet (« creator » | « moderator »). */
+  author_role?: string | null;
   hub?: HubSummary | null;
 }
 
@@ -72,6 +74,7 @@ export function SnippetCard({
                   <Avatar name={name} src={author.avatar_url} size={20} />
                   {name}
                 </Link>
+                <HubRoleBadge role={snippet.author_role} />
                 <AuthorBadges location={author.location} stack={author.stack} />
                 {author.karma ? <KarmaPill karma={author.karma} /> : null}
                 <span aria-hidden>·</span>

@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useT } from '@/shared/i18n';
 import { plainText, timeAgo } from '@/shared/lib';
 import { radius, useTheme } from '@/shared/theme';
-import { TagRow, Text } from '@/shared/ui';
+import { HubRoleBadge, TagRow, Text } from '@/shared/ui';
 
 import type { Question } from './api';
 
@@ -50,6 +50,7 @@ export const QuestionRow = memo(function QuestionRow({ question }: { question: Q
               </Text>
             </View>
           ) : null}
+          <HubRoleBadge role={question.author_role} />
           <Text variant="caption" tone="faint" numberOfLines={1} style={styles.flex}>
             @{question.author?.username ?? t('member')} · {timeAgo(question.created_at)}
           </Text>

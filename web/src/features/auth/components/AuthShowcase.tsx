@@ -63,7 +63,7 @@ export function AuthShowcase({ mode }: { mode: 'login' | 'register' }) {
           </p>
         </div>
 
-        <figure className="overflow-hidden rounded-2xl bg-zinc-900 ring-1 ring-white/8" aria-hidden>
+        <figure className="hidden overflow-hidden rounded-2xl bg-zinc-900 ring-1 ring-white/8 [@media(min-height:780px)]:block" aria-hidden>
           <div className="flex items-center gap-1.5 border-b border-white/8 px-3.5 py-2.5">
             <span className="size-2.5 rounded-full bg-zinc-600" />
             <span className="size-2.5 rounded-full bg-zinc-600" />

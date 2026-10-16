@@ -283,6 +283,7 @@ function PinSheet({ me, visible, onClose }: { me: MyProfile; visible: boolean; o
 function openPinned(type: PinTargetType, id: string, href: string) {
   if (type === 'post') router.push(`/post/${id}`);
   else if (type === 'question') router.push(`/question/${id}`);
+  else if (type === 'snippet') router.push(`/snippet/${id}`);
   else void openLink(href.startsWith('http') ? href : `${PUBLIC_WEB_URL}${href}`);
 }
 

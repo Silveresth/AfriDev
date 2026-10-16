@@ -3,7 +3,7 @@ import { forwardRef, useEffect } from 'react';
 import { Platform, Pressable, type PressableProps, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 import Animated, {
   Easing,
-  FadeInDown,
+  FadeIn,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -35,9 +35,9 @@ export const haptic = {
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-/** Pressable qui s'enfonce légèrement au toucher puis rebondit (boutons, cartes, pastilles). */
+/** Pressable qui s'enfonce légèrement au toucher puis revient, sans rebond (boutons, cartes). */
 export const PressableScale = forwardRef<View, Omit<PressableProps, 'style'> & { style?: StyleProp<ViewStyle>; scaleTo?: number }>(
-  function PressableScale({ style, scaleTo = 0.96, onPressIn, onPressOut, ...props }, ref) {
+  function PressableScale({ style, scaleTo = 0.97, onPressIn, onPressOut, ...props }, ref) {
     const scale = useSharedValue(1);
     const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
     return (
@@ -45,11 +45,11 @@ export const PressableScale = forwardRef<View, Omit<PressableProps, 'style'> & {
         ref={ref}
         {...props}
         onPressIn={(event) => {
-          scale.value = withSpring(scaleTo, SPRING);
+          scale.value = withTiming(Math.max(scaleTo, 0.95), { duration: 90 });
           onPressIn?.(event);
         }}
         onPressOut={(event) => {
-          scale.value = withSpring(1, SPRING);
+          scale.value = withTiming(1, { duration: 120 });
           onPressOut?.(event);
         }}
         style={[style, animated]}
@@ -60,9 +60,9 @@ export const PressableScale = forwardRef<View, Omit<PressableProps, 'style'> & {
 
 // ── Apparition des listes ──
 
-/** Les 10 premières lignes glissent en cascade ; au-delà (défilement), pas d'animation. */
+/** Les premières lignes apparaissent en fondu court ; au-delà (défilement), pas d'animation. */
 export function enteringAt(index: number) {
-  return index < 10 ? FadeInDown.delay(index * 45).duration(380).easing(Easing.out(Easing.cubic)) : undefined;
+  return index < 8 ? FadeIn.duration(180) : undefined;
 }
 
 export function AppearItem({ index, children }: { index: number; children: React.ReactNode }) {

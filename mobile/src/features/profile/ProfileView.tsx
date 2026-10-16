@@ -10,11 +10,13 @@ import { absoluteUrl, type Schemas } from '@/shared/api';
 import { useDataSaver } from '@/shared/data-saver';
 import { type Key, useT } from '@/shared/i18n';
 import { formatCount, timeAgo } from '@/shared/lib';
-import { AppearItem, PressableScale } from '@/shared/motion';
+import { PressableScale } from '@/shared/motion';
 import { useTheme } from '@/shared/theme';
 import { Chips, EmptyState, ListFooter, Text } from '@/shared/ui';
 
-import { ProjectRow, SnippetRow } from './ActivityRows';
+import { SnippetRow } from '@/features/snippets';
+
+import { ProjectRow } from './ActivityRows';
 import {
   type HelpAnswer,
   type MyProfile,
@@ -33,6 +35,7 @@ type Tab = 'creations' | 'videos' | 'help' | 'craft';
 type Creation = 'posts' | 'snippets' | 'projects';
 type Help = 'accepted' | 'answers' | 'questions';
 type Item = Post | Question | PublicSnippet | Project | HelpAnswer;
+type Row = Item | { pair: Post[] };
 type VideoMedia = { thumbhash?: string; duration_seconds?: number | null; urls?: { poster?: string } };
 
 const TABS: { value: Tab; label: Key; icon: LucideIcon }[] = [
@@ -242,26 +245,36 @@ export function ProfileView({ profile, me, onRefresh }: { profile: PublicProfile
             ? questions
             : answers;
 
-  const isGrid = tab === 'videos';
   const tileWidth = (width - 16 * 2 - 8) / 2;
+  const items = (list?.items ?? []) as Item[];
+  // Grille vidéo = lignes de 2 vignettes dans la même liste à une colonne : changer d'onglet
+  // ne recrée jamais la liste (sinon en-tête démonté et défilement remis à zéro).
+  const rows: Row[] =
+    tab === 'videos'
+      ? Array.from({ length: Math.ceil(items.length / 2) }, (_, i) => ({ pair: items.slice(i * 2, i * 2 + 2) as Post[] }))
+      : items;
 
-  const render = (item: Item) => {
-    if (tab === 'videos') return <VideoTile post={item as Post} width={tileWidth} />;
-    if (tab === 'help') return help === 'questions' ? <QuestionRow question={item as Question} /> : <HelpRow answer={item as HelpAnswer} />;
-    if (creation === 'snippets') return <SnippetRow snippet={item as PublicSnippet} />;
-    if (creation === 'projects') return <ProjectRow project={item as Project} />;
-    return <PostRow post={item as Post} />;
+  const render = (row: Row) => {
+    if ('pair' in row) {
+      return (
+        <View style={styles.gridRow}>
+          {row.pair.map((post) => (
+            <VideoTile key={post.id} post={post} width={tileWidth} />
+          ))}
+        </View>
+      );
+    }
+    if (tab === 'help') return help === 'questions' ? <QuestionRow question={row as Question} /> : <HelpRow answer={row as HelpAnswer} />;
+    if (creation === 'snippets') return <SnippetRow snippet={row as PublicSnippet} />;
+    if (creation === 'projects') return <ProjectRow project={row as Project} />;
+    return <PostRow post={row as Post} />;
   };
 
   return (
-    <FlatList<Item>
-      // Changer de nombre de colonnes impose de recréer la liste.
-      key={isGrid ? 'grid' : 'list'}
-      numColumns={isGrid ? 2 : 1}
-      columnWrapperStyle={isGrid ? styles.gridRow : undefined}
-      data={(list?.items ?? []) as Item[]}
-      keyExtractor={(item) => `${tab}-${sub}-${item.id}`}
-      renderItem={({ item, index }) => (isGrid ? render(item) : <AppearItem index={index}>{render(item)}</AppearItem>)}
+    <FlatList<Row>
+      data={rows}
+      keyExtractor={(row) => ('pair' in row ? `pair-${row.pair[0]?.id}` : `${sub}-${row.id}`)}
+      renderItem={({ item }) => render(item)}
       ListHeaderComponent={
         <Header profile={profile} me={me} tab={tab} onTab={setTab} creation={creation} onCreation={setCreation} help={help} onHelp={setHelp} />
       }
@@ -298,7 +311,7 @@ const styles = StyleSheet.create({
   tabs: { flexGrow: 0, borderBottomWidth: StyleSheet.hairlineWidth },
   tabsInner: { paddingHorizontal: 12, gap: 4 },
   tab: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 44, paddingHorizontal: 10, borderBottomWidth: 2 },
-  gridRow: { gap: 8, paddingHorizontal: 16, marginBottom: 8 },
+  gridRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 8 },
   video: { aspectRatio: 9 / 16, borderRadius: 14, overflow: 'hidden' },
   videoShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.25)' },
   videoPlay: {
