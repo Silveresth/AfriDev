@@ -63,6 +63,18 @@ export function useCreateSnippet() {
   });
 }
 
+export function useUpdateSnippet(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { title: string; language: string; content: string; tags: string[] }) =>
+      unwrap(api.PATCH('/api/snippets/{snippet_id}/', { params: { path: { snippet_id: id } }, body: input })),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: snippetKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ['feed', 'home'] });
+    },
+  });
+}
+
 /** Suppression par l'auteur, ou par un modérateur du hub (snippet public). */
 export function useDeleteSnippet() {
   const queryClient = useQueryClient();

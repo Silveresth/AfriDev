@@ -43,6 +43,7 @@ export function useQuestion(id: string) {
   return useQuery({
     queryKey: qaKeys.detail(id),
     queryFn: () => unwrap(api.GET('/api/qa/questions/{question_id}/', { params: { path: { question_id: id } } })),
+    enabled: Boolean(id),
     // La réponse IA arrive quelques secondes après la publication : on la guette.
     refetchInterval: (query) => (query.state.data?.ai_answer_status === 'pending' ? 2500 : false),
   });
@@ -70,6 +71,19 @@ export function useAskQuestion() {
     mutationFn: (input: { title: string; body: string; tags: string[]; hub_id?: string | null }) =>
       unwrap(api.POST('/api/qa/questions/', { body: { ...input, hub_id: input.hub_id ?? null } })),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['qa', 'list'] }),
+  });
+}
+
+export function useUpdateQuestion(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { title: string; body: string; tags: string[] }) =>
+      unwrap(api.PATCH('/api/qa/questions/{question_id}/', { params: { path: { question_id: id } }, body: input })),
+    onSuccess: (question) => {
+      queryClient.setQueryData(qaKeys.detail(id), question);
+      void queryClient.invalidateQueries({ queryKey: ['qa', 'list'] });
+      void queryClient.invalidateQueries({ queryKey: ['feed', 'home'] });
+    },
   });
 }
 

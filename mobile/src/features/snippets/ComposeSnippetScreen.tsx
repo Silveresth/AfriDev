@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { parseTags } from '@/features/feed';
@@ -10,25 +10,54 @@ import { haptic } from '@/shared/motion';
 import { mono, radius, useTheme } from '@/shared/theme';
 import { Button, Header, Switch, Tag, Text, TextField, useToast } from '@/shared/ui';
 
-import { LANGUAGES, useCreateSnippet } from './api';
+import { LANGUAGES, useCreateSnippet, usePublicSnippet, useUpdateSnippet } from './api';
 
 /** Publier un snippet depuis l'appli (public par défaut, dans le hub d'où l'on publie). */
 export function ComposeSnippetScreen() {
   const { colors } = useTheme();
   const { t } = useT();
   const toast = useToast();
-  const { hubId, hubName } = useLocalSearchParams<{ hubId?: string; hubName?: string }>();
+  const { hubId, hubName, editId = '' } = useLocalSearchParams<{ hubId?: string; hubName?: string; editId?: string }>();
   const create = useCreateSnippet();
+  const update = useUpdateSnippet(editId);
+  const existing = usePublicSnippet(editId);
   const [title, setTitle] = useState('');
   const [language, setLanguage] = useState<string>('python');
   const [content, setContent] = useState('');
   const [tags, setTags] = useState('');
   const [isPublic, setIsPublic] = useState(true);
+  const [loaded, setLoaded] = useState(false);
+  const editing = Boolean(editId);
+  const saving = create.isPending || update.isPending;
+  const failure = create.error ?? update.error;
 
-  const canPublish = title.trim().length >= 3 && content.trim().length >= 1 && !create.isPending;
+  useEffect(() => {
+    if (!existing.data || loaded) return;
+    setTitle(existing.data.title);
+    setLanguage(existing.data.language);
+    setContent(existing.data.content);
+    setTags(existing.data.tags.join(', '));
+    setLoaded(true);
+  }, [existing.data, loaded]);
+
+  const canPublish = title.trim().length >= 3 && content.trim().length >= 1 && !saving;
+
+  const save = () =>
+    update.mutate(
+      { title: title.trim(), language, content, tags: parseTags(tags) },
+      {
+        onSuccess: () => {
+          haptic.success();
+          toast(t('modify.saved'));
+          router.back();
+        },
+      },
+    );
 
   const publish = () =>
-    create.mutate(
+    editing
+      ? save()
+      : create.mutate(
       { title: title.trim(), language, content, tags: parseTags(tags), is_public: isPublic, hub_id: hubId ?? null },
       {
         onSuccess: (snippet) => {
@@ -45,9 +74,18 @@ export function ComposeSnippetScreen() {
   return (
     <KeyboardAvoidingView behavior="padding" style={[styles.flex, { backgroundColor: colors.background }]}>
       <Header
-        title={t('snippet.new')}
+        title={t(editing ? 'modify.snippet' : 'snippet.new')}
         close
-        right={<Button label={t('compose.publish')} size="sm" disabled={!canPublish} loading={create.isPending} onPress={publish} style={styles.publish} />}
+        right={
+          <Button
+            label={t(editing ? 'common.save' : 'compose.publish')}
+            size="sm"
+            disabled={!canPublish}
+            loading={saving}
+            onPress={publish}
+            style={styles.publish}
+          />
+        }
       />
       <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
         {hubName ? (
@@ -109,18 +147,20 @@ export function ComposeSnippetScreen() {
           autoCapitalize="none"
           hint={t('compose.tags_hint')}
         />
-        <View style={[styles.toggle, { borderColor: colors.line }]}>
-          <View style={styles.flex}>
-            <Text variant="bodyStrong">{t('snippet.public')}</Text>
-            <Text variant="small" tone="muted">
-              {t('snippet.public_hint')}
-            </Text>
+        {editing ? null : (
+          <View style={[styles.toggle, { borderColor: colors.line }]}>
+            <View style={styles.flex}>
+              <Text variant="bodyStrong">{t('snippet.public')}</Text>
+              <Text variant="small" tone="muted">
+                {t('snippet.public_hint')}
+              </Text>
+            </View>
+            <Switch label={t('snippet.public')} value={isPublic} onChange={setIsPublic} />
           </View>
-          <Switch label={t('snippet.public')} value={isPublic} onChange={setIsPublic} />
-        </View>
-        {create.isError ? (
+        )}
+        {failure ? (
           <Text variant="small" tone="danger">
-            {errorMessage(create.error)}
+            {errorMessage(failure)}
           </Text>
         ) : null}
       </ScrollView>

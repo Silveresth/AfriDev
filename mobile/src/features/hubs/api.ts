@@ -50,6 +50,27 @@ export function useCreateHub() {
   });
 }
 
+/** Modification par les modérateurs du hub (ou le staff). */
+export function useUpdateHub(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Schemas['PatchedHubUpdateRequest']) => unwrap(api.PATCH('/api/hubs/{slug}/', { params: { path: { slug } }, body })),
+    onSuccess: (hub) => {
+      queryClient.setQueryData(hubKeys.detail(hub.slug), hub);
+      void queryClient.invalidateQueries({ queryKey: ['hubs', 'list'] });
+    },
+  });
+}
+
+/** Suppression par le créateur du hub (ou le staff). */
+export function useDeleteHub() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (slug: string) => unwrap(api.DELETE('/api/hubs/{slug}/', { params: { path: { slug } } })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: hubKeys.all }),
+  });
+}
+
 export type HubMember = Schemas['HubMember'];
 export type HubBan = Schemas['HubBan'];
 

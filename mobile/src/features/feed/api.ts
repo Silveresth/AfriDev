@@ -44,6 +44,7 @@ export function usePost(id: string) {
   return useQuery({
     queryKey: feedKeys.detail(id),
     queryFn: () => unwrap(api.GET('/api/feed/{post_id}/', { params: { path: { post_id: id } } })),
+    enabled: Boolean(id),
     // Affichage immédiat depuis la liste déjà chargée, rafraîchi ensuite.
     placeholderData: () => findInLists(queryClient, id),
   });
@@ -168,6 +169,16 @@ export function useCreatePost() {
         }),
       ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['feed', 'list'] }),
+  });
+}
+
+/** Modification par l'auteur (ou le staff) : le post est remplacé partout où il s'affiche. */
+export function useUpdatePost(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { title: string; body: string; tags: string[] }) =>
+      unwrap(api.PATCH('/api/feed/{post_id}/', { params: { path: { post_id: id } }, body: input })),
+    onSuccess: (post) => replacePost(queryClient, post),
   });
 }
 

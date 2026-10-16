@@ -1,16 +1,17 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ThumbsDown, ThumbsUp, Check, CheckCircle2, SendHorizontal, Sparkles, Trash2 } from 'lucide-react-native';
+import { ThumbsDown, ThumbsUp, Check, CheckCircle2, SendHorizontal, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { MoreButton } from '@/features/engage';
 import { TranslateBar } from '@/features/translation';
 import { errorMessage } from '@/shared/api';
 import { useT } from '@/shared/i18n';
 import { openLink, timeAgo } from '@/shared/lib';
 import { useRequireAuth, useSession } from '@/shared/session';
 import { radius, typography, useTheme } from '@/shared/theme';
-import { Avatar, Button, ErrorState, Header, HubRoleBadge, IconButton, Loading, Markdown, TagRow, Text, useToast } from '@/shared/ui';
+import { Avatar, Button, ErrorState, Header, HubRoleBadge, Loading, Markdown, TagRow, Text, useToast } from '@/shared/ui';
 
 import { type Answer, type Question, useAnswerActions, useAnswers, useDeleteQuestion, useQuestion } from './api';
 
@@ -195,22 +196,15 @@ export function QuestionScreen() {
   const name = author?.display_name || author?.username || t('member');
   const rows = answers.data ?? [];
   const mine = Boolean(user && author?.id === user.id);
-  const confirmDelete = () =>
-    Alert.alert(t('common.delete'), mine ? undefined : t('mod.delete_confirm'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.delete'),
-        style: 'destructive',
-        onPress: () =>
-          remove.mutate(data.id, {
-            onSuccess: () => {
-              toast(t('mod.deleted'));
-              router.back();
-            },
-            onError: (error) => toast(errorMessage(error), 'error'),
-          }),
+  const canEdit = mine || Boolean(user?.is_staff);
+  const deleteQuestion = () =>
+    remove.mutate(data.id, {
+      onSuccess: () => {
+        toast(t('mod.deleted'));
+        router.back();
       },
-    ]);
+      onError: (error) => toast(errorMessage(error), 'error'),
+    });
 
   return (
     <KeyboardAvoidingView behavior="padding" style={[styles.flex, { backgroundColor: colors.background }]}>
@@ -218,9 +212,12 @@ export function QuestionScreen() {
         title={data.hub ? `h/${data.hub.slug}` : t('qa.question')}
         back
         right={
-          mine || data.can_moderate ? (
-            <IconButton icon={Trash2} label={t('common.delete')} color={colors.danger} onPress={confirmDelete} />
-          ) : null
+          <MoreButton
+            report={mine ? undefined : { type: 'question', id: data.id }}
+            onEdit={canEdit ? () => router.push({ pathname: '/compose/question', params: { editId: data.id } }) : undefined}
+            editLabel={t('modify.question')}
+            onDelete={canEdit || data.can_moderate ? deleteQuestion : undefined}
+          />
         }
       />
       <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">

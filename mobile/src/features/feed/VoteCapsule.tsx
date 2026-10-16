@@ -49,12 +49,16 @@ function Arrow({ up, active, color, onPress }: { up: boolean; active: boolean; c
   );
 }
 
-/** Capsule 👍 score 👎 : terre cuite pour le pouce levé, violet pour le pouce baissé ; retoucher le même pouce retire le vote. */
 export function VoteCapsule({ post }: { post: Post }) {
+  const vote = useScoreVote(post);
+  return <ScoreCapsule score={post.score} value={post.viewer?.post_vote ?? 0} onVote={(value) => vote.mutate(value)} />;
+}
+
+/** Capsule 👍 score 👎 : terre cuite pour le pouce levé, violet pour le pouce baissé ; retoucher le même pouce retire le vote. */
+export function ScoreCapsule({ score, value, onVote }: { score: number; value: number; onVote: (value: -1 | 0 | 1) => void }) {
   const { colors } = useTheme();
   const requireAuth = useRequireAuth();
-  const vote = useScoreVote(post);
-  const current = post.viewer?.post_vote ?? 0;
+  const current = value;
   const tint = current === 1 ? colors.primary : current === -1 ? colors.downvote : colors.inkMuted;
 
   // Le fond glisse en douceur entre neutre, terre cuite pâle et violet pâle.
@@ -67,16 +71,16 @@ export function VoteCapsule({ post }: { post: Post }) {
   }));
 
   // Sens du défilement du chiffre : il monte si le score augmente.
-  const previous = useRef(post.score);
-  const rising = post.score >= previous.current;
+  const previous = useRef(score);
+  const rising = score >= previous.current;
   useEffect(() => {
-    previous.current = post.score;
-  }, [post.score]);
+    previous.current = score;
+  }, [score]);
 
-  const cast = (value: 1 | -1) =>
+  const cast = (next: 1 | -1) =>
     requireAuth(() => {
       haptic.tap();
-      vote.mutate(current === value ? 0 : value);
+      onVote(current === next ? 0 : next);
     });
 
   return (
@@ -84,12 +88,12 @@ export function VoteCapsule({ post }: { post: Post }) {
       <Arrow up active={current === 1} color={tint} onPress={() => cast(1)} />
       <View style={styles.scoreBox}>
         <Animated.Text
-          key={post.score}
+          key={score}
           entering={(rising ? FadeInUp : FadeInDown).duration(200)}
           exiting={(rising ? FadeOutUp : FadeOutDown).duration(160)}
           style={[typography.smallStrong, styles.score, { color: current ? tint : colors.ink }]}
         >
-          {formatCount(post.score)}
+          {formatCount(score)}
         </Animated.Text>
       </View>
       <Arrow up={false} active={current === -1} color={tint} onPress={() => cast(-1)} />

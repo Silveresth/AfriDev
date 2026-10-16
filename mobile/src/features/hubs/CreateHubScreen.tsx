@@ -1,7 +1,7 @@
-import { DEFAULT_HUB_ICON, HUB_ICONS, type HubIconKey, hubIconValue } from '@afridev/validation';
-import { router } from 'expo-router';
+import { DEFAULT_HUB_ICON, HUB_ICONS, type HubIconKey, hubIconValue, resolveHubIcon } from '@afridev/validation';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Check, Plus, X } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { errorMessage } from '@/shared/api';
@@ -10,7 +10,7 @@ import { haptic } from '@/shared/motion';
 import { radius, typography, useTheme } from '@/shared/theme';
 import { Button, Header, HUB_ICON_COMPONENTS, HubIcon, Text, TextField, useToast } from '@/shared/ui';
 
-import { useCreateHub } from './api';
+import { useCreateHub, useHub, useUpdateHub } from './api';
 
 const MAX_RULES = 10;
 
@@ -30,7 +30,10 @@ export function CreateHubScreen() {
   const { colors } = useTheme();
   const { t } = useT();
   const toast = useToast();
+  const { editSlug = '' } = useLocalSearchParams<{ editSlug?: string }>();
   const create = useCreateHub();
+  const update = useUpdateHub(editSlug);
+  const existing = useHub(editSlug);
   const [name, setName] = useState('');
   const [customSlug, setCustomSlug] = useState<string | null>(null);
   const [icon, setIcon] = useState<HubIconKey>(DEFAULT_HUB_ICON);
@@ -38,9 +41,25 @@ export function CreateHubScreen() {
   const [country, setCountry] = useState('');
   const [rules, setRules] = useState<string[]>([]);
   const [rule, setRule] = useState('');
-  const slug = customSlug ?? slugify(name);
-  const canSubmit = name.trim().length >= 2 && slug.length >= 3 && !create.isPending;
+  const [loaded, setLoaded] = useState(false);
+  const editing = Boolean(editSlug);
+  const saving = create.isPending || update.isPending;
+  const failure = create.error ?? update.error;
+  const slug = editing ? editSlug : (customSlug ?? slugify(name));
+  const canSubmit = name.trim().length >= 2 && slug.length >= 3 && !saving;
   const meta = HUB_ICONS.find((item) => item.key === icon);
+
+  useEffect(() => {
+    if (!existing.data || loaded) return;
+    const hub = existing.data;
+    const resolved = resolveHubIcon(hub.icon);
+    setName(hub.name);
+    setDescription(hub.description);
+    setCountry(hub.target_country);
+    setRules(hub.rules);
+    if (resolved.kind === 'icon') setIcon(resolved.icon.key);
+    setLoaded(true);
+  }, [existing.data, loaded]);
 
   const addRule = () => {
     const value = rule.trim();
@@ -49,16 +68,26 @@ export function CreateHubScreen() {
     setRule('');
   };
 
-  const submit = () =>
+  const submit = () => {
+    const fields = {
+      name: name.trim(),
+      icon: hubIconValue(icon),
+      description: description.trim(),
+      target_country: country.trim(),
+      rules: rule.trim() ? [...rules, rule.trim()] : rules,
+    };
+    if (editing) {
+      update.mutate(fields, {
+        onSuccess: () => {
+          haptic.success();
+          toast(t('modify.saved'));
+          router.back();
+        },
+      });
+      return;
+    }
     create.mutate(
-      {
-        name: name.trim(),
-        slug,
-        icon: hubIconValue(icon),
-        description: description.trim(),
-        target_country: country.trim(),
-        rules: rule.trim() ? [...rules, rule.trim()] : rules,
-      },
+      { ...fields, slug },
       {
         onSuccess: (hub) => {
           haptic.success();
@@ -67,13 +96,23 @@ export function CreateHubScreen() {
         },
       },
     );
+  };
 
   return (
     <KeyboardAvoidingView behavior="padding" style={[styles.flex, { backgroundColor: colors.background }]}>
       <Header
-        title={t('hubs.create')}
+        title={t(editing ? 'modify.hub' : 'hubs.create')}
         close
-        right={<Button label={t('publish.create')} size="sm" disabled={!canSubmit} loading={create.isPending} onPress={submit} style={styles.action} />}
+        right={
+          <Button
+            label={t(editing ? 'common.save' : 'publish.create')}
+            size="sm"
+            disabled={!canSubmit}
+            loading={saving}
+            onPress={submit}
+            style={styles.action}
+          />
+        }
       />
       <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
         {/* Aperçu : ce que verront les membres. */}
@@ -91,15 +130,17 @@ export function CreateHubScreen() {
         </View>
 
         <TextField label={t('hubs.name')} value={name} onChangeText={setName} placeholder="Python Sénégal" maxLength={60} />
-        <TextField
-          label={t('hubs.address')}
-          value={slug}
-          onChangeText={(value) => setCustomSlug(value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-          autoCapitalize="none"
-          autoCorrect={false}
-          maxLength={40}
-          hint={t('hubs.address_hint')}
-        />
+        {editing ? null : (
+          <TextField
+            label={t('hubs.address')}
+            value={slug}
+            onChangeText={(value) => setCustomSlug(value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+            autoCapitalize="none"
+            autoCorrect={false}
+            maxLength={40}
+            hint={t('hubs.address_hint')}
+          />
+        )}
 
         <View style={styles.group}>
           <Text variant="smallStrong">{t('hubs.icon')}</Text>
@@ -184,9 +225,9 @@ export function CreateHubScreen() {
           ) : null}
         </View>
 
-        {create.isError ? (
+        {failure ? (
           <Text variant="small" tone="danger">
-            {errorMessage(create.error)}
+            {errorMessage(failure)}
           </Text>
         ) : null}
       </ScrollView>

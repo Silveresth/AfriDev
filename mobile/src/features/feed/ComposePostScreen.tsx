@@ -1,41 +1,78 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { BarChart3, Plus, X } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { errorMessage } from '@/shared/api';
 import { useT } from '@/shared/i18n';
 import { radius, useTheme } from '@/shared/theme';
-import { Button, Header, Tag, Text, TextField } from '@/shared/ui';
+import { Button, Header, Tag, Text, TextField, useToast } from '@/shared/ui';
 
-import { parseTags, useCreatePost } from './api';
+import { parseTags, useCreatePost, usePost, useUpdatePost } from './api';
 
 export function ComposePostScreen() {
   const { colors } = useTheme();
-  const { hubId, hubName } = useLocalSearchParams<{ hubId?: string; hubName?: string }>();
+  const { hubId, hubName, editId = '' } = useLocalSearchParams<{ hubId?: string; hubName?: string; editId?: string }>();
   const create = useCreatePost();
+  const update = useUpdatePost(editId);
+  const existing = usePost(editId);
+  const toast = useToast();
   const { t } = useT();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [tags, setTags] = useState('');
   const [poll, setPoll] = useState<string[] | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const editing = Boolean(editId);
+  const saving = create.isPending || update.isPending;
+  const failure = create.error ?? update.error;
+
+  useEffect(() => {
+    if (!existing.data || loaded) return;
+    setTitle(existing.data.title);
+    setBody(existing.data.body);
+    setTags(existing.data.tags.join(', '));
+    setLoaded(true);
+  }, [existing.data, loaded]);
 
   const options = poll?.map((option) => option.trim()).filter(Boolean) ?? [];
   const pollValid = !poll || options.length >= 2;
-  const canPublish = title.trim().length >= 3 && (body.trim() || poll) && pollValid && !create.isPending;
+  const canPublish = title.trim().length >= 3 && (body.trim() || poll || editing) && pollValid && !saving;
 
-  const publish = () =>
+  const publish = () => {
+    if (editing) {
+      update.mutate(
+        { title: title.trim(), body: body.trim(), tags: parseTags(tags) },
+        {
+          onSuccess: () => {
+            toast(t('modify.saved'));
+            router.back();
+          },
+        },
+      );
+      return;
+    }
     create.mutate(
       { title: title.trim(), body: body.trim(), tags: parseTags(tags), poll_options: poll ? options : undefined, hub_id: hubId ?? null },
       { onSuccess: (post) => router.replace(`/post/${post.id}`) },
     );
+  };
 
   return (
     <KeyboardAvoidingView behavior="padding" style={[styles.flex, { backgroundColor: colors.background }]}>
       <Header
-        title={t('feed.new_post')}
+        title={t(editing ? 'modify.post' : 'feed.new_post')}
         close
-        right={<Button label={t('compose.publish')} size="sm" disabled={!canPublish} loading={create.isPending} onPress={publish} style={styles.publish} />}
+        right={
+          <Button
+            label={t(editing ? 'common.save' : 'compose.publish')}
+            size="sm"
+            disabled={!canPublish}
+            loading={saving}
+            onPress={publish}
+            style={styles.publish}
+          />
+        }
       />
       <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
         {hubName ? (
@@ -57,7 +94,7 @@ export function ComposePostScreen() {
           hint={`${body.length} / 3000`}
         />
 
-        {poll ? (
+        {editing ? null : poll ? (
           <View style={[styles.poll, { borderColor: colors.line }]}>
             <View style={styles.pollHead}>
               <Text variant="smallStrong">{t('compose.poll')}</Text>
@@ -98,9 +135,9 @@ export function ComposePostScreen() {
           autoCapitalize="none"
           hint={t('compose.tags_hint')}
         />
-        {create.isError ? (
+        {failure ? (
           <Text variant="small" tone="danger">
-            {errorMessage(create.error)}
+            {errorMessage(failure)}
           </Text>
         ) : null}
       </ScrollView>

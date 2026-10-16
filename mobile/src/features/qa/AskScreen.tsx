@@ -7,42 +7,74 @@ import { parseTags } from '@/features/feed/api';
 import { errorMessage } from '@/shared/api';
 import { useT } from '@/shared/i18n';
 import { radius, useTheme } from '@/shared/theme';
-import { Button, ForwardChevron, Header, Tag, Text, TextField } from '@/shared/ui';
+import { Button, ForwardChevron, Header, Tag, Text, TextField, useToast } from '@/shared/ui';
 
-import { useAskQuestion, useSimilarQuestions } from './api';
+import { useAskQuestion, useQuestion, useSimilarQuestions, useUpdateQuestion } from './api';
 
 /** Question : avant de publier, on montre les questions déjà résolues qui ressemblent. */
 export function AskScreen() {
   const { colors } = useTheme();
   const { t } = useT();
-  const { hubId, hubName } = useLocalSearchParams<{ hubId?: string; hubName?: string }>();
+  const { hubId, hubName, editId = '' } = useLocalSearchParams<{ hubId?: string; hubName?: string; editId?: string }>();
   const ask = useAskQuestion();
+  const update = useUpdateQuestion(editId);
+  const existing = useQuestion(editId);
+  const toast = useToast();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [tags, setTags] = useState('');
   const [probe, setProbe] = useState('');
-  const similar = useSimilarQuestions(probe);
+  const [loaded, setLoaded] = useState(false);
+  const editing = Boolean(editId);
+  const saving = ask.isPending || update.isPending;
+  const failure = ask.error ?? update.error;
+  const similar = useSimilarQuestions(editing ? '' : probe);
+
+  useEffect(() => {
+    if (!existing.data || loaded) return;
+    setTitle(existing.data.title);
+    setBody(existing.data.body);
+    setTags(existing.data.tags.join(', '));
+    setLoaded(true);
+  }, [existing.data, loaded]);
 
   useEffect(() => {
     const timer = setTimeout(() => setProbe(title.trim()), 600);
     return () => clearTimeout(timer);
   }, [title]);
 
-  const canPublish = title.trim().length >= 10 && body.trim().length >= 10 && !ask.isPending;
-  const publish = () =>
-    ask.mutate(
-      { title: title.trim(), body: body.trim(), tags: parseTags(tags), hub_id: hubId ?? null },
-      { onSuccess: (question) => router.replace(`/question/${question.id}`) },
-    );
+  const canPublish = title.trim().length >= 10 && body.trim().length >= 10 && !saving;
+  const publish = () => {
+    const input = { title: title.trim(), body: body.trim(), tags: parseTags(tags) };
+    if (editing) {
+      update.mutate(input, {
+        onSuccess: () => {
+          toast(t('modify.saved'));
+          router.back();
+        },
+      });
+      return;
+    }
+    ask.mutate({ ...input, hub_id: hubId ?? null }, { onSuccess: (question) => router.replace(`/question/${question.id}`) });
+  };
 
   const matches = (similar.data ?? []).slice(0, 3);
 
   return (
     <KeyboardAvoidingView behavior="padding" style={[styles.flex, { backgroundColor: colors.background }]}>
       <Header
-        title={t('ask.title')}
+        title={t(editing ? 'modify.question' : 'ask.title')}
         close
-        right={<Button label={t('compose.publish')} size="sm" disabled={!canPublish} loading={ask.isPending} onPress={publish} style={styles.publish} />}
+        right={
+          <Button
+            label={t(editing ? 'common.save' : 'compose.publish')}
+            size="sm"
+            disabled={!canPublish}
+            loading={saving}
+            onPress={publish}
+            style={styles.publish}
+          />
+        }
       />
       <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
         {hubName ? (
@@ -101,9 +133,9 @@ export function AskScreen() {
           autoCapitalize="none"
           hint={t('compose.tags_hint')}
         />
-        {ask.isError ? (
+        {failure ? (
           <Text variant="small" tone="danger">
-            {errorMessage(ask.error)}
+            {errorMessage(failure)}
           </Text>
         ) : null}
       </ScrollView>

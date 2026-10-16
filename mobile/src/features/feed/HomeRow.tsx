@@ -3,12 +3,13 @@ import { BriefcaseBusiness, CheckCircle2, Code2, ExternalLink, FolderGit2, type 
 import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { PUBLIC_WEB_URL } from '@/shared/api';
+import { ActionBar, type ReactType, useCardVote, useDeleteCard } from '@/features/engage';
+import { errorMessage, PUBLIC_WEB_URL } from '@/shared/api';
 import { type Key, useT } from '@/shared/i18n';
 import { formatCount, languageColor, openLink, timeAgo } from '@/shared/lib';
 import { PressableScale } from '@/shared/motion';
 import { radius, useTheme } from '@/shared/theme';
-import { Avatar, CodeBlock, TagRow, Text } from '@/shared/ui';
+import { Avatar, CodeBlock, TagRow, Text, useToast } from '@/shared/ui';
 
 import type { HomeItem } from './api';
 import { PostRow } from './PostRow';
@@ -97,8 +98,60 @@ function HomeCardRow({ item }: { item: HomeItem }) {
           </View>
           <Action type={type} meta={meta} id={item.id} url={card.url} />
         </View>
+        <CardActions item={item} type={type} />
       </View>
     </PressableScale>
+  );
+}
+
+const EDIT_ROUTES: Partial<Record<CardType, string>> = { question: '/compose/question', snippet: '/compose/snippet' };
+const EDIT_LABELS: Partial<Record<CardType, Key>> = { question: 'modify.question', snippet: 'modify.snippet' };
+
+/** Voter, commenter, partager, enregistrer, signaler, modifier, supprimer : sans ouvrir la carte. */
+function CardActions({ item, type }: { item: HomeItem; type: CardType }) {
+  const share = { title: item.card!.title, path: item.card!.url };
+  if (type === 'job' || !item.stats) return <ActionBar share={share} />;
+  return <ReactableActions item={item} stats={item.stats} type={type} share={share} />;
+}
+
+function ReactableActions({
+  item,
+  stats,
+  type,
+  share,
+}: {
+  item: HomeItem;
+  stats: NonNullable<HomeItem['stats']>;
+  type: ReactType;
+  share: { title: string; path: string };
+}) {
+  const { t } = useT();
+  const toast = useToast();
+  const remove = useDeleteCard();
+  const vote = useCardVote(type, item.id, stats);
+  const route = EDIT_ROUTES[type];
+  const label = EDIT_LABELS[type];
+  const edit = () =>
+    route ? router.push({ pathname: route as never, params: { editId: item.id } }) : void openLink(`${PUBLIC_WEB_URL}${share.path}`);
+  return (
+    <ActionBar
+      vote={{ score: stats.score, value: stats.viewer_vote, onVote: (value) => vote.mutate(value) }}
+      thread={type === 'project' ? undefined : { kind: type, id: item.id, count: stats.comment_count }}
+      share={share}
+      save={{ type, id: item.id }}
+      more={{
+        report: stats.can_manage ? undefined : { type, id: item.id },
+        onEdit: stats.can_manage ? edit : undefined,
+        editLabel: label ? t(label) : t('act.open_web'),
+        onDelete: stats.can_manage
+          ? () =>
+              remove.mutate(
+                { type, id: item.id },
+                { onSuccess: () => toast(t('mod.deleted')), onError: (error) => toast(errorMessage(error), 'error') },
+              )
+          : undefined,
+      }}
+    />
   );
 }
 

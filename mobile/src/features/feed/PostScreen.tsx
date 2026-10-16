@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ImageIcon, MessageSquare, Pin, PinOff, Share2, Trash2 } from 'lucide-react-native';
+import { ImageIcon, MessageSquare, Pin, PinOff, Share2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { Alert, FlatList, KeyboardAvoidingView, Pressable, Share, StyleSheet, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Pressable, Share, StyleSheet, View } from 'react-native';
 
+import { MoreButton } from '@/features/engage';
 import { absoluteUrl, errorMessage, PUBLIC_WEB_URL } from '@/shared/api';
 import { TranslateBar } from '@/features/translation';
 import { useDataSaver } from '@/shared/data-saver';
@@ -105,15 +106,7 @@ export function PostScreen() {
     );
   };
 
-  const confirmDelete = () =>
-    Alert.alert(tr('feed.delete_title'), isMine ? tr('feed.delete_body') : tr('mod.delete_confirm'), [
-      { text: tr('common.cancel'), style: 'cancel' },
-      {
-        text: tr('common.delete'),
-        style: 'destructive',
-        onPress: () => remove.mutate(id, { onSuccess: () => router.back() }),
-      },
-    ]);
+  const canEdit = isMine || Boolean(user?.is_staff);
 
   return (
     <KeyboardAvoidingView behavior="padding" style={[styles.flex, { backgroundColor: colors.background }]}>
@@ -130,9 +123,16 @@ export function PostScreen() {
                 onPress={togglePin}
               />
             ) : null}
-            {isMine || moderator ? (
-              <IconButton icon={Trash2} label={tr('common.delete')} color={colors.danger} onPress={confirmDelete} />
-            ) : null}
+            <MoreButton
+              report={isMine || !post.data ? undefined : { type: 'post', id }}
+              onEdit={canEdit ? () => router.push({ pathname: '/compose/post', params: { editId: id } }) : undefined}
+              editLabel={tr('modify.post')}
+              onDelete={
+                canEdit || moderator
+                  ? () => remove.mutate(id, { onSuccess: () => router.back(), onError: (error) => toast(errorMessage(error), 'error') })
+                  : undefined
+              }
+            />
           </>
         }
       />

@@ -1,8 +1,10 @@
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Copy, SendHorizontal, Trash2 } from 'lucide-react-native';
+import { Copy, SendHorizontal } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+
+import { MoreButton } from '@/features/engage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { errorMessage } from '@/shared/api';
@@ -19,7 +21,6 @@ import {
   Header,
   HubIcon,
   HubRoleBadge,
-  IconButton,
   ListFooter,
   Loading,
   TagRow,
@@ -174,29 +175,31 @@ export function SnippetScreen() {
 
   const data = snippet.data;
   const mine = Boolean(user && data?.author?.id === user.id);
-  const confirmDelete = () =>
-    Alert.alert(t('common.delete'), mine ? t('snippet.delete_confirm') : t('mod.delete_confirm'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.delete'),
-        style: 'destructive',
-        onPress: () =>
-          remove.mutate(id, {
-            onSuccess: () => {
-              toast(t('snippet.deleted'));
-              router.back();
-            },
-            onError: (error) => toast(errorMessage(error), 'error'),
-          }),
+  const canEdit = mine || Boolean(user?.is_staff);
+  const deleteSnippet = () =>
+    remove.mutate(id, {
+      onSuccess: () => {
+        toast(t('snippet.deleted'));
+        router.back();
       },
-    ]);
+      onError: (error) => toast(errorMessage(error), 'error'),
+    });
 
   return (
     <KeyboardAvoidingView behavior="padding" style={[styles.flex, { backgroundColor: colors.background }]}>
       <Header
         title={data?.hub ? `h/${data.hub.slug}` : 'Snippet'}
         back
-        right={mine || data?.can_moderate ? <IconButton icon={Trash2} label={t('common.delete')} color={colors.danger} onPress={confirmDelete} /> : null}
+        right={
+          data ? (
+            <MoreButton
+              report={mine ? undefined : { type: 'snippet', id }}
+              onEdit={canEdit ? () => router.push({ pathname: '/compose/snippet', params: { editId: id } }) : undefined}
+              editLabel={t('modify.snippet')}
+              onDelete={canEdit || data.can_moderate ? deleteSnippet : undefined}
+            />
+          ) : null
+        }
       />
       {snippet.isPending ? (
         <Loading />

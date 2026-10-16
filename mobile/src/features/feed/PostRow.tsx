@@ -1,18 +1,19 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { BarChart3, MessageSquare } from 'lucide-react-native';
+import { BarChart3 } from 'lucide-react-native';
 import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { absoluteUrl } from '@/shared/api';
+import { ActionBar } from '@/features/engage';
+import { absoluteUrl, errorMessage } from '@/shared/api';
 import { useDataSaver } from '@/shared/data-saver';
 import { useT } from '@/shared/i18n';
-import { formatCount, plainText, timeAgo } from '@/shared/lib';
+import { plainText, timeAgo } from '@/shared/lib';
+import { useSession } from '@/shared/session';
 import { radius, useTheme } from '@/shared/theme';
-import { Avatar, HubRoleBadge, PinnedBadge, TagRow, Text } from '@/shared/ui';
+import { Avatar, HubRoleBadge, PinnedBadge, TagRow, Text, useToast } from '@/shared/ui';
 
-import { imageOf, type Post } from './api';
-import { VoteCapsule } from './VoteCapsule';
+import { imageOf, type Post, useDeletePost, useScoreVote } from './api';
 
 /** Ligne de communauté : « h/lome-dev » si le post est dans un hub, sinon l'auteur. */
 export function PostByline({ post, showHub = true }: { post: Post; showHub?: boolean }) {
@@ -52,7 +53,7 @@ export function PostByline({ post, showHub = true }: { post: Post; showHub?: boo
 export const PostRow = memo(function PostRow({ post, showHub = true }: { post: Post; showHub?: boolean }) {
   const { colors } = useTheme();
   const { textOnly } = useDataSaver();
-  const { t, tp } = useT();
+  const { t } = useT();
   const image = imageOf(post);
   const thumb = image && !textOnly ? absoluteUrl(image.urls.small ?? image.original_url) : undefined;
   const excerpt = plainText(post.body, 200);
@@ -96,22 +97,38 @@ export const PostRow = memo(function PostRow({ post, showHub = true }: { post: P
         </View>
       ) : null}
       <TagRow tags={post.tags} />
-      <View style={styles.actions}>
-        <VoteCapsule post={post} />
-        <Pressable
-          onPress={open}
-          accessibilityLabel={tp('feed.comments', post.comment_count)}
-          style={({ pressed }) => [styles.pill, { backgroundColor: pressed ? colors.containerHigh : colors.container }]}
-        >
-          <MessageSquare size={16} color={colors.inkMuted} />
-          <Text variant="smallStrong" tone="muted">
-            {formatCount(post.comment_count)}
-          </Text>
-        </Pressable>
-      </View>
+      <PostActions post={post} />
     </Pressable>
   );
 });
+
+/** Actions d'un post depuis une liste : auteur et staff modifient ; modérateurs du hub suppriment. */
+export function PostActions({ post }: { post: Post }) {
+  const { t } = useT();
+  const { user } = useSession();
+  const toast = useToast();
+  const vote = useScoreVote(post);
+  const remove = useDeletePost();
+  const mine = Boolean(user && post.author?.id === user.id);
+  const canEdit = mine || Boolean(user?.is_staff);
+  const canDelete = canEdit || Boolean(post.viewer?.can_moderate);
+  return (
+    <ActionBar
+      vote={{ score: post.score, value: post.viewer?.post_vote ?? 0, onVote: (value) => vote.mutate(value) }}
+      thread={{ kind: 'post', id: post.id, count: post.comment_count }}
+      share={{ title: post.title || t('feed.share_default'), path: `/feed/${post.id}` }}
+      save={{ type: 'post', id: post.id }}
+      more={{
+        report: mine ? undefined : { type: 'post', id: post.id },
+        onEdit: canEdit ? () => router.push({ pathname: '/compose/post', params: { editId: post.id } }) : undefined,
+        editLabel: t('modify.post'),
+        onDelete: canDelete
+          ? () => remove.mutate(post.id, { onSuccess: () => toast(t('mod.deleted')), onError: (error) => toast(errorMessage(error), 'error') })
+          : undefined,
+      }}
+    />
+  );
+}
 
 const styles = StyleSheet.create({
   row: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12, gap: 8, borderBottomWidth: StyleSheet.hairlineWidth },
@@ -121,6 +138,4 @@ const styles = StyleSheet.create({
   flex: { flex: 1, gap: 4 },
   thumb: { width: 84, height: 84, borderRadius: radius.md },
   poll: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.sm },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 34, paddingHorizontal: 12, borderRadius: radius.pill },
 });

@@ -11,11 +11,12 @@ import { absoluteUrl, errorMessage, type Schemas } from '@/shared/api';
 import { CreateButton } from '@/shared/layout/CreateButton';
 import { formatCount } from '@/shared/lib';
 import { type Key, useT } from '@/shared/i18n';
-import { useRequireAuth } from '@/shared/session';
+import { MoreButton } from '@/features/engage';
+import { useRequireAuth, useSession } from '@/shared/session';
 import { useTheme } from '@/shared/theme';
-import { Button, Chips, EmptyState, ErrorState, Header, HubIcon, IconButton, ListFooter, Loading, Text } from '@/shared/ui';
+import { Button, Chips, EmptyState, ErrorState, Header, HubIcon, IconButton, ListFooter, Loading, Text, useToast } from '@/shared/ui';
 
-import { type Hub, useHub, useJoinHub } from './api';
+import { type Hub, useDeleteHub, useHub, useJoinHub } from './api';
 
 type Tab = 'hot' | 'new' | 'questions' | 'snippets';
 type Question = Schemas['QuestionOutput'];
@@ -91,6 +92,9 @@ export function HubScreen() {
   const { colors } = useTheme();
   const { t } = useT();
   const hub = useHub(slug);
+  const { user } = useSession();
+  const toast = useToast();
+  const removeHub = useDeleteHub();
   const [tab, setTab] = useState<Tab>('hot');
   const posts = useFeed({ hub: slug, sort: tab === 'new' ? 'new' : 'hot' }, { enabled: tab === 'hot' || tab === 'new' });
   const questions = useQuestions({ hub: slug }, { enabled: tab === 'questions' });
@@ -112,9 +116,28 @@ export function HubScreen() {
         title={`h/${hub.data.slug}`}
         back
         right={
-          hub.data.viewer?.can_manage ? (
-            <IconButton icon={UsersRound} label={t('hubs.members_title')} onPress={() => router.push(`/hub-members/${hub.data!.slug}`)} />
-          ) : null
+          <>
+            {hub.data.viewer?.can_manage ? (
+              <IconButton icon={UsersRound} label={t('hubs.members_title')} onPress={() => router.push(`/hub-members/${hub.data!.slug}`)} />
+            ) : null}
+            <MoreButton
+              report={hub.data.viewer?.is_creator ? undefined : { type: 'hub', id: hub.data.id }}
+              onEdit={hub.data.viewer?.can_manage ? () => router.push({ pathname: '/compose/hub', params: { editSlug: hub.data!.slug } }) : undefined}
+              editLabel={t('modify.hub')}
+              onDelete={
+                hub.data.viewer?.is_creator || user?.is_staff
+                  ? () =>
+                      removeHub.mutate(hub.data!.slug, {
+                        onSuccess: () => {
+                          toast(t('mod.deleted'));
+                          router.back();
+                        },
+                        onError: (error) => toast(errorMessage(error), 'error'),
+                      })
+                  : undefined
+              }
+            />
+          </>
         }
       />
       <FlatList<Post | Question | PublicSnippet>
