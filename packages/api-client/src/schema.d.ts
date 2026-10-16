@@ -815,6 +815,39 @@ export interface paths {
         patch: operations["hubs_partial_update"];
         trace?: never;
     };
+    "/api/hubs/{slug}/bans/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Membres exclus du hub. */
+        get: operations["hubs_bans_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/hubs/{slug}/bans/{username}/lift/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["hubs_bans_lift_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/hubs/{slug}/feed/": {
         parameters: {
             query?: never;
@@ -845,6 +878,40 @@ export interface paths {
         post: operations["hubs_join_create"];
         /** @description POST : rejoindre (idempotent) ; DELETE : quitter. */
         delete: operations["hubs_join_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/hubs/{slug}/members/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Membres du hub, pour sa modération (les plus récents d'abord). */
+        get: operations["hubs_members_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/hubs/{slug}/members/{username}/remove/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Retirer un membre du hub, et l'exclure si `ban` (il ne pourra plus revenir). */
+        post: operations["hubs_members_remove_create"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2717,6 +2784,12 @@ export interface components {
             next: string | null;
             results: components["schemas"]["HomeItem"][];
         };
+        HubBan: {
+            user: components["schemas"]["Author"];
+            reason: string;
+            /** Format: date-time */
+            banned_at: string;
+        };
         HubInputRequest: {
             name: string;
             /** @default  */
@@ -2726,6 +2799,22 @@ export interface components {
             banner_url?: string;
             rules?: string[];
             target_country?: string;
+        };
+        HubMember: {
+            user: components["schemas"]["Author"];
+            role: components["schemas"]["RoleEnum"];
+            is_creator: boolean;
+            /** Format: date-time */
+            joined_at: string;
+        };
+        HubMemberRemoveRequest: {
+            /**
+             * @description Exclure : empêche de revenir.
+             * @default false
+             */
+            ban: boolean;
+            /** @default  */
+            reason: string;
         };
         HubModeratorActionRequest: {
             username: string;
@@ -2763,6 +2852,11 @@ export interface components {
             is_creator: boolean;
             /** @description member, moderator ou null */
             role: string | null;
+            /**
+             * @description Créateur, modérateur ou staff : gère les membres du hub.
+             * @default false
+             */
+            can_manage: boolean;
         };
         /**
          * @description Sérialiseur de sortie : tous les champs en lecture seule.
@@ -3157,6 +3251,20 @@ export interface components {
             /** Format: uri */
             previous: string | null;
             results: components["schemas"]["HelpAnswer"][];
+        };
+        PaginatedHubBanList: {
+            /** Format: uri */
+            next: string | null;
+            /** Format: uri */
+            previous: string | null;
+            results: components["schemas"]["HubBan"][];
+        };
+        PaginatedHubMemberList: {
+            /** Format: uri */
+            next: string | null;
+            /** Format: uri */
+            previous: string | null;
+            results: components["schemas"]["HubMember"][];
         };
         PaginatedHubOutputList: {
             /** Format: uri */
@@ -3750,6 +3858,12 @@ export interface components {
         RevokedCount: {
             revoked: number;
         };
+        /**
+         * @description * `member` - member
+         *     * `moderator` - moderator
+         * @enum {string}
+         */
+        RoleEnum: "member" | "moderator";
         SavedTarget: {
             target_type: components["schemas"]["BookmarkTargetTypeEnum"];
             /** Format: uuid */
@@ -5762,6 +5876,53 @@ export interface operations {
             };
         };
     };
+    hubs_bans_list: {
+        parameters: {
+            query?: {
+                /** @description Curseur de la page suivante */
+                cursor?: string;
+                /** @description 20 par défaut, 50 maximum */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedHubBanList"];
+                };
+            };
+        };
+    };
+    hubs_bans_lift_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     hubs_feed: {
         parameters: {
             query?: {
@@ -5828,6 +5989,63 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    hubs_members_list: {
+        parameters: {
+            query?: {
+                /** @description Curseur de la page suivante */
+                cursor?: string;
+                /** @description 20 par défaut, 50 maximum */
+                page_size?: number;
+                /** @description Pseudo (début ou partie) */
+                q?: string;
+                role?: "member" | "moderator";
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedHubMemberList"];
+                };
+            };
+        };
+    };
+    hubs_members_remove_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["HubMemberRemoveRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["HubMemberRemoveRequest"];
+                "multipart/form-data": components["schemas"]["HubMemberRemoveRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HubOutput"];
+                };
             };
         };
     };

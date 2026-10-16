@@ -12,9 +12,10 @@ import { Avatar, buttonClasses, Button, CardSkeleton, ErrorNotice, HubIcon, prof
 import { type Hub, useAssignModerator, useHub, useRemoveModerator } from '../api';
 
 import { memberLabel, VerifiedMark } from './HubCard';
+import { HubMembers } from './HubMembers';
 import { JoinButton } from './JoinButton';
 
-type Tab = 'posts' | 'questions' | 'snippets';
+type Tab = 'posts' | 'questions' | 'snippets' | 'members';
 
 interface ExtendedHubViewer {
   is_member?: boolean;
@@ -54,6 +55,8 @@ export function HubScreen({
     );
   }
   const data = hub.data;
+  // Onglet « Membres » : créateur, modérateurs et staff seulement.
+  const canManage = Boolean(data.viewer?.can_manage);
 
   return (
     <TwoColumns aside={<HubAside hub={data} />}>
@@ -65,12 +68,14 @@ export function HubScreen({
           { value: 'posts', label: 'Discussions', icon: <Newspaper className="size-4" aria-hidden /> },
           { value: 'questions', label: 'Q&A', icon: <MessagesSquare className="size-4" aria-hidden /> },
           { value: 'snippets', label: 'Snippets', icon: <Code2 className="size-4" aria-hidden /> },
+          ...(canManage ? [{ value: 'members' as const, label: 'Membres', icon: <UsersRound className="size-4" aria-hidden /> }] : []),
         ]}
       />
       {/* Les trois listes restent montées : changer d'onglet ne recharge rien. */}
       <div hidden={tab !== 'posts'}>{posts}</div>
       <div hidden={tab !== 'questions'}>{questions}</div>
       <div hidden={tab !== 'snippets'}>{snippets}</div>
+      {canManage && tab === 'members' ? <HubMembers hub={data} /> : null}
     </TwoColumns>
   );
 }

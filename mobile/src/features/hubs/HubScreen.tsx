@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
-import { useLocalSearchParams } from 'expo-router';
-import { BadgeCheck, Rows3 } from 'lucide-react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { BadgeCheck, Rows3, UsersRound } from 'lucide-react-native';
 import { useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 
@@ -13,7 +13,7 @@ import { formatCount } from '@/shared/lib';
 import { type Key, useT } from '@/shared/i18n';
 import { useRequireAuth } from '@/shared/session';
 import { useTheme } from '@/shared/theme';
-import { Button, Chips, EmptyState, ErrorState, Header, HubIcon, ListFooter, Loading, Text } from '@/shared/ui';
+import { Button, Chips, EmptyState, ErrorState, Header, HubIcon, IconButton, ListFooter, Loading, Text } from '@/shared/ui';
 
 import { type Hub, useHub, useJoinHub } from './api';
 
@@ -108,7 +108,15 @@ export function HubScreen() {
 
   return (
     <View style={[styles.flex, { backgroundColor: colors.background }]}>
-      <Header title={`h/${hub.data.slug}`} back />
+      <Header
+        title={`h/${hub.data.slug}`}
+        back
+        right={
+          hub.data.viewer?.can_manage ? (
+            <IconButton icon={UsersRound} label={t('hubs.members_title')} onPress={() => router.push(`/hub-members/${hub.data!.slug}`)} />
+          ) : null
+        }
+      />
       <FlatList<Post | Question | PublicSnippet>
         data={list.items as (Post | Question | PublicSnippet)[]}
         keyExtractor={(item) => `${tab}-${item.id}`}

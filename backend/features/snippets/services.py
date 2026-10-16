@@ -58,7 +58,7 @@ def create_snippet(
         language=language.strip().lower(),
         content=content,
         tags=normalize_tags(tags),
-        hub_id=hub_services.require_hub(hub_id=hub_id),
+        hub_id=hub_services.require_hub(hub_id=hub_id, user=owner),
     )
     if snippet_id:
         snippet.id = snippet_id
@@ -92,7 +92,7 @@ def update_snippet(
         snippet.tags = normalize_tags(tags)
         fields.append("tags")
     if hub_id is not ... and hub_id != snippet.hub_id:
-        snippet.hub_id = hub_services.require_hub(hub_id=hub_id)
+        snippet.hub_id = hub_services.require_hub(hub_id=hub_id, user=user)
         fields.append("hub_id")
     if fields:
         snippet.save(update_fields=[*fields, "updated_at"])

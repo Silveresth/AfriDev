@@ -43,3 +43,19 @@ class HubMembership(BaseModel):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["hub", "user"], name="hubs_one_membership")]
+
+
+class HubBan(BaseModel):
+    """Membre exclu par la modération : ne peut ni rejoindre le hub ni y publier."""
+
+    hub = models.ForeignKey(Hub, on_delete=models.CASCADE, related_name="bans")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="hub_bans"
+    )
+    banned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+"
+    )
+    reason = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["hub", "user"], name="hubs_one_ban")]

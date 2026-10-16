@@ -21,7 +21,12 @@ def test_create_join_and_leave(api_client, auth_client, client_for, other_user):
     assert hub["slug"] == "python-senegal"
     assert hub["rules"] == ["Soyez bienveillants"]
     assert hub["member_count"] == 1
-    assert hub["viewer"] == {"is_member": True, "role": "moderator", "is_creator": True}
+    assert hub["viewer"] == {
+        "is_member": True,
+        "role": "moderator",
+        "is_creator": True,
+        "can_manage": True,
+    }
     assert [m["username"] for m in hub["moderators"]] == ["amina"]
 
     taken = auth_client.post(
@@ -196,6 +201,50 @@ def test_moderators_delete_hub_questions_and_snippets(auth_client, client_for, o
 
     assert auth_client.delete(f"/api/qa/questions/{question['id']}/").status_code == 204
     assert auth_client.delete(f"/api/snippets/public/{snippet['id']}/").status_code == 204
+
+
+def test_moderators_manage_members(auth_client, client_for, other_user, make_user):
+    hub = _hub(auth_client)
+    slug = hub["slug"]
+    kofi = client_for(other_user)
+    zara = make_user("zara")
+    zara_client = client_for(zara)
+    kofi.post(f"/api/hubs/{slug}/join/")
+    zara_client.post(f"/api/hubs/{slug}/join/")
+    assert auth_client.get(f"/api/hubs/{slug}/").data["viewer"]["can_manage"] is True
+    assert kofi.get(f"/api/hubs/{slug}/").data["viewer"]["can_manage"] is False
+
+    # La liste des membres est réservée à la modération.
+    assert kofi.get(f"/api/hubs/{slug}/members/").status_code == 403
+    members = auth_client.get(f"/api/hubs/{slug}/members/").data["results"]
+    assert {m["user"]["username"] for m in members} == {"amina", "kofi", "zara"}
+    assert next(m for m in members if m["user"]["username"] == "amina")["is_creator"] is True
+    searched = auth_client.get(f"/api/hubs/{slug}/members/", {"q": "zar"}).data["results"]
+    assert [m["user"]["username"] for m in searched] == ["zara"]
+
+    # Kofi devient modérateur : il gère les membres, mais ni le créateur ni un autre modérateur.
+    auth_client.post(f"/api/hubs/{slug}/moderators/", {"username": "kofi"}, format="json")
+    assert kofi.post(f"/api/hubs/{slug}/members/amina/remove/").status_code == 400
+    removed = kofi.post(f"/api/hubs/{slug}/members/zara/remove/", {"ban": True}, format="json")
+    assert removed.status_code == 200 and removed.data["member_count"] == 2
+
+    # Exclue : ne peut ni revenir ni publier dans le hub ; la levée de l'exclusion le permet.
+    assert zara_client.post(f"/api/hubs/{slug}/join/").status_code == 403
+    post = zara_client.post(
+        "/api/feed/", {"title": "Retour", "body": "…", "hub_id": hub["id"]}, format="json"
+    )
+    assert post.status_code == 403
+    bans = auth_client.get(f"/api/hubs/{slug}/bans/").data["results"]
+    assert [b["user"]["username"] for b in bans] == ["zara"]
+    assert auth_client.post(f"/api/hubs/{slug}/bans/zara/lift/").status_code == 204
+    assert zara_client.post(f"/api/hubs/{slug}/join/").status_code == 200
+
+    # Seul le créateur retire un modérateur.
+    other_mod = make_user("moussa")
+    client_for(other_mod).post(f"/api/hubs/{slug}/join/")
+    auth_client.post(f"/api/hubs/{slug}/moderators/", {"username": "moussa"}, format="json")
+    assert kofi.post(f"/api/hubs/{slug}/members/moussa/remove/").status_code == 403
+    assert auth_client.post(f"/api/hubs/{slug}/members/moussa/remove/").status_code == 200
 
 
 def test_hub_moderator_management(auth_client, client_for, other_user):

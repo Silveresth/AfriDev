@@ -33,10 +33,56 @@ class HubViewerSerializer(serializers.Serializer):
     is_member = serializers.BooleanField()
     is_creator = serializers.BooleanField(default=False)
     role = serializers.CharField(allow_null=True, help_text="member, moderator ou null")
+    can_manage = serializers.BooleanField(
+        default=False, help_text="Créateur, modérateur ou staff : gère les membres du hub."
+    )
 
 
 class HubModeratorActionSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=50)
+
+
+class HubMemberSerializer(serializers.Serializer):
+    user = AuthorSerializer()
+    role = serializers.ChoiceField(choices=["member", "moderator"])
+    is_creator = serializers.BooleanField()
+    joined_at = serializers.DateTimeField()
+
+
+class HubBanSerializer(serializers.Serializer):
+    user = AuthorSerializer()
+    reason = serializers.CharField()
+    banned_at = serializers.DateTimeField()
+
+
+class HubMemberRemoveSerializer(serializers.Serializer):
+    ban = serializers.BooleanField(default=False, help_text="Exclure : empêche de revenir.")
+    reason = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
+
+
+def present_members(memberships, *, hub) -> list[dict]:
+    memberships = list(memberships)
+    cards = profile_selectors.author_cards(user_ids={m.user_id for m in memberships})
+    return [
+        {
+            "user": cards[m.user_id],
+            "role": m.role,
+            "is_creator": m.user_id == hub.creator_id,
+            "joined_at": m.created_at,
+        }
+        for m in memberships
+        if m.user_id in cards
+    ]
+
+
+def present_bans(bans) -> list[dict]:
+    bans = list(bans)
+    cards = profile_selectors.author_cards(user_ids={b.user_id for b in bans})
+    return [
+        {"user": cards[b.user_id], "reason": b.reason, "banned_at": b.created_at}
+        for b in bans
+        if b.user_id in cards
+    ]
 
 
 class HubOutputSerializer(serializers.Serializer):
@@ -67,6 +113,7 @@ def present_hubs(hubs, *, viewer, detail: bool = False) -> list[dict]:
     }
     cards = profile_selectors.author_cards(user_ids=people)
     authenticated = bool(viewer and viewer.is_authenticated)
+    managed = selectors.moderated_hub_ids(hub_ids={hub.id for hub in hubs}, user=viewer)
     return [
         {
             "id": hub.id,
@@ -89,6 +136,7 @@ def present_hubs(hubs, *, viewer, detail: bool = False) -> list[dict]:
                         and (hub.creator_id == viewer.id or getattr(viewer, "is_staff", False))
                     ),
                     "role": roles.get(hub.id),
+                    "can_manage": hub.id in managed,
                 }
                 if authenticated
                 else None

@@ -4,7 +4,7 @@ import uuid
 
 from django.db.models import Q, QuerySet
 
-from .models import Hub, HubMembership
+from .models import Hub, HubBan, HubMembership
 
 
 def list_hubs(
@@ -101,6 +101,20 @@ def viewer_roles(*, hub_ids, user) -> dict:
 
 def member_hub_ids(*, user_id) -> list:
     return list(HubMembership.objects.filter(user_id=user_id).values_list("hub_id", flat=True))
+
+
+def list_members(*, hub_id, query: str | None = None, role: str | None = None) -> QuerySet:
+    """Adhésions d'un hub (gestion par la modération), filtrables par pseudo et par rôle."""
+    members = HubMembership.objects.filter(hub_id=hub_id)
+    if role in HubMembership.Role.values:
+        members = members.filter(role=role)
+    if query:
+        members = members.filter(user__username__icontains=query.strip().lstrip("@"))
+    return members
+
+
+def list_bans(*, hub_id) -> QuerySet:
+    return HubBan.objects.filter(hub_id=hub_id).order_by("-created_at")
 
 
 def list_moderators(*, hub_id) -> list:

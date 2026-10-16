@@ -73,7 +73,7 @@ def create_question(
         body=body,
         tags=normalize_tags(tags),
         audio_media_id=audio_media_id or None,
-        hub_id=hub_services.require_hub(hub_id=hub_id),
+        hub_id=hub_services.require_hub(hub_id=hub_id, user=author),
     )
     if question_id:
         question.id = question_id

@@ -76,42 +76,85 @@ export function useJoinHub(hub: Pick<Hub, 'slug'>) {
   });
 }
 
+/** Après une action de modération : fiche du hub, membres et exclus à jour. */
+function useHubRefresh(slug: string) {
+  const queryClient = useQueryClient();
+  return (fresh?: Hub) => {
+    if (fresh) queryClient.setQueryData(hubKeys.detail(slug), fresh);
+    void queryClient.invalidateQueries({ queryKey: hubKeys.all });
+  };
+}
+
 /** Nommer un modérateur pour le hub (réservé au créateur du hub). */
 export function useAssignModerator(slug: string) {
-  const queryClient = useQueryClient();
+  const refresh = useHubRefresh(slug);
   return useMutation({
-    mutationFn: async (username: string) => {
-      const res = await apiFetch(`/api/hubs/${encodeURIComponent(slug)}/moderators/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username }),
-      });
-      return (await res.json()) as Hub;
-    },
-    onSuccess: (fresh: Hub) => {
-      queryClient.setQueryData(hubKeys.detail(slug), fresh);
-      void queryClient.invalidateQueries({ queryKey: hubKeys.all });
-    },
+    mutationFn: (username: string) =>
+      unwrap(api.POST('/api/hubs/{slug}/moderators/', { params: { path: { slug } }, body: { username } })),
+    onSuccess: refresh,
   });
 }
 
 /** Révoquer un modérateur du hub (réservé au créateur du hub). */
 export function useRemoveModerator(slug: string) {
-  const queryClient = useQueryClient();
+  const refresh = useHubRefresh(slug);
   return useMutation({
     mutationFn: async (username: string) => {
+      // DELETE avec corps : absent du schéma OpenAPI, d'où l'appel direct (erreurs vérifiées).
       const res = await apiFetch(`/api/hubs/${encodeURIComponent(slug)}/moderators/`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username }),
       });
-      return (await res.json()) as Hub;
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.error?.message ?? body?.detail ?? 'Révocation impossible.');
+      return body as Hub;
     },
-    onSuccess: (fresh: Hub) => {
-      queryClient.setQueryData(hubKeys.detail(slug), fresh);
-      void queryClient.invalidateQueries({ queryKey: hubKeys.all });
-    },
+    onSuccess: refresh,
   });
 }
 
+export type HubMember = Schemas['HubMember'];
+export type HubBan = Schemas['HubBan'];
+
+/** Membres du hub (créateur et modérateurs seulement). */
+export function useHubMembers(slug: string, filters: { q?: string; role?: 'member' | 'moderator' }, enabled = true) {
+  return useInfiniteList(
+    ['hubs', 'members', slug, filters],
+    (cursor) => unwrap(api.GET('/api/hubs/{slug}/members/', { params: { path: { slug }, query: { cursor, ...filters } } })),
+    { enabled },
+  );
+}
+
+export function useHubBans(slug: string, enabled = true) {
+  return useInfiniteList(
+    ['hubs', 'bans', slug],
+    (cursor) => unwrap(api.GET('/api/hubs/{slug}/bans/', { params: { path: { slug }, query: { cursor } } })),
+    { enabled },
+  );
+}
+
+/** Retirer un membre ; `ban` : l'exclure (il ne pourra ni revenir ni publier dans le hub). */
+export function useRemoveMember(slug: string) {
+  const refresh = useHubRefresh(slug);
+  return useMutation({
+    mutationFn: ({ username, ban = false, reason = '' }: { username: string; ban?: boolean; reason?: string }) =>
+      unwrap(
+        api.POST('/api/hubs/{slug}/members/{username}/remove/', {
+          params: { path: { slug, username } },
+          body: { ban, reason },
+        }),
+      ),
+    onSuccess: refresh,
+  });
+}
+
+export function useLiftBan(slug: string) {
+  const refresh = useHubRefresh(slug);
+  return useMutation({
+    mutationFn: (username: string) =>
+      unwrap(api.POST('/api/hubs/{slug}/bans/{username}/lift/', { params: { path: { slug, username } } })),
+    onSuccess: () => refresh(),
+  });
+}
 

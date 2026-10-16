@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { api, type Schemas, unwrap } from '@/shared/api';
+import { api, apiFetch, type Schemas, unwrap } from '@/shared/api';
 import type { Key } from '@/shared/i18n';
 import { useInfiniteList } from '@/shared/query';
 
@@ -48,6 +48,57 @@ export function useCreateHub() {
       void queryClient.invalidateQueries({ queryKey: ['hubs', 'list'] });
     },
   });
+}
+
+export type HubMember = Schemas['HubMember'];
+export type HubBan = Schemas['HubBan'];
+
+/** Membres du hub (créateur, modérateurs et staff seulement). */
+export function useHubMembers(slug: string, q: string) {
+  return useInfiniteList(['hubs', 'members', slug, q], (cursor) =>
+    unwrap(api.GET('/api/hubs/{slug}/members/', { params: { path: { slug }, query: { cursor, q: q || undefined } } })),
+  );
+}
+
+export function useHubBans(slug: string) {
+  return useInfiniteList(['hubs', 'bans', slug], (cursor) =>
+    unwrap(api.GET('/api/hubs/{slug}/bans/', { params: { path: { slug }, query: { cursor } } })),
+  );
+}
+
+/** Actions de modération sur un membre ; la fiche, les membres et les exclus sont rechargés. */
+export function useMemberActions(slug: string) {
+  const queryClient = useQueryClient();
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: hubKeys.all });
+  const remove = useMutation({
+    mutationFn: ({ username, ban = false }: { username: string; ban?: boolean }) =>
+      unwrap(api.POST('/api/hubs/{slug}/members/{username}/remove/', { params: { path: { slug, username } }, body: { ban, reason: '' } })),
+    onSuccess: refresh,
+  });
+  const promote = useMutation({
+    mutationFn: (username: string) => unwrap(api.POST('/api/hubs/{slug}/moderators/', { params: { path: { slug } }, body: { username } })),
+    onSuccess: refresh,
+  });
+  const demote = useMutation({
+    // DELETE avec corps : absent du schéma OpenAPI, d'où l'appel direct (erreurs vérifiées).
+    mutationFn: async (username: string) => {
+      const response = await apiFetch(`/api/hubs/${encodeURIComponent(slug)}/moderators/`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error?.message ?? body?.detail ?? 'Révocation impossible.');
+      }
+    },
+    onSuccess: refresh,
+  });
+  const lift = useMutation({
+    mutationFn: (username: string) => unwrap(api.POST('/api/hubs/{slug}/bans/{username}/lift/', { params: { path: { slug, username } } })),
+    onSuccess: refresh,
+  });
+  return { remove, promote, demote, lift };
 }
 
 /** Rejoindre / quitter : la fiche et les listes sont mises à jour avec la réponse. */

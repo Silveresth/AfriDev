@@ -9,7 +9,7 @@ from django.utils.text import slugify
 from core.exceptions import ConflictError, DomainError, NotFoundError, PermissionDeniedError
 
 from .events import hub_joined
-from .models import Hub, HubMembership
+from .models import Hub, HubBan, HubMembership
 
 SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$")
 EDITABLE_FIELDS = ("name", "description", "icon", "banner_url", "rules", "target_country")
@@ -106,9 +106,15 @@ def set_verified(*, hub: Hub, user, verified: bool) -> Hub:
     return hub
 
 
+def _ensure_not_banned(hub_id, user) -> None:
+    if user and HubBan.objects.filter(hub_id=hub_id, user=user).exists():
+        raise PermissionDeniedError("Vous avez été exclu de ce hub par sa modération.")
+
+
 @transaction.atomic
 def join_hub(*, hub: Hub, user) -> HubMembership:
-    """Idempotent : rejoindre deux fois ne change rien."""
+    """Idempotent : rejoindre deux fois ne change rien. Refusé à un membre exclu."""
+    _ensure_not_banned(hub.id, user)
     membership, created = HubMembership.objects.get_or_create(hub=hub, user=user)
     if created:
         Hub.objects.filter(id=hub.id).update(member_count=F("member_count") + 1)
@@ -121,10 +127,7 @@ def join_hub(*, hub: Hub, user) -> HubMembership:
 def leave_hub(*, hub: Hub, user) -> None:
     if hub.creator_id == user.id:
         raise DomainError("Le créateur ne peut pas quitter son hub.", code="creator_cannot_leave")
-    deleted, _ = HubMembership.objects.filter(hub=hub, user=user).delete()
-    if deleted:
-        Hub.objects.filter(id=hub.id, member_count__gt=0).update(member_count=F("member_count") - 1)
-        hub.refresh_from_db(fields=["member_count"])
+    _remove_membership(hub, user)
 
 
 def delete_hub(*, hub: Hub, user) -> None:
@@ -133,13 +136,57 @@ def delete_hub(*, hub: Hub, user) -> None:
     hub.soft_delete()
 
 
-def require_hub(*, hub_id):
-    """Pour feed / qa / snippets : vérifie qu'un hub existe avant d'y rattacher un contenu."""
+def require_hub(*, hub_id, user=None):
+    """Pour feed / qa / snippets : vérifie qu'un hub existe avant d'y rattacher un contenu,
+    et que l'auteur n'en est pas exclu."""
     if not hub_id:
         return None
     if not Hub.objects.alive().filter(id=hub_id).exists():
         raise NotFoundError("Hub introuvable.", code="hub_not_found")
+    _ensure_not_banned(hub_id, user)
     return hub_id
+
+
+def _remove_membership(hub: Hub, user) -> None:
+    deleted, _ = HubMembership.objects.filter(hub=hub, user=user).delete()
+    if deleted:
+        Hub.objects.filter(id=hub.id, member_count__gt=0).update(member_count=F("member_count") - 1)
+        hub.refresh_from_db(fields=["member_count"])
+
+
+@transaction.atomic
+def remove_member(
+    *, hub: Hub, admin_user, target_user, ban: bool = False, reason: str = ""
+) -> None:
+    """Retire un membre du hub (modérateurs) ; `ban` l'empêche aussi de revenir et d'y publier.
+
+    Le créateur ne peut pas être retiré ; un modérateur ne peut l'être que par le créateur
+    (ou le staff) ; on ne se retire pas soi-même ici (bouton « Quitter »)."""
+    if not _is_moderator(hub, admin_user):
+        raise PermissionDeniedError("Seuls les modérateurs du hub gèrent ses membres.")
+    if target_user.id == hub.creator_id:
+        raise DomainError(
+            "Le créateur du hub ne peut pas en être retiré.", code="creator_protected"
+        )
+    if target_user.id == admin_user.id:
+        raise DomainError("Utilisez « Quitter le hub » pour vous retirer.", code="self_removal")
+    target = HubMembership.objects.filter(hub=hub, user=target_user).first()
+    is_creator_or_staff = admin_user.is_staff or hub.creator_id == admin_user.id
+    if target and target.role == HubMembership.Role.MODERATOR and not is_creator_or_staff:
+        raise PermissionDeniedError("Seul le créateur du hub peut retirer un modérateur.")
+    if target is None and not ban:
+        raise NotFoundError("Ce membre ne fait pas partie du hub.")
+    _remove_membership(hub, target_user)
+    if ban:
+        HubBan.objects.update_or_create(
+            hub=hub, user=target_user, defaults={"banned_by": admin_user, "reason": reason[:200]}
+        )
+
+
+def lift_ban(*, hub: Hub, admin_user, target_user) -> None:
+    if not _is_moderator(hub, admin_user):
+        raise PermissionDeniedError("Seuls les modérateurs du hub gèrent ses membres.")
+    HubBan.objects.filter(hub=hub, user=target_user).delete()
 
 
 @transaction.atomic
@@ -147,6 +194,8 @@ def assign_moderator(*, hub: Hub, admin_user, target_user) -> HubMembership:
     """Seul le créateur du hub (ou le staff) peut nommer un modérateur."""
     if not (admin_user.is_staff or hub.creator_id == admin_user.id):
         raise PermissionDeniedError("Seul le créateur du hub peut nommer des modérateurs.")
+    if HubBan.objects.filter(hub=hub, user=target_user).exists():
+        raise DomainError("Levez d'abord l'exclusion de ce membre.", code="member_banned")
 
     membership, created = HubMembership.objects.get_or_create(hub=hub, user=target_user)
     if created:

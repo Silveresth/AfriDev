@@ -101,7 +101,7 @@ def create_post(
         poll_options=options,
         media_id=media_id or None,
         tags=normalize_tags(tags),
-        hub_id=hub_services.require_hub(hub_id=hub_id),
+        hub_id=hub_services.require_hub(hub_id=hub_id, user=author),
     )
     if post_id:
         post.id = post_id
@@ -147,7 +147,7 @@ def update_post(
         post.tags = normalize_tags(tags)
         fields.append("tags")
     if hub_id is not ... and hub_id != post.hub_id:
-        post.hub_id = hub_services.require_hub(hub_id=hub_id)
+        post.hub_id = hub_services.require_hub(hub_id=hub_id, user=user)
         fields.append("hub_id")
     if fields:
         post.save(update_fields=[*fields, "updated_at"])
