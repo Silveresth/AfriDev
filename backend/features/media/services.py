@@ -10,8 +10,9 @@ from django.db import transaction
 from django.utils import timezone
 
 from core.exceptions import DomainError
-from integrations import storage
+from integrations import cloudinary, storage
 
+from . import cloud
 from .events import media_ready
 from .models import MediaAsset
 
@@ -75,10 +76,10 @@ def _schedule_transcoding(asset: MediaAsset) -> None:
 
 @transaction.atomic
 def start_upload(*, owner, kind: str, mime_type: str, size_bytes: int, filename: str):
-    """Réserve un média et renvoie (média, URL pré-signée R2 ou None en dev local).
+    """Réserve un média et renvoie (média, instructions d'envoi ; None en dev local).
 
-    Le fichier ne passe jamais par le serveur : le client l'envoie directement à R2,
-    puis appelle `complete_upload`.
+    Le fichier ne passe jamais par le serveur : le client l'envoie directement à Cloudinary
+    (formulaire signé), puis appelle `complete_upload`.
     """
     _validate(kind=kind, mime_type=mime_type, size_bytes=size_bytes)
     asset = _new_asset(
@@ -89,9 +90,14 @@ def start_upload(*, owner, kind: str, mime_type: str, size_bytes: int, filename:
         filename=filename,
         status=MediaAsset.Status.UPLOADING,
     )
+    if not cloudinary.is_configured():
+        asset.save()
+        return asset, None
+    asset.original_path = cloud.public_id(asset)
     asset.save()
-    upload = storage.presigned_upload(
-        asset.original_path, content_type=mime_type, size_bytes=size_bytes
+    signed = cloud.signed_upload(asset)
+    upload = storage.PresignedUpload(
+        method="POST", url=signed.url, fields=signed.fields, file_field=signed.file_field
     )
     return asset, upload
 
@@ -131,21 +137,44 @@ class _LimitedReader:
 
 
 def complete_upload(*, asset: MediaAsset) -> MediaAsset:
-    """Vérifie l'objet reçu (HEAD, sans le télécharger) puis lance le transcodage."""
+    """Vérifie le fichier reçu (sans le télécharger) puis lance le traitement."""
     if asset.status != MediaAsset.Status.UPLOADING:
         return asset  # idempotent : un double appel du client ne relance rien
-    info = storage.stat(asset.original_path)
-    if info is None:
-        raise InvalidMediaError("Fichier non reçu : relancez l'envoi.")
     max_mb = MAX_SIZE_MB.get(asset.kind, settings.MEDIA_MAX_UPLOAD_MB)
-    if info.size > max_mb * 1024 * 1024:
-        storage.delete(asset.original_path)
+    fields = ["size_bytes", "status", "updated_at"]
+    if cloudinary.is_configured():
+        try:
+            info = cloud.received(asset)
+        except cloudinary.CloudinaryError as exc:
+            raise InvalidMediaError("Stockage des médias indisponible : réessayez.") from exc
+        if info is None:
+            raise InvalidMediaError("Fichier non reçu : relancez l'envoi.")
+        size = info.bytes
+        if size > max_mb * 1024 * 1024:
+            cloud.destroy(asset)
+        else:
+            # Dimensions et durée relevées par Cloudinary : aucune analyse sur le serveur.
+            asset.original_path = info.secure_url
+            asset.width, asset.height, asset.duration_seconds = (
+                info.width,
+                info.height,
+                info.duration,
+            )
+            fields += ["original_path", "width", "height", "duration_seconds"]
+    else:
+        stat = storage.stat(asset.original_path)
+        if stat is None:
+            raise InvalidMediaError("Fichier non reçu : relancez l'envoi.")
+        size = stat.size
+        if size > max_mb * 1024 * 1024:
+            storage.delete(asset.original_path)
+    if size > max_mb * 1024 * 1024:
         mark_failed(asset=asset, error="Fichier trop lourd.")
         raise InvalidMediaError(f"Fichier trop lourd (maximum {max_mb} Mo).")
     with transaction.atomic():
-        asset.size_bytes = info.size
+        asset.size_bytes = size
         asset.status = MediaAsset.Status.PROCESSING
-        asset.save(update_fields=["size_bytes", "status", "updated_at"])
+        asset.save(update_fields=fields)
         _schedule_transcoding(asset)
     return asset
 
@@ -155,9 +184,12 @@ def purge_stale_uploads(*, older_than: timedelta = STALE_UPLOAD_AFTER) -> int:
     stale = MediaAsset.objects.filter(
         status=MediaAsset.Status.UPLOADING, created_at__lt=timezone.now() - older_than
     )
-    paths = list(stale.values_list("original_path", flat=True))
-    for path in paths:
-        storage.delete(path)
+    remote = cloudinary.is_configured()
+    for asset in stale.only("id", "owner_id", "kind", "original_path"):
+        if remote:
+            cloud.destroy(asset)  # le fichier a pu être envoyé sans confirmation
+        else:
+            storage.delete(asset.original_path)
     deleted, _ = stale.delete()
     return deleted
 
@@ -167,6 +199,9 @@ def purge_stale_uploads(*, older_than: timedelta = STALE_UPLOAD_AFTER) -> int:
 
 @transaction.atomic
 def upload_media(*, owner, kind: str, uploaded_file) -> MediaAsset:
+    if cloudinary.is_configured():
+        # Plus aucun client ne l'emploie : avec Cloudinary, le fichier ne passe pas par le VPS.
+        raise InvalidMediaError("Envoi direct requis : utilisez /api/media/presign-upload/.")
     mime_type = uploaded_file.content_type or mimetypes.guess_type(uploaded_file.name)[0] or ""
     _validate(kind=kind, mime_type=mime_type, size_bytes=uploaded_file.size)
     asset = _new_asset(
@@ -205,7 +240,10 @@ def mark_failed(*, asset: MediaAsset, error: str) -> None:
 
 def delete_media(*, asset: MediaAsset) -> None:
     asset.soft_delete()
-    # Les segments HLS (dossier hls/) sont purgés par préfixe côté stockage objet.
+    if cloudinary.is_configured():
+        # Une seule suppression : Cloudinary efface aussi les variantes et vide son cache.
+        transaction.on_commit(lambda: cloud.destroy(asset))
+        return
     paths = [asset.original_path] + [p for name, p in asset.variants.items() if name != "hls"]
 
     def _purge():

@@ -16,7 +16,7 @@ export async function uploadFromUri(
   filename?: string,
 ) {
   const body = await (await fetch(uri)).blob();
-  return uploadDirect({ kind, body, mimeType, size: body.size, filename });
+  return uploadDirect({ kind, body, mimeType, size: body.size, filename: filename ?? uri.split('/').pop(), uri });
 }
 
 /** Comme le web, mais une coupure réseau explique quoi faire (adresse de l'API, mode tunnel). */

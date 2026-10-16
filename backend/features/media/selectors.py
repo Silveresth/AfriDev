@@ -1,6 +1,6 @@
 """Lectures. Seul point d'entrée en lecture pour les autres features."""
 
-from integrations import storage
+from integrations import cloudinary, storage
 
 from .models import MediaAsset
 
@@ -60,4 +60,10 @@ def read_original(*, asset_id) -> tuple[bytes, str] | None:
     asset = get_asset(asset_id=asset_id)
     if asset is None:
         return None
-    return storage.read(asset.original_path), asset.original_path.rsplit("/", 1)[-1]
+    name = asset.original_path.rsplit("/", 1)[-1]
+    if asset.original_path.startswith(("http://", "https://")):  # fichier sur Cloudinary
+        try:
+            return cloudinary.download(asset.original_path, max_bytes=asset.size_bytes + 1024), name
+        except cloudinary.CloudinaryError:
+            return None
+    return storage.read(asset.original_path), name

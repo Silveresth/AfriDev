@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import environ
 
@@ -258,43 +259,26 @@ POWERSYNC_JWT_KID = env("POWERSYNC_JWT_KID", default="afridev-powersync")
 POWERSYNC_ALLOW_DEV_KEY = DEBUG
 POWERSYNC_DEV_KEY_PATH = BASE_DIR / ".powersync_dev_key.pem"
 
-# ── Médias : stockage objet Cloudflare R2 (API S3) ──
-# Sans R2_BUCKET_NAME : disque local (dev). Avec : les clients envoient directement vers R2
-# via une URL pré-signée ; aucun fichier lourd ne transite par la mémoire du VPS.
-R2_ACCESS_KEY_ID = env("R2_ACCESS_KEY_ID", default="")
-R2_SECRET_ACCESS_KEY = env("R2_SECRET_ACCESS_KEY", default="")
-R2_BUCKET_NAME = env("R2_BUCKET_NAME", default="")
-# https://<ACCOUNT_ID>.r2.cloudflarestorage.com
-R2_ENDPOINT_URL = env("R2_ENDPOINT_URL", default="")
-# URL publique (domaine personnalisé R2 ou r2.dev) ; vide = URLs Django locales.
-MEDIA_CDN_URL = env("MEDIA_CDN_URL", default="")
+# ── Médias : Cloudinary ──
+# Envoi direct du client vers Cloudinary (formulaire signé par l'API, aucun fichier lourd ne
+# transite par le VPS) ; tailles, formats, HLS et affiches produits à la volée par Cloudinary.
+# Sans configuration : disque local (développement, tests), traité sur place.
+# CLOUDINARY_URL (Tableau de bord › « API environment variable ») suffit :
+#   cloudinary://<api_key>:<api_secret>@<cloud_name>
+_cloudinary = urlsplit(env("CLOUDINARY_URL", default=""))
+CLOUDINARY_CLOUD_NAME = env("CLOUDINARY_CLOUD_NAME", default=_cloudinary.hostname or "")
+CLOUDINARY_API_KEY = env("CLOUDINARY_API_KEY", default=_cloudinary.username or "")
+CLOUDINARY_API_SECRET = env("CLOUDINARY_API_SECRET", default=_cloudinary.password or "")
+# Dossier racine des fichiers dans le compte Cloudinary.
+CLOUDINARY_FOLDER = env("CLOUDINARY_FOLDER", default="afridev")
 MEDIA_MAX_UPLOAD_MB = env.int("MEDIA_MAX_UPLOAD_MB", default=50)
-# Durée de validité d'une URL d'envoi pré-signée (secondes).
+# Durée de validité annoncée d'une autorisation d'envoi (secondes).
 MEDIA_PRESIGN_EXPIRES = env.int("MEDIA_PRESIGN_EXPIRES", default=15 * 60)
-USE_R2_STORAGE = bool(R2_BUCKET_NAME)
 
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
 }
-if USE_R2_STORAGE:
-    STORAGES["default"] = {
-        "BACKEND": "storages.backends.s3.S3Storage",
-        "OPTIONS": {
-            "access_key": R2_ACCESS_KEY_ID,
-            "secret_key": R2_SECRET_ACCESS_KEY,
-            "bucket_name": R2_BUCKET_NAME,
-            "endpoint_url": R2_ENDPOINT_URL,
-            "region_name": "auto",
-            "signature_version": "s3v4",
-            # Clés UUID uniques : pas de HEAD « exists » avant chaque écriture.
-            "file_overwrite": True,
-            "default_acl": None,
-            "querystring_auth": False,
-            "custom_domain": MEDIA_CDN_URL.split("://", 1)[-1].rstrip("/") or None,
-            "object_parameters": {"CacheControl": "public, max-age=31536000, immutable"},
-        },
-    }
 
 FFMPEG_BINARY = env("FFMPEG_BINARY", default="ffmpeg")
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024

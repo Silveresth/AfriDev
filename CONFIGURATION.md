@@ -92,18 +92,17 @@ Légende : **Obligatoire** = sans elle, la fonction ne marche pas · *Facultativ
 
 Les autres réglages IA (`GROQ_REASONING_*`, `LLM_CACHE_SECONDS`, `AI_TASK_SOFT_TIME_LIMIT`, `EMBEDDING_QUERY_CACHE_SECONDS`, `SEMANTIC_SEARCH_QUOTA`, `MODERATION_*`) ont de bonnes valeurs par défaut.
 
-### 3.4 Stockage des médias (Cloudflare R2)
+### 3.4 Photos, vidéos et messages vocaux (Cloudinary)
 
-Sans ces variables, les fichiers vont sur le disque du VPS (`backend/media`), ce qui est déconseillé avec 2 Go.
+Les fichiers partent directement du téléphone ou du navigateur vers Cloudinary, qui produit les tailles, les formats (WebP/AVIF), la vidéo en streaming (HLS) et les affiches. Rien de lourd ne tourne sur le VPS. Sans ces variables, les fichiers vont sur le disque du VPS (déconseillé avec 2 Go).
 
 | Variable | Comment l'obtenir |
 |---|---|
-| `R2_BUCKET_NAME` | Tableau de bord Cloudflare › **R2** › *Create bucket* (ex. `afridev-media`). |
-| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | R2 › *Manage R2 API Tokens* › *Create API token* › permission **Object Read & Write**, limitée au bucket. Le secret ne s'affiche qu'une fois. |
-| `R2_ENDPOINT_URL` | `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` : l'Account ID est affiché sur la page R2 (colonne de droite). |
-| `MEDIA_CDN_URL` | Bucket › *Settings* › **Custom Domains** (ex. `https://media.afridev.dev`) ou *Public r2.dev URL*. |
+| `CLOUDINARY_URL` | [console.cloudinary.com](https://console.cloudinary.com) › **Dashboard** › *API environment variable* (bouton copier). Format : `cloudinary://<API_KEY>:<API_SECRET>@<CLOUD_NAME>`. |
+| *ou* `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Les trois valeurs séparées, sur le même Dashboard (le secret s'affiche avec l'icône œil). |
+| `CLOUDINARY_FOLDER` | *Facultative.* Dossier des fichiers dans le compte (`afridev` par défaut). |
 
-**À faire aussi dans le bucket** : *Settings* › **CORS Policy** › coller le contenu de [infra/r2/cors.json](infra/r2/cors.json). Sans cela, les envois de photos et de vidéos depuis le site échouent.
+Aucun réglage CORS n'est nécessaire : Cloudinary accepte les envois directs depuis un navigateur.
 
 ### 3.5 Connexion Google et GitHub
 
@@ -215,12 +214,8 @@ MEILISEARCH_KEY=
 GROQ_API_KEY=
 VOYAGE_API_KEY=
 
-# Médias
-R2_ACCESS_KEY_ID=
-R2_SECRET_ACCESS_KEY=
-R2_BUCKET_NAME=
-R2_ENDPOINT_URL=
-MEDIA_CDN_URL=
+# Médias (Cloudinary)
+CLOUDINARY_URL=
 
 # Connexion
 GITHUB_CLIENT_ID=

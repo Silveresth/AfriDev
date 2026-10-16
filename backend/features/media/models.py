@@ -11,7 +11,7 @@ class MediaAsset(BaseModel):
         AUDIO = "audio", "Message vocal"
 
     class Status(models.TextChoices):
-        # URL pré-signée délivrée, le client n'a pas encore confirmé l'envoi vers R2.
+        # Autorisation d'envoi délivrée, le client n'a pas encore confirmé l'envoi.
         UPLOADING = "uploading", "Envoi en cours"
         PROCESSING = "processing", "En traitement"
         READY = "ready", "Prêt"

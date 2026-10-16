@@ -10,7 +10,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from integrations import storage
+from integrations import cloudinary, storage
 
 from .. import selectors, services
 from .serializers import (
@@ -39,7 +39,7 @@ class MediaUploadView(APIView):
 
 
 class PresignUploadView(APIView):
-    """Étape 1 : réserve le média et délivre l'URL d'envoi direct vers R2."""
+    """Étape 1 : réserve le média et délivre l'autorisation d'envoi direct vers Cloudinary."""
 
     @extend_schema(
         request=PresignUploadInputSerializer, responses={201: PresignUploadOutputSerializer}
@@ -48,7 +48,7 @@ class PresignUploadView(APIView):
         data = PresignUploadInputSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         asset, upload = services.start_upload(owner=request.user, **data.validated_data)
-        if upload is None:  # dev sans R2 : l'API locale joue le rôle du stockage objet
+        if upload is None:  # dev sans Cloudinary : l'API locale joue le rôle du stockage
             url = reverse("media:local-upload", kwargs={"asset_id": asset.id})
             upload = storage.PresignedUpload(
                 method="PUT",
@@ -57,7 +57,13 @@ class PresignUploadView(APIView):
             )
         payload = {
             "asset_id": asset.id,
-            "upload": {"method": upload.method, "url": upload.url, "headers": upload.headers},
+            "upload": {
+                "method": upload.method,
+                "url": upload.url,
+                "headers": upload.headers,
+                "fields": upload.fields,
+                "file_field": upload.file_field,
+            },
             "expires_in": settings.MEDIA_PRESIGN_EXPIRES,
         }
         return Response(payload, status=status.HTTP_201_CREATED)
@@ -78,7 +84,7 @@ class CompleteUploadView(APIView):
 
 
 class LocalUploadView(APIView):
-    """Développement sans R2 : reçoit le PUT que le client enverrait à l'URL pré-signée."""
+    """Développement sans Cloudinary : reçoit le fichier que le client y enverrait."""
 
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -88,7 +94,7 @@ class LocalUploadView(APIView):
         parameters=[OpenApiParameter("token", str, OpenApiParameter.QUERY)],
     )
     def put(self, request, asset_id):
-        if storage.is_remote():
+        if cloudinary.is_configured():
             raise NotFound()
         if services.asset_id_from_local_token(request.query_params.get("token", "")) != str(
             asset_id

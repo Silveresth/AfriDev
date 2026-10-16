@@ -16,6 +16,8 @@ export interface DirectUploadFile {
   mimeType: string;
   size: number;
   filename?: string;
+  /** React Native : URI locale du fichier (formulaire multipart natif). */
+  uri?: string;
 }
 
 export interface Tokens {
@@ -197,8 +199,9 @@ export function createAfriDevClient({
   }
 
   /**
-   * Envoi direct vers le stockage objet (Cloudflare R2) : l'API délivre une URL pré-signée,
-   * le fichier part du client vers R2 sans transiter par le serveur, puis l'API confirme.
+   * Envoi direct vers le stockage des médias (Cloudinary) : l'API délivre un formulaire signé,
+   * le fichier part du client sans transiter par le serveur, puis l'API confirme.
+   * En développement sans Cloudinary : PUT du fichier brut vers l'API locale.
    */
   async function uploadDirect(file: DirectUploadFile): Promise<MediaOutput> {
     const presign = await unwrap(
@@ -206,12 +209,27 @@ export function createAfriDevClient({
         body: { kind: file.kind, mime_type: file.mimeType, size_bytes: file.size, filename: file.filename ?? '' },
       }),
     );
+    const { upload } = presign;
+    let body: BodyInit = file.body;
+    if (upload.method === 'POST') {
+      const form = new FormData();
+      for (const [name, value] of Object.entries(upload.fields)) form.append(name, value);
+      const filename = file.filename || 'upload';
+      if (file.uri) {
+        // React Native : le fichier est lu depuis son URI par le moteur réseau natif.
+        form.append(upload.file_field, { uri: file.uri, name: filename, type: file.mimeType } as unknown as Blob);
+      } else {
+        form.append(upload.file_field, file.body, filename);
+      }
+      body = form;
+    }
     let sent: Response;
     try {
-      sent = await fetch(presign.upload.url, {
-        method: presign.upload.method,
-        headers: presign.upload.headers,
-        body: file.body,
+      sent = await fetch(upload.url, {
+        method: upload.method,
+        // Formulaire : le navigateur pose lui-même l'en-tête multipart (avec sa frontière).
+        headers: upload.method === 'POST' ? undefined : upload.headers,
+        body,
       });
     } catch {
       throw new ApiError('Envoi du fichier impossible : vérifiez votre connexion.', 'network', 0);

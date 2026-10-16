@@ -1186,7 +1186,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Étape 1 : réserve le média et délivre l'URL d'envoi direct vers R2. */
+        /** @description Étape 1 : réserve le média et délivre l'autorisation d'envoi direct vers Cloudinary. */
         post: operations["media_presign_upload_create"];
         delete?: never;
         options?: never;
@@ -3028,6 +3028,12 @@ export interface components {
             suspended: number;
         };
         /**
+         * @description * `PUT` - PUT
+         *     * `POST` - POST
+         * @enum {string}
+         */
+        MethodEnum: "PUT" | "POST";
+        /**
          * @description * `translate` - Traduire
          *     * `simplify` - Vulgariser
          * @enum {string}
@@ -4222,12 +4228,20 @@ export interface components {
         UploadInputRequest: {
             operations: components["schemas"]["CrudOperationRequest"][];
         };
+        /**
+         * @description PUT : corps brut avec `headers` (dev local). POST : formulaire multipart (Cloudinary),
+         *     `fields` tels quels puis le fichier sous le nom `file_field`.
+         */
         UploadInstruction: {
-            method: string;
+            method: components["schemas"]["MethodEnum"];
             url: string;
             headers: {
                 [key: string]: string;
             };
+            fields: {
+                [key: string]: string;
+            };
+            file_field: string;
         };
         UploadOutput: {
             applied: number;

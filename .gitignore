@@ -54,3 +54,5 @@ Thumbs.db
 *.tar.gz
 *.zip
 
+# Classeur de configuration rempli (contient des secrets)
+configuration-prod*.xlsx

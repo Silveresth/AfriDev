@@ -16,9 +16,14 @@ class PresignUploadInputSerializer(serializers.Serializer):
 
 
 class UploadInstructionSerializer(serializers.Serializer):
-    method = serializers.CharField()
+    """PUT : corps brut avec `headers` (dev local). POST : formulaire multipart (Cloudinary),
+    `fields` tels quels puis le fichier sous le nom `file_field`."""
+
+    method = serializers.ChoiceField(choices=["PUT", "POST"])
     url = serializers.CharField()
     headers = serializers.DictField(child=serializers.CharField())
+    fields = serializers.DictField(child=serializers.CharField())
+    file_field = serializers.CharField(allow_blank=True)
 
 
 class PresignUploadOutputSerializer(serializers.Serializer):

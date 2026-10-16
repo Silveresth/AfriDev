@@ -22,8 +22,6 @@ dependencies = [
     "PyJWT[crypto]>=2.10",
     "Pillow>=11",
     "segno>=1.6",
-    "django-storages[s3]>=1.14",
-    "boto3>=1.35",
 ]
 
 [project.optional-dependencies]

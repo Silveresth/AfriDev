@@ -4,7 +4,9 @@ import logging
 
 from celery import shared_task
 
-from . import services
+from integrations import cloudinary
+
+from . import cloud, services
 from .models import MediaAsset
 from .transcoding import TRANSCODERS, TranscodingError
 
@@ -13,12 +15,17 @@ logger = logging.getLogger(__name__)
 
 @shared_task(acks_late=True)
 def transcode_media(asset_id: str) -> None:
+    """Cloudinary : variantes à la volée + aperçu flou (quelques Ko téléchargés).
+    Disque local (dev) : transcodage sur place (Pillow, ffmpeg)."""
     asset = MediaAsset.objects.alive().filter(id=asset_id).first()
     if asset is None:
         return
-    base = asset.original_path.rsplit("/", 1)[0]
     try:
-        result = TRANSCODERS[asset.kind](asset.original_path, base)
+        if cloudinary.is_configured():
+            result = cloud.process(asset)
+        else:
+            base = asset.original_path.rsplit("/", 1)[0]
+            result = TRANSCODERS[asset.kind](asset.original_path, base)
     except (TranscodingError, OSError, ValueError) as exc:
         logger.exception("Transcodage impossible pour %s", asset_id)
         services.mark_failed(asset=asset, error=str(exc))

@@ -33,8 +33,9 @@ EXPO_ACCESS_TOKEN = ""
 WEBPUSH_VAPID_PRIVATE_KEY = ""
 FFMPEG_BINARY = "ffmpeg-absent-in-tests"
 MEDIA_ROOT = BASE_DIR / ".test-media"
-MEDIA_CDN_URL = ""
-USE_R2_STORAGE = False
+CLOUDINARY_CLOUD_NAME = ""
+CLOUDINARY_API_KEY = ""
+CLOUDINARY_API_SECRET = ""
 STORAGES = {
     **STORAGES,  # noqa: F405
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
