@@ -16,6 +16,8 @@ sync_rules:
   path: sync-rules.yaml
 
 # Les jetons sont émis par Django (features/sync) et vérifiés via sa clé publique.
+# « backend » : nom du conteneur sur le réseau Docker (host.docker.internal n'existe pas sous
+# Linux, d'où des jetons jamais validés en production).
 client_auth:
-  jwks_uri: http://host.docker.internal:8000/api/sync/jwks/
+  jwks_uri: http://backend:8000/api/sync/jwks/
   audience: ["powersync"]

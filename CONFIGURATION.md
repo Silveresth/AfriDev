@@ -239,5 +239,5 @@ WEBPUSH_VAPID_SUBJECT=mailto:contact@afridev.dev
 ## 7. Points d'attention
 
 - **Clé Next.js en clair** : `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` est écrite dans `deploy.yml` et `docker-compose.yml`, donc visible sur GitHub. Il vaut mieux la remplacer par un secret GitHub (`openssl rand -base64 32`).
-- **PowerSync** lit la clé publique de Django via `host.docker.internal`, une adresse qui n'existe pas par défaut sous Linux. Si la synchro hors ligne ne fonctionne pas sur le VPS, c'est la première chose à vérifier.
+- **Modèles Groq** : ne mettez pas `GROQ_SMART_MODEL` / `GROQ_FAST_MODEL` dans le `.env` sauf besoin précis ; les anciennes valeurs `llama-3.x` n'existent plus chez Groq et cassent toute l'IA. Sans ces lignes, les bons modèles par défaut s'appliquent.
 - **Mémoire (2 Go)** : le worker IA séparé (`celery-ai`) ajoute environ 150 Mo. Surveille-le avec `docker stats`.
