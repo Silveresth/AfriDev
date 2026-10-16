@@ -5,7 +5,13 @@ DEBUG = False
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 # Domaine public, plus les noms internes : « backend » (appels du site côté serveur via
 # http://backend:8000) et localhost (healthcheck du conteneur).
-ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS")
+ALLOWED_HOSTS = env.list(
+    "DJANGO_ALLOWED_HOSTS",
+    default=env.list(
+        "ALLOWED_HOSTS",
+        default=["afridev.duckdns.org", "backend", "localhost", "127.0.0.1"],
+    ),
+)
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
