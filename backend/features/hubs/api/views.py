@@ -1,5 +1,6 @@
 """Vues minces : valident l'entrée, puis appellent services / selectors."""
 
+from django.contrib.auth import get_user_model
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound
@@ -10,8 +11,6 @@ from core.pagination import CursorPagination
 from core.permissions import ReadOnlyOrAuthenticated
 from core.schema import CURSOR_PARAMETERS, paginated
 
-from django.contrib.auth import get_user_model
-
 from .. import selectors, services
 from .serializers import (
     HubInputSerializer,
@@ -20,6 +19,7 @@ from .serializers import (
     HubUpdateSerializer,
     present_hubs,
 )
+
 
 
 # Tri de l'exploration : populaires (membres) ou récents.
