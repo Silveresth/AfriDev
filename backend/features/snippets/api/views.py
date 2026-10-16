@@ -17,6 +17,8 @@ from .serializers import (
     PublicSnippetSerializer,
     ScanInputSerializer,
     SecretFindingSerializer,
+    SnippetCommentInputSerializer,
+    SnippetCommentSerializer,
     SnippetInputSerializer,
     SnippetOutputSerializer,
     SnippetUpdateSerializer,
@@ -44,10 +46,12 @@ def _present_public(snippets) -> list[dict]:
             "tags": s.tags,
             "hub": hubs.get(s.hub_id),
             "published_at": s.published_at,
+            "comment_count": s.comment_count,
             "author": authors.get(s.owner_id),
         }
         for s in snippets
     ]
+
 
 
 class SnippetListCreateView(APIView):
@@ -161,3 +165,82 @@ class SecretScanView(APIView):
         data.is_valid(raise_exception=True)
         findings = selectors.find_secrets(data.validated_data["content"])
         return Response([finding.__dict__ for finding in findings])
+
+
+class SnippetCommentListCreateView(APIView):
+    """GET : liste publique des commentaires d'un snippet. POST : ajouter un commentaire (auth requise)."""
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return super().get_permissions()
+
+    @extend_schema(
+        parameters=CURSOR_PARAMETERS,
+        responses=paginated(SnippetCommentSerializer),
+        operation_id="snippets_comments_list",
+    )
+    def get(self, request, snippet_id):
+        comments_qs = selectors.list_comments(snippet_id=snippet_id)
+        paginator = CursorPagination()
+        page = paginator.paginate_queryset(comments_qs, request)
+        author_ids = {c.author_id for c in page}
+        authors = profile_selectors.author_cards(user_ids=author_ids)
+        data = [
+            {
+                "id": c.id,
+                "body": c.body,
+                "created_at": c.created_at,
+                "updated_at": c.updated_at,
+                "parent_id": c.parent_id,
+                "author": authors.get(c.author_id),
+            }
+            for c in page
+        ]
+        return paginator.get_paginated_response(SnippetCommentSerializer(data, many=True).data)
+
+    @extend_schema(
+        request=SnippetCommentInputSerializer,
+        responses={201: SnippetCommentSerializer},
+        operation_id="snippets_comments_create",
+    )
+    def post(self, request, snippet_id):
+        data = SnippetCommentInputSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        snippet = selectors.get_public_snippet(snippet_id=snippet_id)
+        if snippet is None:
+            raise NotFound("Snippet introuvable ou non public.")
+
+        comment = services.add_comment(
+            snippet=snippet,
+            author=request.user,
+            body=data.validated_data["body"],
+            parent_id=data.validated_data.get("parent_id"),
+        )
+        authors = profile_selectors.author_cards(user_ids={comment.author_id})
+        return Response(
+            SnippetCommentSerializer(
+                {
+                    "id": comment.id,
+                    "body": comment.body,
+                    "created_at": comment.created_at,
+                    "updated_at": comment.updated_at,
+                    "parent_id": comment.parent_id,
+                    "author": authors.get(comment.author_id),
+                }
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class SnippetCommentDeleteView(APIView):
+    """Suppression douce d'un commentaire par son auteur."""
+
+    @extend_schema(responses={204: None}, operation_id="snippets_comments_delete")
+    def delete(self, request, snippet_id, comment_id):
+        comment = selectors.get_comment(comment_id=comment_id, author=request.user)
+        if comment is None or str(comment.snippet_id) != str(snippet_id):
+            raise NotFound("Commentaire introuvable.")
+        services.delete_comment(comment=comment, user=request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+

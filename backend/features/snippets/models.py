@@ -19,6 +19,7 @@ class Snippet(BaseModel):
     published_at = models.DateTimeField(null=True, blank=True)
     # Étage 2 du Security Guard : {"risky": bool, "reasons": [...], "checked_at": iso}
     ai_review = models.JSONField(default=dict, blank=True)
+    comment_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         indexes = [
@@ -40,3 +41,25 @@ class SnippetVersion(BaseModel):
             models.UniqueConstraint(fields=["snippet", "number"], name="snippets_version_unique")
         ]
         ordering = ["-number"]
+
+
+class SnippetComment(BaseModel):
+    snippet = models.ForeignKey(Snippet, on_delete=models.CASCADE, related_name="comments")
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="snippet_comments"
+    )
+    body = models.TextField(max_length=2000)
+    # Un seul niveau d'imbrication : parent est toujours un commentaire racine.
+    parent = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="replies",
+    )
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Comment by {self.author_id} on {self.snippet_id}"

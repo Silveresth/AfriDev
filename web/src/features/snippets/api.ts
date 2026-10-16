@@ -172,3 +172,58 @@ export function useSnippetActions() {
   });
   return { publish, remove };
 }
+
+// ─── Comments ────────────────────────────────────────────────────────────────
+
+export interface SnippetComment {
+  id: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+  parent_id: string | null;
+  author: PublicSnippet['author'];
+}
+
+export const commentKeys = {
+  all: (snippetId: string) => ['snippets', 'comments', snippetId] as const,
+};
+
+export function useSnippetComments(snippetId: string) {
+  return useInfiniteList(
+    commentKeys.all(snippetId),
+    (cursor) =>
+      unwrap(
+        api.GET('/api/snippets/{snippet_id}/comments/' as any, {
+          params: { path: { snippet_id: snippetId }, query: { cursor } as any },
+        }),
+      ),
+    { enabled: Boolean(snippetId) },
+  );
+}
+
+export function useAddComment(snippetId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ body, parent_id }: { body: string; parent_id?: string | null }) =>
+      unwrap(
+        api.POST('/api/snippets/{snippet_id}/comments/' as any, {
+          params: { path: { snippet_id: snippetId } } as any,
+          body: { body, parent_id: parent_id ?? null } as any,
+        }),
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: commentKeys.all(snippetId) }),
+  });
+}
+
+export function useDeleteComment(snippetId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (commentId: string) =>
+      unwrap(
+        api.DELETE('/api/snippets/{snippet_id}/comments/{comment_id}/' as any, {
+          params: { path: { snippet_id: snippetId, comment_id: commentId } } as any,
+        }),
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: commentKeys.all(snippetId) }),
+  });
+}

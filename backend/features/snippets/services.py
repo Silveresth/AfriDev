@@ -1,7 +1,7 @@
 """Écritures. Seul point d'entrée en écriture."""
 
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Case, F, Max, Value, When
 from django.utils import timezone
 
 from core.exceptions import DomainError, NotFoundError, PermissionDeniedError
@@ -9,7 +9,7 @@ from core.utils import normalize_tags
 from features.hubs import services as hub_services
 
 from .events import snippet_flagged, snippet_published, snippet_unpublished
-from .models import Snippet, SnippetVersion
+from .models import Snippet, SnippetComment, SnippetVersion
 from .security_guard import scan_for_secrets
 
 
@@ -200,3 +200,38 @@ def apply_offline_write(*, user, op: str, record_id, data: dict) -> None:
                 publish_snippet(snippet=snippet)
             else:
                 unpublish_snippet(snippet=snippet)
+
+
+@transaction.atomic
+def add_comment(*, snippet: Snippet, author, body: str, parent_id=None) -> SnippetComment:
+    """Ajoute un commentaire à un snippet public avec incrément atomique de comment_count."""
+    parent = None
+    if parent_id:
+        parent = SnippetComment.objects.alive().filter(
+            id=parent_id, snippet=snippet, parent__isnull=True
+        ).first()
+
+    comment = SnippetComment.objects.create(
+        snippet=snippet,
+        author=author,
+        body=body.strip(),
+        parent=parent,
+    )
+    Snippet.objects.filter(pk=snippet.pk).update(comment_count=F("comment_count") + 1)
+    return comment
+
+
+@transaction.atomic
+def delete_comment(*, comment: SnippetComment, user) -> None:
+    """Soft-delete d'un commentaire par son auteur et décrément de comment_count."""
+    if comment.author_id != user.id and not getattr(user, "is_staff", False):
+        raise PermissionDeniedError("Vous ne pouvez pas supprimer ce commentaire.")
+
+    comment.soft_delete()
+    Snippet.objects.filter(pk=comment.snippet_id).update(
+        comment_count=Case(
+            When(comment_count__gt=0, then=F("comment_count") - 1),
+            default=Value(0),
+        )
+    )
+

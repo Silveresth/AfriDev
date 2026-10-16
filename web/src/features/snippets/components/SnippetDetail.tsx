@@ -20,6 +20,7 @@ import {
 } from '@/shared/ui';
 
 import { type PublicSnippet, usePublicSnippet, useSnippet, useSnippetsByAuthor, useVersions } from '../api';
+import { SnippetComments } from './SnippetComments';
 
 interface ViewModel {
   id: string;
@@ -137,9 +138,12 @@ export function SnippetDetail({ id, initial }: { id: string; initial?: PublicSni
           </Card>
         </aside>
       </div>
+
+      <SnippetComments snippetId={view.id} isPublic={view.isPublic} />
     </div>
   );
 }
+
 
 function Versions({ id }: { id: string }) {
   const versions = useVersions(id, true);

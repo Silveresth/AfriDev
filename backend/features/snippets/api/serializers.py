@@ -43,6 +43,7 @@ class SnippetOutputSerializer(ReadOnlyModelSerializer):
             "hub_id",
             "published_at",
             "ai_review",
+            "comment_count",
             "created_at",
             "updated_at",
         ]
@@ -58,6 +59,7 @@ class PublicSnippetSerializer(serializers.Serializer):
     tags = serializers.ListField(child=serializers.CharField())
     hub = HubSummarySerializer(allow_null=True)
     published_at = serializers.DateTimeField()
+    comment_count = serializers.IntegerField(default=0)
     author = AuthorSerializer(allow_null=True)
 
 
@@ -75,3 +77,20 @@ class SecretFindingSerializer(serializers.Serializer):
     rule_id = serializers.CharField()
     description = serializers.CharField()
     line = serializers.IntegerField()
+
+
+class SnippetCommentInputSerializer(serializers.Serializer):
+    body = serializers.CharField(max_length=2000, trim_whitespace=True)
+    parent_id = serializers.UUIDField(required=False, allow_null=True)
+
+
+class SnippetCommentSerializer(serializers.Serializer):
+    """Commentaire public avec auteur enrichi."""
+
+    id = serializers.UUIDField()
+    body = serializers.CharField()
+    created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField()
+    parent_id = serializers.UUIDField(allow_null=True)
+    author = AuthorSerializer(allow_null=True)
+

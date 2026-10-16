@@ -4,7 +4,7 @@ from django.db.models import Q, QuerySet
 
 from core.utils import keyset_before
 
-from .models import Snippet
+from .models import Snippet, SnippetComment
 from .security_guard import SecretFinding, scan_for_secrets
 
 
@@ -129,3 +129,21 @@ def export_for_user(*, user_id) -> dict:
             )
         )
     }
+
+
+def list_comments(*, snippet_id) -> QuerySet:
+    """Commentaires non supprimés d'un snippet, ordonnés chronologiquement."""
+    return (
+        SnippetComment.objects.alive()
+        .filter(snippet_id=snippet_id)
+        .order_by("created_at")
+    )
+
+
+def get_comment(*, comment_id, author=None) -> SnippetComment | None:
+    """Récupère un commentaire par son identifiant, optionnellement filtré par auteur."""
+    qs = SnippetComment.objects.alive().filter(id=comment_id)
+    if author is not None:
+        qs = qs.filter(author=author)
+    return qs.first()
+
