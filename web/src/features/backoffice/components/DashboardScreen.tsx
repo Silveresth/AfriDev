@@ -59,9 +59,9 @@ export function DashboardScreen() {
             <Moderation data={dashboard.data} />
           </div>
           <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+            <Content data={dashboard.data} />
             <Unanswered data={dashboard.data} />
             <Ai data={dashboard.data} />
-            <Content data={dashboard.data} />
           </div>
           <p className="text-label-md text-ink-faint">
             Mis à jour <TimeAgo date={dashboard.data.generated_at} /> · actualisation automatique chaque minute
@@ -97,12 +97,20 @@ function Kpi({
   alert?: boolean;
 }) {
   const body = (
-    <Card className={cn('h-full space-y-2 p-4 transition-colors', href && 'hover:border-primary', alert && 'border-primary bg-primary-soft/30')}>
-      <p className="flex items-center gap-2 text-label-md font-bold tracking-wide uppercase text-ink-muted">
-        {icon} {label}
-      </p>
-      <p className="text-headline-xl text-ink">{formatCount(value)}</p>
-      <p className="text-body-sm text-ink-muted">{detail}</p>
+    <Card className={cn('h-full p-5 transition-colors', href && 'hover:border-line-strong', alert && 'border-primary/40')}>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-body-sm font-medium text-ink-muted">{label}</p>
+        <span
+          className={cn(
+            'flex size-9 shrink-0 items-center justify-center rounded-xl [&_svg]:size-[18px]',
+            alert ? 'bg-primary text-on-primary' : 'bg-primary-soft text-primary-ink',
+          )}
+        >
+          {icon}
+        </span>
+      </div>
+      <p className="mt-1 text-[2rem] leading-tight font-bold tracking-tight text-ink tabular-nums">{formatCount(value)}</p>
+      <p className="mt-1 text-body-sm text-ink-muted">{detail}</p>
     </Card>
   );
   return href ? (
@@ -121,7 +129,7 @@ function Kpis({ data }: { data: Dashboard }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <Kpi
-        icon={<Users className="size-4" aria-hidden />}
+        icon={<Users aria-hidden />}
         label="Membres"
         value={members.total}
         href="/admin/members"
@@ -132,13 +140,13 @@ function Kpis({ data }: { data: Dashboard }) {
         }
       />
       <Kpi
-        icon={<TrendingUp className="size-4" aria-hidden />}
+        icon={<TrendingUp aria-hidden />}
         label="Contributions"
         value={contributions}
         detail={[plural(content.posts.new, 'post'), plural(content.comments.new, 'commentaire'), plural(content.qa.new_questions, 'question'), plural(content.qa.new_answers, 'réponse')].join(', ')}
       />
       <Kpi
-        icon={<ShieldAlert className="size-4" aria-hidden />}
+        icon={<ShieldAlert aria-hidden />}
         label="À modérer"
         value={moderation.open}
         href="/admin/moderation"
@@ -146,7 +154,7 @@ function Kpis({ data }: { data: Dashboard }) {
         detail={`${plural(moderation.new, 'signalement')} sur la période, dont ${moderation.new_from_ai} par l'IA`}
       />
       <Kpi
-        icon={<MessageCircleQuestion className="size-4" aria-hidden />}
+        icon={<MessageCircleQuestion aria-hidden />}
         label="Sans réponse"
         value={content.qa.unanswered}
         detail={`${plural(content.qa.resolved, 'question résolue', 'questions résolues')} sur ${content.qa.questions}`}
@@ -157,7 +165,7 @@ function Kpis({ data }: { data: Dashboard }) {
 
 function Activity({ data }: { data: Dashboard }) {
   return (
-    <Card className="space-y-6 p-4 sm:p-6">
+    <Card className="space-y-6 p-5 sm:p-6">
       <CardHeader icon={<TrendingUp className="size-5" aria-hidden />} title="Activité" subtitle={`Sur ${data.period_days} jours`} />
       <StackedBars
         title="Contributions par jour"
@@ -181,7 +189,7 @@ function Activity({ data }: { data: Dashboard }) {
 function Moderation({ data }: { data: Dashboard }) {
   const { moderation, sync } = data;
   return (
-    <Card className="space-y-5 p-4 sm:p-6">
+    <Card className="space-y-5 p-5 sm:p-6">
       <CardHeader
         icon={<ShieldAlert className="size-5" aria-hidden />}
         title="Modération"
@@ -202,7 +210,7 @@ function Moderation({ data }: { data: Dashboard }) {
         ))}
       </div>
       <div className="space-y-2">
-        <p className="text-label-md font-bold tracking-wide uppercase text-ink-muted">Motifs sur la période</p>
+        <p className="text-body-sm font-medium text-ink-muted">Motifs sur la période</p>
         <Breakdown
           items={Object.entries(moderation.by_reason)
             .sort((a, b) => b[1] - a[1])
@@ -223,7 +231,7 @@ function Moderation({ data }: { data: Dashboard }) {
 
 function Unanswered({ data }: { data: Dashboard }) {
   return (
-    <Card className="space-y-4 p-4 sm:p-6">
+    <Card className="space-y-4 p-5 sm:p-6">
       <CardHeader
         icon={<MessageCircleQuestion className="size-5" aria-hidden />}
         title="Questions en attente"
@@ -264,7 +272,7 @@ function Ai({ data }: { data: Dashboard }) {
   const { ai } = data;
   const { usage } = ai;
   return (
-    <Card className="space-y-4 p-4 sm:p-6">
+    <Card className="space-y-4 p-5 sm:p-6">
       <CardHeader icon={<Sparkles className="size-5" aria-hidden />} title="Assistant IA (Groq)" />
       <Breakdown
         items={Object.entries(AI_STATUS).map(([status, meta]) => ({
@@ -334,7 +342,7 @@ function Content({ data }: { data: Dashboard }) {
     },
   ];
   return (
-    <Card className="space-y-4 p-4 sm:p-6">
+    <Card className="space-y-4 p-5 sm:p-6">
       <CardHeader icon={<FolderGit2 className="size-5" aria-hidden />} title="Contenus" />
       <dl className="divide-y divide-line">
         {rows.map((row) => (
