@@ -67,7 +67,7 @@ services:
       timeout: 10s
       retries: 3
     # Vérifie que Postgres répond avant de lancer les migrations et le serveur ASGI.
-    command: ["sh", "-c", "until python -c 'import psycopg, os; psycopg.connect(os.environ.get(\"DATABASE_URL\"))' 2>/dev/null; do echo 'Attente de la base de données...'; sleep 2; done; python manage.py migrate --noinput && exec daphne -b 0.0.0.0 -p 8000 config.asgi:application"]
+    command: ["sh", "-c", "until python -c 'import psycopg, os; psycopg.connect(os.environ.get(\"DATABASE_URL\"))' 2>/dev/null; do echo 'Attente de la base de données...'; sleep 2; done; python manage.py migrate --noinput && python manage.py collectstatic --noinput -v 0 && exec daphne -b 0.0.0.0 -p 8000 config.asgi:application"]
     env_file:
       - .env
     environment:
@@ -83,6 +83,8 @@ services:
       - "127.0.0.1:8000:8000"
     volumes:
       - ./backend/media:/app/media
+      # Fichiers de l'admin Django (collectstatic), servis par nginx sous /static/.
+      - ./backend/staticfiles:/app/staticfiles
     depends_on:
       postgres:
         condition: service_healthy
@@ -180,6 +182,7 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       # Médias stockés sur le VPS, servis par nginx (location /media/).
       - ./backend/media:/var/www/media:ro
+      - ./backend/staticfiles:/var/www/static:ro
     depends_on:
       - backend
       - web

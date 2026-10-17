@@ -10,7 +10,8 @@ from core.views import HealthView, JobStatusView
 from features.feed.api.views import HubFeedView
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    # /admin appartient au back-office du site (Next.js) ; l'admin technique de Django est ici.
+    path("django-admin/", admin.site.urls),
     path("api/health/", HealthView.as_view(), name="health"),
     path("api/jobs/<uuid:job_id>/", JobStatusView.as_view(), name="job-status"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
