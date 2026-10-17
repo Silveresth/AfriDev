@@ -4,6 +4,7 @@ import { Check, CircleDot, Star, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 
 import { cn, formatCount, initials } from '@/shared/lib';
+import { absoluteMediaUrl } from '@/shared/media';
 import { Card, StatusBadge } from '@/shared/ui';
 
 export interface ProjectCardData {
@@ -15,6 +16,7 @@ export interface ProjectCardData {
   stars: number;
   open_issue_count?: number;
   is_recruiting?: boolean;
+  logo_url?: string;
 }
 
 export function repoSlug(url: string) {
@@ -37,9 +39,14 @@ export function ProjectCard({
     <Card className={cn('relative flex flex-col gap-3 p-4 transition-colors hover:border-primary', className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded bg-primary font-semibold text-on-primary">
-            {initials(project.name)}
-          </span>
+          {project.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- logo recompressé servi par le CDN
+            <img src={absoluteMediaUrl(project.logo_url)} alt="" className="size-10 shrink-0 rounded-lg object-cover" />
+          ) : (
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary font-semibold text-on-primary">
+              {initials(project.name)}
+            </span>
+          )}
           <div className="min-w-0">
             <h3 className="truncate text-headline-md">
               <Link href={`/projects/${project.id}`} className="after:absolute after:inset-0 hover:text-primary-ink">

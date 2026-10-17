@@ -11,8 +11,8 @@ class Hub(BaseModel):
     slug = models.SlugField(max_length=40, unique=True)
     description = models.TextField(max_length=500, blank=True)
     # Émoji ou URL d'image (pas de téléchargement imposé : l'émoji ne coûte aucun octet).
-    icon = models.CharField(max_length=300, blank=True)
-    banner_url = models.URLField(blank=True)
+    icon = models.CharField(max_length=500, blank=True)
+    banner_url = models.URLField(max_length=500, blank=True)
     # Règles affichées sur la page du hub, dans l'ordre.
     rules = models.JSONField(default=list, blank=True)
     creator = models.ForeignKey(

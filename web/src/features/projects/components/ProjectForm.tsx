@@ -7,6 +7,7 @@ import { useState } from 'react';
 
 import { errorMessage } from '@/shared/api';
 import { PageContainer, PageHeader } from '@/shared/layout';
+import { ImagePairField } from '@/shared/media';
 import {
   Button,
   CardSkeleton,
@@ -25,7 +26,7 @@ import {
 
 import { type ProjectInput, useProject, useSaveProject } from '../api';
 
-const EMPTY: ProjectInput = { name: '', description: '', repo_url: '', tags: [], is_recruiting: true };
+const EMPTY: ProjectInput = { name: '', description: '', repo_url: '', tags: [], is_recruiting: true, banner_url: '', logo_url: '' };
 
 export function ProjectFormScreen({ id }: { id?: string }) {
   const existing = useProject(id);
@@ -37,6 +38,8 @@ export function ProjectFormScreen({ id }: { id?: string }) {
         repo_url: existing.data.repo_url,
         tags: existing.data.tags,
         is_recruiting: existing.data.is_recruiting,
+        banner_url: existing.data.banner_url,
+        logo_url: existing.data.logo_url,
       }
     : EMPTY;
   return <ProjectForm id={id} initial={initial} />;
@@ -47,6 +50,7 @@ function ProjectForm({ id, initial }: { id?: string; initial: ProjectInput }) {
   const toast = useToast();
   const save = useSaveProject();
   const [form, setForm] = useState<ProjectInput>(initial);
+  const [uploading, setUploading] = useState(false);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -77,6 +81,24 @@ function ProjectForm({ id, initial }: { id?: string; initial: ProjectInput }) {
       />
       <form onSubmit={submit} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
         <FormCard>
+          <FormSection title="Images" description="Une bannière et un logo pour reconnaître le projet d'un coup d'œil.">
+            <ImagePairField
+              name={form.name || 'Projet'}
+              square
+              imageLabel="Logo"
+              bannerUrl={form.banner_url}
+              imageUrl={form.logo_url}
+              onBusyChange={setUploading}
+              onChange={(changes) =>
+                setForm((current) => ({
+                  ...current,
+                  ...(changes.banner !== undefined ? { banner_url: changes.banner } : {}),
+                  ...(changes.image !== undefined ? { logo_url: changes.image } : {}),
+                }))
+              }
+            />
+          </FormSection>
+
           <FormSection title="Le projet">
             <Field label="Nom du projet" required htmlFor="project-name" counter={`${form.name.length} / 100`}>
               <Input
@@ -133,7 +155,7 @@ function ProjectForm({ id, initial }: { id?: string; initial: ProjectInput }) {
             <Button variant="ghost" onClick={() => router.back()}>
               Annuler
             </Button>
-            <Button type="submit" loading={save.isPending}>
+            <Button type="submit" loading={save.isPending} disabled={uploading}>
               <Save className="size-4" aria-hidden /> {id ? 'Enregistrer' : 'Publier le projet'}
             </Button>
           </FormFooter>

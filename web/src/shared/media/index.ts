@@ -7,3 +7,4 @@ export {
   uploadMedia,
   uploadProfileImage,
 } from './upload';
+export { ImagePairField } from './ImagePairField';

@@ -7,6 +7,7 @@ import { useState } from 'react';
 
 import { errorMessage } from '@/shared/api';
 import { cn } from '@/shared/lib';
+import { ImagePairField } from '@/shared/media';
 import { Button, Dialog, Field, HUB_ICON_COMPONENTS, HubIcon, Input, Textarea, useToast } from '@/shared/ui';
 
 import { type Hub, useCreateHub, useUpdateHub } from '../api';
@@ -43,6 +44,10 @@ export function CreateHubDialog({ open, onClose, hub }: { open: boolean; onClose
   const [country, setCountry] = useState(hub?.target_country ?? '');
   const [rules, setRules] = useState<string[]>(hub?.rules ?? []);
   const [rule, setRule] = useState('');
+  const [bannerUrl, setBannerUrl] = useState(hub?.banner_url ?? '');
+  // Photo de profil du hub : une image envoyée remplace l'icône du catalogue.
+  const [imageUrl, setImageUrl] = useState(hub && /^https?:\/\//.test(hub.icon) ? hub.icon : '');
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const slug = hub?.slug ?? customSlug ?? slugify(name);
   const canSubmit = name.trim().length >= 2 && slug.length >= 3;
@@ -59,7 +64,8 @@ export function CreateHubDialog({ open, onClose, hub }: { open: boolean; onClose
     setError(null);
     const fields = {
       name: name.trim(),
-      icon: hubIconValue(icon),
+      icon: imageUrl || hubIconValue(icon),
+      banner_url: bannerUrl,
       description: description.trim(),
       target_country: country.trim(),
       rules: rule.trim() ? [...rules, rule.trim()] : rules,
@@ -83,9 +89,21 @@ export function CreateHubDialog({ open, onClose, hub }: { open: boolean; onClose
   return (
     <Dialog open={open} onClose={onClose} title={editing ? 'Modifier le hub' : 'Créer un hub'} className="w-[min(40rem,calc(100vw-2rem))]">
       <form onSubmit={submit} className="space-y-6">
+        <ImagePairField
+          name={name || 'Hub'}
+          imageLabel="Photo du hub"
+          bannerUrl={bannerUrl}
+          imageUrl={imageUrl}
+          onBusyChange={setUploading}
+          onChange={(changes) => {
+            if (changes.banner !== undefined) setBannerUrl(changes.banner);
+            if (changes.image !== undefined) setImageUrl(changes.image);
+          }}
+        />
+
         {/* Aperçu : ce que verront les membres. */}
         <div className="flex items-center gap-3.5 rounded-2xl border border-line bg-container-low/60 p-4">
-          <HubIcon icon={hubIconValue(icon)} name={name || 'Hub'} size={48} className="rounded-xl" />
+          <HubIcon icon={imageUrl || hubIconValue(icon)} name={name || 'Hub'} size={48} className="rounded-xl" />
           <div className="min-w-0">
             <p className="truncate text-headline-md text-ink">{name.trim() || 'Nom du hub'}</p>
             <p className="truncate text-body-sm text-ink-muted">
@@ -123,7 +141,7 @@ export function CreateHubDialog({ open, onClose, hub }: { open: boolean; onClose
         </div>
 
         <fieldset className="space-y-2.5">
-          <legend className="text-body-sm font-medium text-ink">Icône</legend>
+          <legend className="text-body-sm font-medium text-ink">{imageUrl ? 'Icône (utilisée si vous retirez la photo)' : 'Ou une icône'}</legend>
           <div className="grid grid-cols-5 gap-2 sm:grid-cols-10" role="radiogroup" aria-label="Icône du hub">
             {HUB_ICONS.map((item) => {
               const Glyph = HUB_ICON_COMPONENTS[item.lucide];
@@ -224,7 +242,7 @@ export function CreateHubDialog({ open, onClose, hub }: { open: boolean; onClose
           <Button variant="outline" onClick={onClose}>
             Annuler
           </Button>
-          <Button type="submit" loading={create.isPending || update.isPending} disabled={!canSubmit}>
+          <Button type="submit" loading={create.isPending || update.isPending} disabled={!canSubmit || uploading}>
             {editing ? 'Enregistrer' : 'Créer le hub'}
           </Button>
         </div>

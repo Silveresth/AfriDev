@@ -8,6 +8,7 @@ import { ApplyButton, OwnerPanel } from '@/features/matchmaking';
 import { ProjectGuide } from '@/features/onboarding-agent';
 import { TwoColumns } from '@/shared/layout';
 import { formatCount } from '@/shared/lib';
+import { absoluteMediaUrl } from '@/shared/media';
 import { useSession } from '@/shared/session';
 import {
   Avatar,
@@ -53,18 +54,29 @@ function ProjectView({ project, mine }: { project: Project; mine: boolean }) {
   return (
     <>
       <Card className="overflow-hidden">
-        <div className="relative h-24 sm:h-28" style={{ backgroundColor: profileColorHex(project.name) }} aria-hidden>
-          <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.2)_1px,transparent_1.2px)] bg-[length:14px_14px] [mask-image:linear-gradient(105deg,transparent_10%,black_75%)]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-black/15" />
-        </div>
+        {project.banner_url ? (
+          // eslint-disable-next-line @next/next/no-img-element -- image recompressée servie par le CDN
+          <img src={absoluteMediaUrl(project.banner_url)} alt="" data-media className="h-32 w-full object-cover sm:h-44" />
+        ) : (
+          <div className="h-24 bg-container sm:h-28" aria-hidden />
+        )}
         <div className="px-4 pb-5 sm:px-6">
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <span
-              className="-mt-10 flex size-20 items-center justify-center rounded-2xl border-4 border-card text-[2rem] font-bold text-white shadow-card"
-              style={{ backgroundColor: profileColorHex(project.name) }}
-            >
-              {project.name.slice(0, 1).toUpperCase()}
-            </span>
+            {project.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element -- logo recompressé servi par le CDN
+              <img
+                src={absoluteMediaUrl(project.logo_url)}
+                alt=""
+                className="-mt-10 size-20 rounded-2xl border-4 border-card bg-card object-cover shadow-card"
+              />
+            ) : (
+              <span
+                className="-mt-10 flex size-20 items-center justify-center rounded-2xl border-4 border-card text-[2rem] font-bold text-white shadow-card"
+                style={{ backgroundColor: profileColorHex(project.name) }}
+              >
+                {project.name.slice(0, 1).toUpperCase()}
+              </span>
+            )}
             <div className="flex flex-wrap gap-2 pt-3">
               {project.repo_url ? (
                 <a

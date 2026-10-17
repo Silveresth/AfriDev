@@ -52,6 +52,8 @@ export interface ProjectInput {
   repo_url: string;
   tags: string[];
   is_recruiting: boolean;
+  banner_url: string;
+  logo_url: string;
 }
 
 export function useSaveProject() {
@@ -68,7 +70,8 @@ export function useSaveProject() {
         id: newId,
         op: 'PUT',
         type: 'projects',
-        data: { ...input },
+        // Copie locale : les colonnes connues de la synchro (les images exigent le réseau).
+        data: { name: input.name, description: input.description, repo_url: input.repo_url, tags: input.tags, is_recruiting: input.is_recruiting },
         label: `Projet : ${input.name}`,
       });
     },

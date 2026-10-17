@@ -1,15 +1,16 @@
 'use client';
 
-import { CalendarDays, Github, Info, Link2, MapPin, Pencil, Share2, Sparkles, UserCheck, UserPlus } from 'lucide-react';
+import { CalendarDays, Github, Info, Link2, MapPin, MoreHorizontal, Pencil, Share2, Sparkles, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useId, useState } from 'react';
 
+import { useOpenConversation } from '@/features/messaging';
 import { errorMessage } from '@/shared/api';
 import { cn, formatCount } from '@/shared/lib';
 import { absoluteMediaUrl } from '@/shared/media';
 import { useSession } from '@/shared/session';
-import { Avatar, Button, Card, Dialog, EmptyState, Markdown, Skeleton, useToast } from '@/shared/ui';
+import { Avatar, Button, Card, Dialog, EmptyState, Markdown, Menu, MenuItem, Skeleton, useToast } from '@/shared/ui';
 
 import { type PublicProfile, useFollow, useFollowList } from '../api';
 import { SPECIAL_BADGES } from './badges';
@@ -19,8 +20,9 @@ import { SocialLinks } from './SocialLinks';
 const SINCE = new Intl.DateTimeFormat('fr', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 /**
- * En-tête immersif : bannière plein cadre assombrie en dégradé, avatar centré qui la chevauche,
- * statistiques en 3 colonnes, action principale, bio Markdown et réseaux sociaux.
+ * En-tête façon TikTok : grand avatar rond, nom en gras et @pseudo, compteurs
+ * Suivis / Followers / J'aime, puis Suivre · Message · partager · « … », et la bio.
+ * La bannière (facultative) s'affiche en bandeau discret au-dessus.
  */
 export function ProfileHeader({ profile, isMe, accent, onEdit }: { profile: PublicProfile; isMe: boolean; accent: string; onEdit: () => void }) {
   const toast = useToast();
@@ -43,68 +45,60 @@ export function ProfileHeader({ profile, isMe, accent, onEdit }: { profile: Publ
 
   return (
     <Card className="overflow-hidden">
-      <div className="relative h-44 sm:h-60" style={{ backgroundColor: accent }}>
-        {banner ? (
-          // eslint-disable-next-line @next/next/no-img-element -- image déjà recompressée (WebP) servie par le CDN
-          <img src={banner} alt="" data-media decoding="async" className="absolute inset-0 size-full object-cover" />
-        ) : (
-          <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.22)_1px,transparent_1.2px)] bg-[length:14px_14px] [mask-image:linear-gradient(105deg,transparent_10%,black_75%)]" aria-hidden />
-        )}
-        {/* Dégradé d'assombrissement : lisibilité des actions et transition douce vers la carte. */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/5 to-card" aria-hidden />
-        <div className="absolute top-3 right-3 flex gap-2">
-          <button
-            type="button"
-            onClick={share}
-            aria-label="Partager le profil"
-            className="flex size-9 items-center justify-center rounded-full bg-black/35 text-white ring-1 ring-white/20 backdrop-blur-sm transition-colors hover:bg-black/50"
-          >
-            <Share2 className="size-4" aria-hidden />
-          </button>
-        </div>
-      </div>
+      {banner ? (
+        // eslint-disable-next-line @next/next/no-img-element -- image déjà recompressée (WebP) servie par le CDN
+        <img src={banner} alt="" data-media decoding="async" className="h-28 w-full object-cover sm:h-36" />
+      ) : null}
 
-      <div className="relative -mt-20 flex flex-col items-center px-5 pb-6 text-center sm:-mt-24 sm:px-8">
-        <Avatar name={name} src={profile.avatar_url} color={accent} size={136} className="text-[2.75rem] shadow-raised ring-[5px] ring-card" />
+      <div className="px-5 pt-6 pb-6 sm:px-8 sm:pt-8">
+        <div className="flex items-start gap-5 sm:gap-8">
+          <Avatar
+            name={name}
+            src={profile.avatar_url}
+            color={accent}
+            size={160}
+            className="order-2 size-24! shrink-0 text-[2.25rem]! sm:order-1 sm:size-40! sm:text-[3rem]!"
+          />
+          <div className="order-1 min-w-0 flex-1 sm:order-2">
+            <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
+              <h1 className="flex flex-wrap items-center gap-2 text-[1.75rem] leading-tight font-extrabold tracking-tight text-ink sm:text-[2rem]">
+                <span className="break-words">{name}</span>
+                {special.map((badge) => {
+                  const { icon: Icon, className } = SPECIAL_BADGES[badge.code]!;
+                  return (
+                    <span
+                      key={badge.code}
+                      title={`${badge.label} : ${badge.description}`}
+                      className={cn('inline-flex size-6 items-center justify-center rounded-full ring-1', className)}
+                    >
+                      <Icon className="size-3.5" aria-hidden />
+                      <span className="sr-only">{badge.label}</span>
+                    </span>
+                  );
+                })}
+              </h1>
+              <span className="hidden h-5 w-px bg-line-strong sm:block" aria-hidden />
+              <p className="text-body-lg text-ink-muted">@{profile.username}</p>
+            </div>
 
-        <h1 className="mt-3 flex flex-wrap items-center justify-center gap-2 text-headline-xl text-ink">
-          {name}
-          {special.map((badge) => {
-            const { icon: Icon, className } = SPECIAL_BADGES[badge.code]!;
-            return (
-              <span
-                key={badge.code}
-                title={`${badge.label} : ${badge.description}`}
-                className={cn('inline-flex size-7 items-center justify-center rounded-full ring-1', className)}
-              >
-                <Icon className="size-4" aria-hidden />
-                <span className="sr-only">{badge.label}</span>
-              </span>
-            );
-          })}
-        </h1>
-        <p className="mt-0.5 text-body-md text-ink-muted">
-          @{profile.username}
-          {profile.stack?.length ? <span className="text-ink"> · {profile.stack.slice(0, 3).join(', ')}</span> : null}
-        </p>
+            <StatsBar profile={profile} accent={accent} />
 
-        <StatsBar profile={profile} accent={accent} />
-
-        <div className="mt-4 flex w-full max-w-xs justify-center gap-2">
-          {isMe ? (
-            <Button className="flex-1" variant="outline" onClick={onEdit}>
-              <Pencil className="size-4" aria-hidden /> Modifier mon profil
-            </Button>
-          ) : (
-            <FollowButton profile={profile} />
-          )}
+            <div className="mt-4 hidden items-center gap-2 sm:flex">
+              <Actions profile={profile} isMe={isMe} onEdit={onEdit} onShare={share} />
+            </div>
+          </div>
         </div>
 
-        {profile.bio ? <Markdown source={profile.bio} breaks className="mt-5 max-w-prose text-body-lg [&_p]:my-1" /> : null}
+        <div className="mt-4 flex items-center gap-2 sm:hidden">
+          <Actions profile={profile} isMe={isMe} onEdit={onEdit} onShare={share} />
+        </div>
 
-        <SocialLinks links={profile.social_links} className="mt-4 justify-center" />
+        {profile.bio ? <Markdown source={profile.bio} breaks className="mt-4 max-w-prose text-body-md text-ink [&_p]:my-1" /> : null}
+        {profile.stack?.length ? <p className="mt-2 text-body-sm text-ink-muted">{profile.stack.slice(0, 6).join(' · ')}</p> : null}
 
-        <ul className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-body-sm text-ink-muted">
+        <SocialLinks links={profile.social_links} className="mt-3" />
+
+        <ul className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-body-sm text-ink-muted">
           {profile.location ? (
             <li className="flex items-center gap-1.5">
               <MapPin className="size-4 text-ink-faint" aria-hidden /> {profile.location}
@@ -128,11 +122,52 @@ export function ProfileHeader({ profile, isMe, accent, onEdit }: { profile: Publ
             </li>
           ) : null}
         </ul>
-        <div className="w-full max-w-xl text-left">
+        <div className="w-full max-w-xl">
           <OpenToWork profile={profile} />
         </div>
       </div>
     </Card>
+  );
+}
+
+const roundAction =
+  'flex size-11 shrink-0 items-center justify-center rounded-full bg-container text-ink transition-colors hover:bg-container-high';
+
+/** Rangée d'actions : Suivre (rouge plein) · Message · partager · « … » (ou Modifier pour soi). */
+function Actions({ profile, isMe, onEdit, onShare }: { profile: PublicProfile; isMe: boolean; onEdit: () => void; onShare: () => void }) {
+  const toast = useToast();
+  if (isMe) {
+    return (
+      <>
+        <Button className="h-11 flex-1 rounded-full sm:w-56 sm:flex-none" variant="primary" onClick={onEdit}>
+          <Pencil className="size-4" aria-hidden /> Modifier le profil
+        </Button>
+        <button type="button" onClick={onShare} aria-label="Partager le profil" className={roundAction}>
+          <Share2 className="size-5" aria-hidden />
+        </button>
+      </>
+    );
+  }
+  return (
+    <>
+      <FollowButton profile={profile} />
+      <MessageButton username={profile.username} />
+      <button type="button" onClick={onShare} aria-label="Partager le profil" className={roundAction}>
+        <Share2 className="size-5" aria-hidden />
+      </button>
+      <Menu
+        className="w-52"
+        trigger={(props) => (
+          <button type="button" aria-label="Plus d'actions" {...props} className={roundAction}>
+            <MoreHorizontal className="size-5" aria-hidden />
+          </button>
+        )}
+      >
+        <MenuItem onSelect={() => void navigator.clipboard.writeText(`${window.location.origin}/u/${profile.username}`).then(() => toast('Lien du profil copié.'))}>
+          <Link2 aria-hidden /> Copier le lien
+        </MenuItem>
+      </Menu>
+    </>
   );
 }
 
@@ -145,8 +180,8 @@ function FollowButton({ profile }: { profile: PublicProfile }) {
   const following = profile.is_following;
   return (
     <Button
-      className="flex-1"
-      variant={following ? 'outline' : 'primary'}
+      className={cn('h-11 flex-1 rounded-full sm:w-44 sm:flex-none', following && 'bg-container text-ink hover:bg-container-high')}
+      variant={following ? 'ghost' : 'primary'}
       aria-pressed={following}
       onClick={() => {
         if (!isAuthenticated) {
@@ -156,28 +191,61 @@ function FollowButton({ profile }: { profile: PublicProfile }) {
         follow.mutate(!following, { onError: (error) => toast(errorMessage(error)) });
       }}
     >
-      {following ? <UserCheck className="size-4" aria-hidden /> : <UserPlus className="size-4" aria-hidden />}
+      {following ? <UserCheck className="size-4" aria-hidden /> : null}
       {following ? 'Abonné·e' : 'Suivre'}
     </Button>
   );
 }
 
-/** [Abonnements] | [Abonnés] | [Craft Score] : les deux premiers ouvrent la liste. */
+/** Ouvre (ou crée) la conversation avec ce membre, puis la messagerie. */
+function MessageButton({ username }: { username: string }) {
+  const { isAuthenticated } = useSession();
+  const router = useRouter();
+  const pathname = usePathname();
+  const toast = useToast();
+  const open = useOpenConversation();
+  return (
+    <Button
+      variant="ghost"
+      className="h-11 flex-1 rounded-full bg-container font-semibold text-ink hover:bg-container-high sm:w-36 sm:flex-none"
+      loading={open.isPending}
+      onClick={() => {
+        if (!isAuthenticated) {
+          router.push(`/login?next=${encodeURIComponent(pathname)}`);
+          return;
+        }
+        open.mutate(username, {
+          onSuccess: (conversation) => router.push(`/messages?c=${conversation.id}`),
+          onError: (error) => toast(errorMessage(error), 'error'),
+        });
+      }}
+    >
+      Message
+    </Button>
+  );
+}
+
+/** « 946 Suivis  16,4 k Followers  270 k J'aime  · Craft » : les deux premiers ouvrent la liste. */
 function StatsBar({ profile, accent }: { profile: PublicProfile; accent: string }) {
   const [list, setList] = useState<'followers' | 'following' | null>(null);
-  const cell = 'flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-2 transition-colors';
+  const likes = (profile.craft.creation.breakdown.post_upvotes ?? 0) + (profile.craft.help.breakdown.answer_upvotes ?? 0);
+  const stat = 'flex items-baseline gap-1.5 rounded-lg transition-colors hover:text-primary-ink';
   return (
     <>
-      <div className="mt-5 flex w-full max-w-md items-stretch divide-x divide-line">
-        <button type="button" className={cn(cell, 'hover:bg-container-low')} onClick={() => setList('following')}>
-          <span className="text-headline-md text-ink tabular-nums">{formatCount(profile.following_count)}</span>
-          <span className="text-label-md text-ink-muted">Abonnements</span>
+      <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+        <button type="button" className={stat} onClick={() => setList('following')}>
+          <span className="text-[1.125rem] font-bold text-ink tabular-nums">{formatCount(profile.following_count)}</span>
+          <span className="text-body-md text-ink-muted">Suivis</span>
         </button>
-        <button type="button" className={cn(cell, 'hover:bg-container-low')} onClick={() => setList('followers')}>
-          <span className="text-headline-md text-ink tabular-nums">{formatCount(profile.followers_count)}</span>
-          <span className="text-label-md text-ink-muted">Abonnés</span>
+        <button type="button" className={stat} onClick={() => setList('followers')}>
+          <span className="text-[1.125rem] font-bold text-ink tabular-nums">{formatCount(profile.followers_count)}</span>
+          <span className="text-body-md text-ink-muted">Followers</span>
         </button>
-        <CraftStat profile={profile} accent={accent} className={cell} />
+        <span className="flex items-baseline gap-1.5">
+          <span className="text-[1.125rem] font-bold text-ink tabular-nums">{formatCount(likes)}</span>
+          <span className="text-body-md text-ink-muted">J&apos;aime</span>
+        </span>
+        <CraftStat profile={profile} accent={accent} className="flex items-baseline" />
       </div>
       <FollowListDialog username={profile.username} kind={list} onClose={() => setList(null)} />
     </>
@@ -191,13 +259,13 @@ function CraftStat({ profile, accent, className }: { profile: PublicProfile; acc
   const total = Math.max(1, craft.help.score + craft.creation.score);
   return (
     <div className={cn(className, 'group relative')}>
-      <button type="button" aria-describedby={tooltipId} className="flex flex-col items-center gap-0.5 outline-none">
-        <span className="flex items-center gap-1 text-headline-md tabular-nums" style={{ color: accent }}>
-          <Sparkles className="size-4" aria-hidden />
+      <button type="button" aria-describedby={tooltipId} className="flex items-baseline gap-1.5 outline-none">
+        <span className="flex items-center gap-1 text-[1.125rem] font-bold tabular-nums" style={{ color: accent }}>
+          <Sparkles className="size-4 self-center" aria-hidden />
           {formatCount(craft.score)}
         </span>
-        <span className="flex items-center gap-1 text-label-md text-ink-muted">
-          Craft Score <Info className="size-3" aria-hidden />
+        <span className="flex items-center gap-1 text-body-md text-ink-muted">
+          Craft <Info className="size-3 self-center" aria-hidden />
         </span>
       </button>
       <div

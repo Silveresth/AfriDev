@@ -10,8 +10,8 @@ class HubInputSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=60)
     slug = serializers.CharField(max_length=40, required=False, allow_blank=True, default="")
     description = serializers.CharField(max_length=500, required=False, allow_blank=True)
-    icon = serializers.CharField(max_length=300, required=False, allow_blank=True)
-    banner_url = serializers.URLField(required=False, allow_blank=True)
+    icon = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    banner_url = serializers.URLField(max_length=500, required=False, allow_blank=True)
     rules = serializers.ListField(
         child=serializers.CharField(max_length=200, allow_blank=True), required=False, max_length=10
     )
@@ -21,8 +21,8 @@ class HubInputSerializer(serializers.Serializer):
 class HubUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=60, required=False)
     description = serializers.CharField(max_length=500, required=False, allow_blank=True)
-    icon = serializers.CharField(max_length=300, required=False, allow_blank=True)
-    banner_url = serializers.URLField(required=False, allow_blank=True)
+    icon = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    banner_url = serializers.URLField(max_length=500, required=False, allow_blank=True)
     rules = serializers.ListField(
         child=serializers.CharField(max_length=200, allow_blank=True), required=False, max_length=10
     )
