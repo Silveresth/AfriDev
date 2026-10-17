@@ -1,5 +1,6 @@
 import pytest
 
+from features.onboarding_agent import selectors as guide_selectors
 from features.profiles import selectors as profile_selectors
 from features.profiles import services as profile_services
 from features.projects import services as project_services
@@ -29,20 +30,29 @@ def test_matchmaking_api(auth_client, client_for, user, other_user):
 def test_accepted_candidate_gets_welcome_page_and_guide(
     auth_client, client_for, user, other_user, make_user, monkeypatch
 ):
-    from features.onboarding_agent import tasks as guide_tasks
-    from features.onboarding_agent.models import OnboardingGuide
-    from features.projects.models import Issue, Project
-
-    monkeypatch.setattr(guide_tasks.ai_build_onboarding_guide, "delay", lambda *a, **k: None)
-    project = project_services.create_project(owner=user, name="AfriPay", tags=["django"])
-    Project.objects.filter(id=project.id).update(repo_url="https://github.com/afridev/afripay")
-    Issue.objects.create(project=project, number=1, title="Refactor", url="https://github.com/x/1")
-    Issue.objects.create(
-        project=project,
-        number=2,
-        title="Fix typo",
-        url="https://github.com/x/2",
-        labels=["good first issue"],
+    # Ni GitHub ni l'IA pendant le test : les tâches sont neutralisées par leur chemin.
+    monkeypatch.setattr(
+        "features.projects.tasks.sync_project_repo.delay", lambda *args, **kwargs: None
+    )
+    monkeypatch.setattr(
+        "features.onboarding_agent.tasks.ai_build_onboarding_guide.delay",
+        lambda *args, **kwargs: None,
+    )
+    project = project_services.create_project(
+        owner=user, name="AfriPay", tags=["django"], repo_url="https://github.com/afridev/afripay"
+    )
+    project_services.store_repo_sync(
+        project_id=project.id,
+        repo={"stars": 3},
+        issues=[
+            {"number": 1, "title": "Refactor", "url": "https://github.com/x/1"},
+            {
+                "number": 2,
+                "title": "Fix typo",
+                "url": "https://github.com/x/2",
+                "labels": ["good first issue"],
+            },
+        ],
     )
 
     candidate = client_for(other_user)
@@ -57,7 +67,7 @@ def test_accepted_candidate_gets_welcome_page_and_guide(
         {"accept": True},
         format="json",
     )
-    guide = OnboardingGuide.objects.get(project_id=project.id)
+    guide = guide_selectors.latest_project_guide(project_id=project.id)
     assert guide.requested_by_id == other_user.id
 
     welcome = candidate.get(url).data
