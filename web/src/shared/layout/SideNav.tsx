@@ -4,6 +4,7 @@ import { PanelLeftClose, PanelLeftOpen, Settings, ShieldCheck } from 'lucide-rea
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { useUnreadMessages } from '@/features/messaging';
 import { useLang } from '@/shared/i18n';
 import { cn, formatBytes } from '@/shared/lib';
 import { useIsOnline, useStorageEstimate } from '@/shared/offline';
@@ -36,6 +37,7 @@ export function SideNav({
   const { user, profile } = useSession();
   const { t } = useLang();
   const pathname = navPath(usePathname(), profile?.username);
+  const { data: unreadMessages } = useUnreadMessages();
 
   return (
     <nav aria-label="Navigation principale" className="flex min-h-full flex-col gap-4">
@@ -53,7 +55,13 @@ export function SideNav({
           <ul className="space-y-0.5">
             {section.hrefs.map((href) => (
               <li key={href}>
-                <NavLink item={byHref(href)} pathname={pathname} collapsed={collapsed} showShortcut={showShortcuts} />
+                <NavLink
+                  item={byHref(href)}
+                  pathname={pathname}
+                  collapsed={collapsed}
+                  showShortcut={showShortcuts}
+                  badge={href === '/messages' ? unreadMessages : undefined}
+                />
               </li>
             ))}
           </ul>
@@ -92,11 +100,14 @@ function NavLink({
   pathname,
   collapsed,
   showShortcut = false,
+  badge,
 }: {
   item: NavItem;
   pathname: string;
   collapsed: boolean;
   showShortcut?: boolean;
+  /** Pastille de non-lus (messages). */
+  badge?: number;
 }) {
   const { t } = useLang();
   const active = isActive(pathname, item.href);
@@ -121,10 +132,16 @@ function NavLink({
         strokeWidth={active ? 2 : 1.75}
         aria-hidden
       />
+      {badge && collapsed ? <span className="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-primary ring-2 ring-surface" aria-hidden /> : null}
       {collapsed ? null : (
         <>
           <span className="flex-1 truncate">{label}</span>
-          {showShortcut && item.key ? (
+          {badge ? (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-label-sm font-bold text-on-primary tabular-nums">
+              {badge > 99 ? '99+' : badge}
+            </span>
+          ) : null}
+          {showShortcut && item.key && !badge ? (
             <span className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden>
               <Kbd>G</Kbd>
               <Kbd>{item.key.toUpperCase()}</Kbd>

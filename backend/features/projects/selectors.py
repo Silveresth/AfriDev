@@ -69,6 +69,7 @@ def home_candidates(*, before=None, limit: int, author_ids=None) -> list[dict]:
         "language",
         "is_recruiting",
         "repo_url",
+        "logo_url",
     )[:limit]
     return [
         {
@@ -86,6 +87,7 @@ def home_candidates(*, before=None, limit: int, author_ids=None) -> list[dict]:
                 "language": p.language,
                 "is_recruiting": p.is_recruiting,
                 "repo_url": p.repo_url,
+                "logo_url": p.logo_url,
             },
         }
         for p in rows

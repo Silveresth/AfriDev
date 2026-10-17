@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "features.bookmarks",
     "features.jobs_events",
     "features.reactions",
+    "features.messaging",
 ]
 
 MIDDLEWARE = [

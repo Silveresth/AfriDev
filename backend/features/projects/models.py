@@ -11,6 +11,9 @@ class Project(BaseModel):
     name = models.CharField(max_length=100)
     description = models.TextField(max_length=3000, blank=True)
     repo_url = models.URLField(blank=True)
+    # Bannière et logo (envoyés vers le stockage objet, comme les images de profil).
+    banner_url = models.URLField(max_length=500, blank=True)
+    logo_url = models.URLField(max_length=500, blank=True)
     # Technologies du projet (même forme que la colonne `tags` de la copie locale).
     tags = models.JSONField(default=list, blank=True)
     is_recruiting = models.BooleanField(default=True)

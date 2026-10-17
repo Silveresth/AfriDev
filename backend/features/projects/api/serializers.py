@@ -12,6 +12,8 @@ class ProjectInputSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100)
     description = serializers.CharField(max_length=3000, required=False, allow_blank=True)
     repo_url = serializers.URLField(required=False, allow_blank=True)
+    banner_url = serializers.URLField(max_length=500, required=False, allow_blank=True)
+    logo_url = serializers.URLField(max_length=500, required=False, allow_blank=True)
     tags = serializers.ListField(child=serializers.CharField(max_length=30), required=False)
     is_recruiting = serializers.BooleanField(required=False, default=True)
 
@@ -20,6 +22,8 @@ class ProjectUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100, required=False)
     description = serializers.CharField(max_length=3000, required=False, allow_blank=True)
     repo_url = serializers.URLField(required=False, allow_blank=True)
+    banner_url = serializers.URLField(max_length=500, required=False, allow_blank=True)
+    logo_url = serializers.URLField(max_length=500, required=False, allow_blank=True)
     tags = serializers.ListField(child=serializers.CharField(max_length=30), required=False)
     is_recruiting = serializers.BooleanField(required=False)
 
@@ -29,6 +33,8 @@ class ProjectOutputSerializer(serializers.Serializer):
     name = serializers.CharField()
     description = serializers.CharField()
     repo_url = serializers.CharField()
+    banner_url = serializers.CharField()
+    logo_url = serializers.CharField()
     tags = serializers.ListField(child=serializers.CharField())
     is_recruiting = serializers.BooleanField()
     stars = serializers.IntegerField()
@@ -59,6 +65,8 @@ def present_projects(projects) -> list[dict]:
             "name": p.name,
             "description": p.description,
             "repo_url": p.repo_url,
+            "banner_url": p.banner_url,
+            "logo_url": p.logo_url,
             "tags": p.tags,
             "is_recruiting": p.is_recruiting,
             "stars": p.stars,

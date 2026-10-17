@@ -1245,6 +1245,88 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/messages/conversations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["messages_conversations_list"];
+        put?: never;
+        /** @description Ouvre (ou retrouve) la conversation avec ce membre. */
+        post: operations["messages_conversations_open"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/messages/conversations/{conversation_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["messages_conversations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/messages/conversations/{conversation_id}/messages/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Messages du plus récent au plus ancien. */
+        get: operations["messages_list"];
+        put?: never;
+        post: operations["messages_send"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/messages/conversations/{conversation_id}/read/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["messages_mark_read"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/messages/unread/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["messages_unread"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/moderation/reports/": {
         parameters: {
             query?: never;
@@ -2612,6 +2694,22 @@ export interface components {
          * @enum {string}
          */
         ContractTypeEnum: "cdi" | "cdd" | "freelance" | "stage" | "alternance" | "temps_partiel";
+        Conversation: {
+            /** Format: uuid */
+            id: string;
+            /** @description L'autre participant. */
+            other: components["schemas"]["Author"] | null;
+            last_message_preview: string;
+            /** Format: date-time */
+            last_message_at: string | null;
+            last_message_mine: boolean;
+            unread: number;
+            /**
+             * Format: date-time
+             * @description Lu par l'autre jusqu'à cette date (« Vu »).
+             */
+            other_read_at: string | null;
+        };
         /** @description Craft Score global et ses deux jauges (infobulle Entraide vs Création). */
         Craft: {
             score: number;
@@ -3153,6 +3251,18 @@ export interface components {
             staff: number;
             suspended: number;
         };
+        Message: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            sender_id: string;
+            body: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        MessageInputRequest: {
+            body: string;
+        };
         /**
          * @description * `PUT` - PUT
          *     * `POST` - POST
@@ -3354,6 +3464,9 @@ export interface components {
          * @enum {string}
          */
         OpEnum: "PUT" | "PATCH" | "DELETE";
+        OpenConversationRequest: {
+            username: string;
+        };
         PaginatedCommentOutputList: {
             /** Format: uri */
             next: string | null;
@@ -3367,6 +3480,13 @@ export interface components {
             /** Format: uri */
             previous: string | null;
             results: components["schemas"]["ContentRow"][];
+        };
+        PaginatedConversationList: {
+            /** Format: uri */
+            next: string | null;
+            /** Format: uri */
+            previous: string | null;
+            results: components["schemas"]["Conversation"][];
         };
         PaginatedEventOutputList: {
             /** Format: uri */
@@ -3437,6 +3557,13 @@ export interface components {
             /** Format: uri */
             previous: string | null;
             results: components["schemas"]["Member"][];
+        };
+        PaginatedMessageList: {
+            /** Format: uri */
+            next: string | null;
+            /** Format: uri */
+            previous: string | null;
+            results: components["schemas"]["Message"][];
         };
         PaginatedModerationReportList: {
             /** Format: uri */
@@ -3583,6 +3710,8 @@ export interface components {
             name?: string;
             description?: string;
             repo_url?: string;
+            banner_url?: string;
+            logo_url?: string;
             tags?: string[];
             is_recruiting?: boolean;
         };
@@ -3751,6 +3880,8 @@ export interface components {
             name: string;
             description?: string;
             repo_url?: string;
+            banner_url?: string;
+            logo_url?: string;
             tags?: string[];
             /** @default true */
             is_recruiting: boolean;
@@ -3761,6 +3892,8 @@ export interface components {
             name: string;
             description: string;
             repo_url: string;
+            banner_url: string;
+            logo_url: string;
             tags: string[];
             is_recruiting: boolean;
             stars: number;
@@ -4367,6 +4500,10 @@ export interface components {
             author: components["schemas"]["Author"] | null;
         };
         UnreadCount: {
+            unread: number;
+        };
+        UnreadMessages: {
+            /** @description Conversations avec des messages non lus. */
             unread: number;
         };
         UploadInputRequest: {
@@ -6825,6 +6962,169 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PresignUploadOutput"];
+                };
+            };
+        };
+    };
+    messages_conversations_list: {
+        parameters: {
+            query?: {
+                /** @description Curseur de la page suivante */
+                cursor?: string;
+                /** @description 20 par défaut, 50 maximum */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedConversationList"];
+                };
+            };
+        };
+    };
+    messages_conversations_open: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenConversationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OpenConversationRequest"];
+                "multipart/form-data": components["schemas"]["OpenConversationRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+        };
+    };
+    messages_conversations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+        };
+    };
+    messages_list: {
+        parameters: {
+            query?: {
+                /** @description Curseur de la page suivante */
+                cursor?: string;
+                /** @description 20 par défaut, 50 maximum */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedMessageList"];
+                };
+            };
+        };
+    };
+    messages_send: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessageInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MessageInputRequest"];
+                "multipart/form-data": components["schemas"]["MessageInputRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+        };
+    };
+    messages_mark_read: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+        };
+    };
+    messages_unread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadMessages"];
                 };
             };
         };

@@ -40,6 +40,8 @@ def create_project(
     repo_url: str = "",
     tags: list | None = None,
     is_recruiting: bool = True,
+    banner_url: str = "",
+    logo_url: str = "",
     project_id=None,
 ) -> Project:
     if project_id:
@@ -58,6 +60,8 @@ def create_project(
         repo_url=_validate_repo(repo_url),
         tags=normalize_tags(tags, limit=12),
         is_recruiting=is_recruiting,
+        banner_url=banner_url.strip(),
+        logo_url=logo_url.strip(),
     )
     if project_id:
         project.id = project_id
@@ -71,7 +75,15 @@ def update_project(*, project: Project, user, **fields) -> Project:
     if project.owner_id != user.id and not user.is_staff:
         raise PermissionDeniedError("Seul le porteur du projet peut le modifier.")
     changed = []
-    for name in ("name", "description", "repo_url", "tags", "is_recruiting"):
+    for name in (
+        "name",
+        "description",
+        "repo_url",
+        "tags",
+        "is_recruiting",
+        "banner_url",
+        "logo_url",
+    ):
         if name not in fields or fields[name] is None:
             continue
         value = fields[name]

@@ -24,6 +24,7 @@ urlpatterns = [
     path("api/hubs/", include("features.hubs.api.urls")),
     path("api/bookmarks/", include("features.bookmarks.api.urls")),
     path("api/reactions/", include("features.reactions.api.urls")),
+    path("api/messages/", include("features.messaging.api.urls")),
     path("api/", include("features.jobs_events.api.urls")),  # /api/job-board/ et /api/events/
     path("api/discussions/", include("features.discussions.api.urls")),
     path("api/translation/", include("features.translation.api.urls")),

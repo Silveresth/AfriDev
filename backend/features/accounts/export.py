@@ -11,6 +11,7 @@ from features.discussions import selectors as discussion_selectors
 from features.feed import selectors as feed_selectors
 from features.hubs import selectors as hub_selectors
 from features.jobs_events import selectors as jobs_selectors
+from features.messaging import selectors as messaging_selectors
 from features.profiles import selectors as profile_selectors
 from features.projects import selectors as project_selectors
 from features.qa import selectors as qa_selectors
@@ -30,6 +31,7 @@ SECTIONS = (
     bookmark_selectors,
     jobs_selectors,
     reaction_selectors,
+    messaging_selectors,
 )
 
 
