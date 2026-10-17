@@ -16,6 +16,8 @@ export function notificationHref(data: unknown): string | null {
       return `/projects/${id}`;
     case 'guide':
       return `/projects/guides/${id}`;
+    case 'welcome':
+      return `/projects/welcome/${id}`;
     case 'profile':
       return `/u/${id}`;
     default:

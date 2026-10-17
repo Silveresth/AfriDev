@@ -169,6 +169,14 @@ export function notificationRoute(data: unknown): string | null {
   return null;
 }
 
+/** Notifications sans écran dans l'appli (projet, guide, espace contributeur) : page du site. */
+export function notificationWebUrl(data: unknown): string | null {
+  const { type, id } = (data ?? {}) as { type?: string; id?: string };
+  if (!id) return null;
+  const path = { project: `/projects/${id}`, guide: `/projects/guides/${id}`, welcome: `/projects/welcome/${id}` }[type ?? ''];
+  return path ? `${PUBLIC_WEB_URL}${path}` : null;
+}
+
 /** Ouvre un lien dans l'application si c'est une ressource interne, ou dans le navigateur intégré. */
 export function openLink(url: string) {
   const internalRoute = resolveInternalRoute(url);

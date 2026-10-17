@@ -4,7 +4,7 @@ import { AtSign, Bell, CheckCheck, CheckCircle2, Heart, MessageSquare, Sparkles,
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { api, type Schemas, unwrap } from '@/shared/api';
-import { notificationRoute, timeAgo } from '@/shared/lib';
+import { notificationRoute, notificationWebUrl, openLink, timeAgo } from '@/shared/lib';
 import { useT } from '@/shared/i18n';
 import { AppearItem } from '@/shared/motion';
 import { type Page, useInfiniteList } from '@/shared/query';
@@ -119,7 +119,9 @@ export function NotificationsScreen() {
   const open = (notification: Notification) => {
     if (!notification.read_at) markRead.mutate(notification);
     const href = hrefOf(notification);
+    const web = notificationWebUrl(notification.data);
     if (href) router.push(href);
+    else if (web) void openLink(web);
   };
 
   return (

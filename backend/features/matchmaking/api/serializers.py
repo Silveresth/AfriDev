@@ -62,6 +62,36 @@ class ApplicationSerializer(ReadOnlyModelSerializer):
         return cards.get(application.candidate_id)
 
 
+class WelcomeProjectSerializer(ProjectSummarySerializer):
+    language = serializers.CharField()
+
+
+class WelcomeGuideSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    status = serializers.CharField()
+
+
+class WelcomeIssueSerializer(serializers.Serializer):
+    number = serializers.IntegerField()
+    title = serializers.CharField()
+    url = serializers.URLField()
+    labels = serializers.ListField(child=serializers.CharField())
+    good_first = serializers.BooleanField()
+
+
+class WelcomeSerializer(serializers.Serializer):
+    """Page « Bienvenue dans l'équipe » d'un candidat accepté (aussi visible du porteur)."""
+
+    application_id = serializers.UUIDField()
+    accepted_at = serializers.DateTimeField()
+    viewer_role = serializers.ChoiceField(choices=["candidate", "owner"])
+    project = WelcomeProjectSerializer()
+    owner = AuthorSerializer(allow_null=True)
+    team = AuthorSerializer(many=True, help_text="Contributeurs acceptés sur le projet.")
+    guide = WelcomeGuideSerializer(allow_null=True)
+    issues = WelcomeIssueSerializer(many=True)
+
+
 def project_summary(project) -> dict:
     return {
         "id": project.id,

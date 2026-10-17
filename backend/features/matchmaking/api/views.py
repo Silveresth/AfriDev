@@ -6,15 +6,19 @@ from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from features.onboarding_agent import selectors as guide_selectors
+from features.profiles import selectors as profile_selectors
 from features.projects import selectors as project_selectors
 
 from .. import selectors, services
+from ..models import ProjectApplication
 from .serializers import (
     ApplicationAnswerInputSerializer,
     ApplicationSerializer,
     ApplyInputSerializer,
     CandidateRecommendationSerializer,
     ProjectRecommendationSerializer,
+    WelcomeSerializer,
     candidate_card,
     project_summary,
 )
@@ -97,6 +101,42 @@ class AnswerApplicationView(APIView):
             accept=data.validated_data["accept"],
         )
         return Response(ApplicationSerializer(application).data)
+
+
+class WelcomeView(APIView):
+    """GET /api/matchmaking/applications/<id>/welcome/ : tout ce qu'il faut pour démarrer."""
+
+    @extend_schema(responses=WelcomeSerializer, operation_id="matchmaking_welcome")
+    def get(self, request, application_id):
+        application = _application(application_id)
+        project = project_selectors.get_project(project_id=application.project_id)
+        if project is None:
+            raise NotFound("Projet introuvable.")
+        is_candidate = application.candidate_id == request.user.id
+        is_owner = project.owner_id == request.user.id
+        if (
+            not (is_candidate or is_owner)
+            or application.status != ProjectApplication.Status.ACCEPTED
+        ):
+            raise NotFound("Candidature introuvable.")
+
+        team_ids = selectors.accepted_member_ids(project_id=project.id)
+        cards = profile_selectors.author_cards(user_ids={project.owner_id, *team_ids})
+        guide = guide_selectors.latest_project_guide(project_id=project.id)
+        return Response(
+            WelcomeSerializer(
+                {
+                    "application_id": application.id,
+                    "accepted_at": application.updated_at,
+                    "viewer_role": "candidate" if is_candidate else "owner",
+                    "project": {**project_summary(project), "language": project.language},
+                    "owner": cards.get(project.owner_id),
+                    "team": [cards[uid] for uid in team_ids if uid in cards],
+                    "guide": {"id": guide.id, "status": guide.status} if guide else None,
+                    "issues": selectors.welcome_issues(project_id=project.id),
+                }
+            ).data
+        )
 
 
 class ApplicationDetailView(APIView):

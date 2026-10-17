@@ -1047,6 +1047,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/matchmaking/applications/{application_id}/welcome/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET /api/matchmaking/applications/<id>/welcome/ : tout ce qu'il faut pour démarrer. */
+        get: operations["matchmaking_welcome"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/matchmaking/applications/mine/": {
         parameters: {
             query?: never;
@@ -4346,6 +4363,12 @@ export interface components {
          * @enum {integer}
          */
         ValueEnum: -1 | 0 | 1;
+        /**
+         * @description * `candidate` - candidate
+         *     * `owner` - owner
+         * @enum {string}
+         */
+        ViewerRoleEnum: "candidate" | "owner";
         ViewerState: {
             /** @description Vote du membre sur le post : -1, 0 ou 1. */
             post_vote: number;
@@ -4394,6 +4417,43 @@ export interface components {
             weights: {
                 [key: string]: number;
             };
+        };
+        /** @description Page « Bienvenue dans l'équipe » d'un candidat accepté (aussi visible du porteur). */
+        Welcome: {
+            /** Format: uuid */
+            application_id: string;
+            /** Format: date-time */
+            accepted_at: string;
+            viewer_role: components["schemas"]["ViewerRoleEnum"];
+            project: components["schemas"]["WelcomeProject"];
+            owner: components["schemas"]["Author"] | null;
+            /** @description Contributeurs acceptés sur le projet. */
+            team: components["schemas"]["Author"][];
+            guide: components["schemas"]["WelcomeGuide"] | null;
+            issues: components["schemas"]["WelcomeIssue"][];
+        };
+        WelcomeGuide: {
+            /** Format: uuid */
+            id: string;
+            status: string;
+        };
+        WelcomeIssue: {
+            number: number;
+            title: string;
+            /** Format: uri */
+            url: string;
+            labels: string[];
+            good_first: boolean;
+        };
+        WelcomeProject: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description: string;
+            repo_url: string;
+            tags: string[];
+            stars: number;
+            language: string;
         };
         /**
          * @description * `cdi_remote` - CDI en télétravail
@@ -6396,6 +6456,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Application"];
+                };
+            };
+        };
+    };
+    matchmaking_welcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Welcome"];
                 };
             };
         };

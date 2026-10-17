@@ -1,6 +1,6 @@
 'use client';
 
-import { GitPullRequestArrow } from 'lucide-react';
+import { GitPullRequestArrow, PartyPopper } from 'lucide-react';
 import { useState } from 'react';
 
 import { errorMessage } from '@/shared/api';
@@ -26,10 +26,17 @@ export function ApplyButton({ projectId, projectName }: { projectId: string; pro
     );
   }
   const existing = applications.data?.find((application) => application.project_id === projectId);
-  if (existing) {
-    const label = { pending: 'Candidature envoyée', accepted: 'Candidature acceptée', declined: 'Candidature déclinée' }[existing.status];
+  if (existing?.status === 'accepted') {
     return (
-      <StatusBadge tone={existing.status === 'accepted' ? 'success' : existing.status === 'declined' ? 'neutral' : 'warning'} className="justify-center py-2">
+      <ButtonLink href={`/projects/welcome/${existing.id}`} variant="secondary" className="w-full">
+        <PartyPopper className="size-4" aria-hidden /> Mon espace contributeur
+      </ButtonLink>
+    );
+  }
+  if (existing) {
+    const label = existing.status === 'pending' ? 'Candidature envoyée' : 'Candidature déclinée';
+    return (
+      <StatusBadge tone={existing.status === 'declined' ? 'neutral' : 'warning'} className="justify-center py-2">
         {label}
       </StatusBadge>
     );

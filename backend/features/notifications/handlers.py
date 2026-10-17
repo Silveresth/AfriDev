@@ -161,10 +161,18 @@ def on_application_submitted(
 def on_application_answered(
     sender, application_id, project_id, project_name, candidate_id, accepted, **kwargs
 ):
-    verdict = "acceptée" if accepted else "déclinée"
+    if accepted:
+        notify(
+            recipient_id=candidate_id,
+            kind=Kind.APPLICATION_ANSWERED,
+            title=f"Bienvenue dans l'équipe {project_name} 🎉",
+            body="Votre guide de démarrage et vos premières tâches vous attendent.",
+            data={"type": "welcome", "id": str(application_id), "project_id": str(project_id)},
+        )
+        return
     notify(
         recipient_id=candidate_id,
         kind=Kind.APPLICATION_ANSWERED,
-        title=f"Candidature {verdict} : {project_name}",
+        title=f"Candidature déclinée : {project_name}",
         data={"type": "project", "id": str(project_id), "application_id": str(application_id)},
     )

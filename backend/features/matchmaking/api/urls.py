@@ -8,6 +8,7 @@ from .views import (
     ProjectApplicationsView,
     RecommendedCandidatesView,
     RecommendedProjectsView,
+    WelcomeView,
 )
 
 app_name = "matchmaking"
@@ -30,6 +31,11 @@ urlpatterns = [
         "applications/<uuid:application_id>/",
         ApplicationDetailView.as_view(),
         name="application-detail",
+    ),
+    path(
+        "applications/<uuid:application_id>/welcome/",
+        WelcomeView.as_view(),
+        name="application-welcome",
     ),
     path(
         "applications/<uuid:application_id>/answer/",

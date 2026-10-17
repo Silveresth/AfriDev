@@ -54,6 +54,18 @@ export function useProjectApplications(projectId: string, enabled: boolean) {
   });
 }
 
+export type Welcome = Schemas['Welcome'];
+
+/** Espace « Bienvenue dans l'équipe » : le guide IA est guetté tant qu'il se prépare. */
+export function useWelcome(applicationId: string) {
+  return useQuery({
+    queryKey: ['matchmaking', 'welcome', applicationId],
+    queryFn: () =>
+      unwrap(api.GET('/api/matchmaking/applications/{application_id}/welcome/', { params: { path: { application_id: applicationId } } })),
+    refetchInterval: (query) => (query.state.data?.guide?.status === 'pending' ? 5000 : false),
+  });
+}
+
 export function useApply(projectId: string) {
   const queryClient = useQueryClient();
   return useMutation({

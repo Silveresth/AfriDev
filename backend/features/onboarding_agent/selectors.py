@@ -18,6 +18,17 @@ def list_guides(*, user=None, project_id=None) -> QuerySet[OnboardingGuide]:
     return guides
 
 
+def latest_project_guide(*, project_id) -> OnboardingGuide | None:
+    """Guide le plus récent du projet, prêt ou en cours (les échecs sont ignorés)."""
+    return (
+        OnboardingGuide.objects.alive()
+        .filter(project_id=project_id)
+        .exclude(status=OnboardingGuide.Status.FAILED)
+        .order_by("-created_at")
+        .first()
+    )
+
+
 def guide_stats(*, since) -> dict:
     guides = OnboardingGuide.objects.alive().filter(created_at__gte=since)
     return {"new": guides.count(), "failed": guides.filter(status="failed").count()}

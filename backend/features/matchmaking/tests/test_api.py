@@ -24,3 +24,48 @@ def test_matchmaking_api(auth_client, client_for, user, other_user):
     assert other.get(f"/api/matchmaking/projects/{project.id}/candidates/").status_code == 403
     applications = auth_client.get(f"/api/matchmaking/projects/{project.id}/applications/")
     assert len(applications.data) == 1
+
+
+def test_accepted_candidate_gets_welcome_page_and_guide(
+    auth_client, client_for, user, other_user, make_user, monkeypatch
+):
+    from features.onboarding_agent import tasks as guide_tasks
+    from features.onboarding_agent.models import OnboardingGuide
+    from features.projects.models import Issue, Project
+
+    monkeypatch.setattr(guide_tasks.ai_build_onboarding_guide, "delay", lambda *a, **k: None)
+    project = project_services.create_project(owner=user, name="AfriPay", tags=["django"])
+    Project.objects.filter(id=project.id).update(repo_url="https://github.com/afridev/afripay")
+    Issue.objects.create(project=project, number=1, title="Refactor", url="https://github.com/x/1")
+    Issue.objects.create(
+        project=project,
+        number=2,
+        title="Fix typo",
+        url="https://github.com/x/2",
+        labels=["good first issue"],
+    )
+
+    candidate = client_for(other_user)
+    application = candidate.post(
+        f"/api/matchmaking/projects/{project.id}/apply/", {}, format="json"
+    )
+    url = f"/api/matchmaking/applications/{application.data['id']}/welcome/"
+    assert candidate.get(url).status_code == 404  # pas encore acceptée
+
+    auth_client.post(
+        f"/api/matchmaking/applications/{application.data['id']}/answer/",
+        {"accept": True},
+        format="json",
+    )
+    guide = OnboardingGuide.objects.get(project_id=project.id)
+    assert guide.requested_by_id == other_user.id
+
+    welcome = candidate.get(url).data
+    assert welcome["viewer_role"] == "candidate"
+    assert welcome["owner"]["username"] == "amina"
+    assert [m["username"] for m in welcome["team"]] == ["kofi"]
+    assert welcome["guide"]["id"] == str(guide.id)
+    assert [i["number"] for i in welcome["issues"]] == [2, 1]
+    assert welcome["issues"][0]["good_first"] is True
+    assert auth_client.get(url).data["viewer_role"] == "owner"
+    assert client_for(make_user("awa")).get(url).status_code == 404

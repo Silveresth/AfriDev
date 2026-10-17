@@ -8,7 +8,7 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
 import { api, unwrap } from '@/shared/api';
-import { notificationRoute } from '@/shared/lib';
+import { notificationRoute, notificationWebUrl, openLink } from '@/shared/lib';
 
 /**
  * Notifications push mobiles (Expo → FCM / APNs) :
@@ -128,7 +128,12 @@ export function PushRegistration() {
         .catch(() => undefined);
     }
     // Démarrage à froid depuis la notification : la navigation n'est prête qu'au tour suivant.
-    const timer = setTimeout(() => router.push((notificationRoute(data) ?? '/notifications') as never), 0);
+    const timer = setTimeout(() => {
+      const route = notificationRoute(data);
+      const web = notificationWebUrl(data);
+      if (!route && web) void openLink(web);
+      else router.push((route ?? '/notifications') as never);
+    }, 0);
     return () => clearTimeout(timer);
   }, [lastResponse, queryClient]);
 

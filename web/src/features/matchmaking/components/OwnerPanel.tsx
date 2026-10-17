@@ -46,10 +46,15 @@ export function OwnerPanel({ projectId }: { projectId: string }) {
                         <X className="size-4" aria-hidden /> Décliner
                       </Button>
                     </span>
+                  ) : application.status === 'accepted' ? (
+                    <span className="flex items-center gap-2">
+                      <StatusBadge tone="success">Acceptée</StatusBadge>
+                      <Link href={`/projects/welcome/${application.id}`} className="text-body-sm font-semibold text-primary-ink hover:underline">
+                        Son onboarding
+                      </Link>
+                    </span>
                   ) : (
-                    <StatusBadge tone={application.status === 'accepted' ? 'success' : 'neutral'}>
-                      {application.status === 'accepted' ? 'Acceptée' : 'Déclinée'}
-                    </StatusBadge>
+                    <StatusBadge tone="neutral">Déclinée</StatusBadge>
                   )}
                 </div>
                 {application.message ? <p className="text-body-sm text-ink">{application.message}</p> : null}
