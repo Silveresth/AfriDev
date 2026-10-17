@@ -59,8 +59,13 @@ export function useOpenConversation() {
 export function useSendMessage(conversationId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: string) =>
-      unwrap(api.POST('/api/messages/conversations/{conversation_id}/messages/', { params: { path: { conversation_id: conversationId } }, body: { body } })),
+    mutationFn: (input: { body?: string; media_id?: string }) =>
+      unwrap(
+        api.POST('/api/messages/conversations/{conversation_id}/messages/', {
+          params: { path: { conversation_id: conversationId } },
+          body: { body: input.body ?? '', media_id: input.media_id ?? null },
+        }),
+      ),
     onSuccess: (message) => {
       queryClient.setQueryData<InfiniteData<Page<Message>>>(messageKeys.thread(conversationId), (data) =>
         data ? { ...data, pages: data.pages.map((page, index) => (index === 0 ? { ...page, results: [message, ...page.results] } : page)) } : data,

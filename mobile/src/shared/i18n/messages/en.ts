@@ -570,6 +570,12 @@ const en: MobileMessages = {
   'profile.following_short': 'Following',
   'profile.followers_short': 'Followers',
   'profile.likes': 'Likes',
+  'dm.attach': 'Send a photo or video',
+  'dm.voice': 'Record a voice message',
+  'dm.cancel_voice': 'Cancel voice message',
+  'dm.recording': 'Recording…',
+  'dm.sending_media': 'Sending media…',
+  'dm.sending_voice': 'Sending voice message…',
   'hubs.image': 'Hub picture',
 };
 export default en;

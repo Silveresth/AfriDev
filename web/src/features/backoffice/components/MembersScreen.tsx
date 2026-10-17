@@ -21,6 +21,7 @@ import {
   StatusBadge,
   TimeAgo,
   useToast,
+  Pagination,
 } from '@/shared/ui';
 
 import { type Member, type MemberFilters, useMembers, useUpdateMember } from '../api';
@@ -74,37 +75,58 @@ export function MembersScreen() {
         </EmptyState>
       ) : (
         <Card className="overflow-hidden p-0">
-          {/* Tableau sur grand écran, cartes empilées sur téléphone. */}
-          <table className="hidden w-full text-left md:table">
-            <thead className="border-b border-line bg-container-low text-label-md font-bold tracking-wide uppercase text-ink-muted">
-              <tr>
-                <th className="px-4 py-3 font-medium">Membre</th>
-                <th className="px-4 py-3 font-medium">Contact</th>
-                <th className="px-4 py-3 font-medium">Inscription</th>
-                <th className="px-4 py-3 font-medium">Dernière connexion</th>
-                <th className="px-4 py-3 font-medium">Statut</th>
-                <th className="px-4 py-3 font-medium"><span className="sr-only">Actions</span></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {members.items.map((member) => (
-                <tr key={member.id} className={cn(!member.is_active && 'bg-danger-soft/20')}>
-                  <td className="px-4 py-3"><Identity member={member} /></td>
-                  <td className="px-4 py-3 text-body-sm text-ink-muted">
-                    <span className="block">{member.email || '—'}</span>
-                    {member.phone_number ? <span className="block">{member.phone_number}</span> : null}
-                  </td>
-                  <td className="px-4 py-3 text-body-sm text-ink-muted"><TimeAgo date={member.date_joined} /></td>
-                  <td className="px-4 py-3 text-body-sm text-ink-muted">
-                    {member.last_login ? <TimeAgo date={member.last_login} /> : 'Jamais'}
-                  </td>
-                  <td className="px-4 py-3"><Badges member={member} /></td>
-                  <td className="px-4 py-3"><Actions member={member} /></td>
+          {/* Tableau sur grand écran (colonnes resserrées, jamais coupé), cartes sur petit écran. */}
+          <div className="hidden overflow-x-auto lg:block">
+            <table className="w-full table-fixed text-left">
+              <colgroup>
+                <col className="w-[38%]" />
+                <col className="w-[20%]" />
+                <col className="w-[16%]" />
+                <col className="w-[26%]" />
+              </colgroup>
+              <thead className="border-b border-line bg-container-low text-label-md text-ink-muted">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Membre</th>
+                  <th className="px-4 py-3 font-medium">Activité</th>
+                  <th className="px-4 py-3 font-medium">Statut</th>
+                  <th className="px-4 py-3 text-right font-medium">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          <ul className="divide-y divide-line md:hidden">
+              </thead>
+              <tbody className="divide-y divide-line">
+                {members.items.map((member) => (
+                  <tr key={member.id} className={cn('align-top', !member.is_active && 'bg-danger-soft/20')}>
+                    <td className="px-4 py-3">
+                      <Identity member={member} />
+                      <p className="mt-1 truncate pl-12 text-label-md text-ink-faint" title={[member.email, member.phone_number].filter(Boolean).join(' · ')}>
+                        {[member.email, member.phone_number].filter(Boolean).join(' · ') || '—'}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3 text-body-sm text-ink-muted">
+                      <span className="block">
+                        Inscrit <TimeAgo date={member.date_joined} />
+                      </span>
+                      <span className="block text-label-md text-ink-faint">
+                        {member.last_login ? (
+                          <>
+                            Vu <TimeAgo date={member.last_login} />
+                          </>
+                        ) : (
+                          'Jamais connecté'
+                        )}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badges member={member} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Actions member={member} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <ul className="divide-y divide-line lg:hidden">
             {members.items.map((member) => (
               <li key={member.id} className={cn('space-y-3 p-4', !member.is_active && 'bg-danger-soft/20')}>
                 <Identity member={member} />
@@ -118,11 +140,14 @@ export function MembersScreen() {
           </ul>
         </Card>
       )}
-      {members.hasNextPage ? (
-        <Button variant="ghost" className="mt-4 w-full" onClick={() => members.fetchNextPage()} loading={members.isFetchingNextPage}>
-          Charger plus
-        </Button>
-      ) : null}
+      <Pagination
+        page={members.page}
+        hasPrevious={members.hasPrevious}
+        hasNext={members.hasNext}
+        onPrevious={members.goPrevious}
+        onNext={members.goNext}
+        loading={members.isFetching}
+      />
     </>
   );
 }

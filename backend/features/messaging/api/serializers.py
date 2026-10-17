@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from core.serializers import AuthorSerializer
+from features.media import selectors as media_selectors
 
 
 class OpenConversationSerializer(serializers.Serializer):
@@ -8,14 +9,35 @@ class OpenConversationSerializer(serializers.Serializer):
 
 
 class MessageInputSerializer(serializers.Serializer):
-    body = serializers.CharField(max_length=2000)
+    body = serializers.CharField(max_length=2000, required=False, allow_blank=True, default="")
+    media_id = serializers.UUIDField(
+        required=False,
+        allow_null=True,
+        help_text="Photo, vidéo ou vocal déjà envoyé (/api/media/).",
+    )
 
 
 class MessageSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     sender_id = serializers.UUIDField()
-    body = serializers.CharField()
+    body = serializers.CharField(allow_blank=True)
+    media = serializers.JSONField(allow_null=True, help_text="Même forme que /api/media/<id>/.")
     created_at = serializers.DateTimeField()
+
+
+def present_messages(messages) -> list[dict]:
+    messages = list(messages)
+    media = media_selectors.describe_many(asset_ids={m.media_id for m in messages})
+    return [
+        {
+            "id": m.id,
+            "sender_id": m.sender_id,
+            "body": m.body,
+            "media": media.get(m.media_id),
+            "created_at": m.created_at,
+        }
+        for m in messages
+    ]
 
 
 class ConversationSerializer(serializers.Serializer):

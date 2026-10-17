@@ -3257,11 +3257,19 @@ export interface components {
             /** Format: uuid */
             sender_id: string;
             body: string;
+            /** @description Même forme que /api/media/<id>/. */
+            media: unknown;
             /** Format: date-time */
             created_at: string;
         };
         MessageInputRequest: {
+            /** @default  */
             body: string;
+            /**
+             * Format: uuid
+             * @description Photo, vidéo ou vocal déjà envoyé (/api/media/).
+             */
+            media_id?: string | null;
         };
         /**
          * @description * `PUT` - PUT
@@ -7071,7 +7079,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
                 "application/json": components["schemas"]["MessageInputRequest"];
                 "application/x-www-form-urlencoded": components["schemas"]["MessageInputRequest"];

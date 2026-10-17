@@ -4,7 +4,7 @@ import type { Schemas } from '@afridev/api-client';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api, unwrap } from '@/shared/api';
-import { useInfiniteList } from '@/shared/query';
+import { usePagedList } from '@/shared/query';
 
 export type Dashboard = Schemas['Dashboard'];
 export type ModerationReport = Schemas['ModerationReport'];
@@ -40,7 +40,7 @@ export interface ReportFilters {
 }
 
 export function useReports(filters: ReportFilters) {
-  return useInfiniteList(
+  return usePagedList(
     backofficeKeys.reports(filters),
     (cursor) => unwrap(api.GET('/api/moderation/reports/', { params: { query: { cursor, ...filters } } })),
     PRIVATE,
@@ -86,7 +86,7 @@ export interface ContentFilters {
 }
 
 export function useContent(filters: ContentFilters) {
-  return useInfiniteList(
+  return usePagedList(
     ['backoffice', 'content', filters],
     (cursor) => unwrap(api.GET('/api/backoffice/content/', { params: { query: { cursor, ...filters } } })),
     PRIVATE,
@@ -116,7 +116,7 @@ export interface MemberFilters {
 }
 
 export function useMembers(filters: MemberFilters) {
-  return useInfiniteList(
+  return usePagedList(
     backofficeKeys.members(filters),
     (cursor) => unwrap(api.GET('/api/backoffice/members/', { params: { query: { cursor, ...filters } } })),
     PRIVATE,

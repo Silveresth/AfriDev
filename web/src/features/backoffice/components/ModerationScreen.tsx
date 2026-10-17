@@ -19,6 +19,7 @@ import {
   StatusBadge,
   TimeAgo,
   useToast,
+  Pagination,
 } from '@/shared/ui';
 
 import {
@@ -120,11 +121,14 @@ export function ModerationScreen() {
           ))}
         </ul>
       )}
-      {reports.hasNextPage ? (
-        <Button variant="ghost" className="mt-4 w-full" onClick={() => reports.fetchNextPage()} loading={reports.isFetchingNextPage}>
-          Charger plus
-        </Button>
-      ) : null}
+      <Pagination
+        page={reports.page}
+        hasPrevious={reports.hasPrevious}
+        hasNext={reports.hasNext}
+        onPrevious={reports.goPrevious}
+        onNext={reports.goNext}
+        loading={reports.isFetching}
+      />
     </>
   );
 }

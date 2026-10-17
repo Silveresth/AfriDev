@@ -49,7 +49,9 @@ class Message(BaseModel):
     sender = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="sent_messages"
     )
-    body = models.TextField(max_length=2000)
+    body = models.TextField(max_length=2000, blank=True)
+    # Photo, vidéo ou message vocal (features.media), facultatif ; référence sans clé étrangère.
+    media_id = models.UUIDField(null=True, blank=True)
 
     class Meta:
         indexes = [models.Index(fields=["conversation", "-created_at"])]

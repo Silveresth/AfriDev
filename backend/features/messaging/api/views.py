@@ -18,6 +18,7 @@ from .serializers import (
     OpenConversationSerializer,
     UnreadMessagesSerializer,
     present_conversations,
+    present_messages,
 )
 
 
@@ -88,7 +89,9 @@ class MessageListView(APIView):
         page = paginator.paginate_queryset(
             selectors.list_messages(conversation_id=conversation.id), request
         )
-        return paginator.get_paginated_response(MessageSerializer(page, many=True).data)
+        return paginator.get_paginated_response(
+            MessageSerializer(present_messages(page), many=True).data
+        )
 
     @extend_schema(
         operation_id="messages_send",
@@ -102,8 +105,11 @@ class MessageListView(APIView):
             conversation=_conversation(request, conversation_id),
             sender=request.user,
             body=data.validated_data["body"],
+            media_id=data.validated_data.get("media_id"),
         )
-        return Response(MessageSerializer(message).data, status=status.HTTP_201_CREATED)
+        return Response(
+            MessageSerializer(present_messages([message])[0]).data, status=status.HTTP_201_CREATED
+        )
 
 
 class MarkReadView(APIView):

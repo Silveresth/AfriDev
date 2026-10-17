@@ -600,6 +600,12 @@ const fr = {
   'profile.following_short': 'Suivis',
   'profile.followers_short': 'Followers',
   'profile.likes': 'J’aime',
+  'dm.attach': 'Envoyer une photo ou une vidéo',
+  'dm.voice': 'Enregistrer un message vocal',
+  'dm.cancel_voice': 'Annuler le vocal',
+  'dm.recording': 'Enregistrement…',
+  'dm.sending_media': 'Envoi du média…',
+  'dm.sending_voice': 'Envoi du vocal…',
   'hubs.image': 'Photo du hub',
 } as const;
 export default fr;

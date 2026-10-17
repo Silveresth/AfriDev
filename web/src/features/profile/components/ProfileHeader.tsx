@@ -139,7 +139,7 @@ function Actions({ profile, isMe, onEdit, onShare }: { profile: PublicProfile; i
   if (isMe) {
     return (
       <>
-        <Button className="h-11 flex-1 rounded-full sm:w-56 sm:flex-none" variant="primary" onClick={onEdit}>
+        <Button className="h-11 min-w-0 flex-1 rounded-full px-3 sm:w-56 sm:flex-none" variant="primary" onClick={onEdit}>
           <Pencil className="size-4" aria-hidden /> Modifier le profil
         </Button>
         <button type="button" onClick={onShare} aria-label="Partager le profil" className={roundAction}>
@@ -158,7 +158,7 @@ function Actions({ profile, isMe, onEdit, onShare }: { profile: PublicProfile; i
       <Menu
         className="w-52"
         trigger={(props) => (
-          <button type="button" aria-label="Plus d'actions" {...props} className={roundAction}>
+          <button type="button" aria-label="Plus d'actions" {...props} className={cn(roundAction, 'max-sm:hidden')}>
             <MoreHorizontal className="size-5" aria-hidden />
           </button>
         )}
@@ -180,7 +180,7 @@ function FollowButton({ profile }: { profile: PublicProfile }) {
   const following = profile.is_following;
   return (
     <Button
-      className={cn('h-11 flex-1 rounded-full sm:w-44 sm:flex-none', following && 'bg-container text-ink hover:bg-container-high')}
+      className={cn('h-11 min-w-0 flex-1 rounded-full px-3 sm:w-44 sm:flex-none', following && 'bg-container text-ink hover:bg-container-high')}
       variant={following ? 'ghost' : 'primary'}
       aria-pressed={following}
       onClick={() => {
@@ -207,7 +207,7 @@ function MessageButton({ username }: { username: string }) {
   return (
     <Button
       variant="ghost"
-      className="h-11 flex-1 rounded-full bg-container font-semibold text-ink hover:bg-container-high sm:w-36 sm:flex-none"
+      className="h-11 min-w-0 flex-1 rounded-full bg-container px-3 font-semibold text-ink hover:bg-container-high sm:w-36 sm:flex-none"
       loading={open.isPending}
       onClick={() => {
         if (!isAuthenticated) {

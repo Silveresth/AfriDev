@@ -48,3 +48,29 @@ def test_cannot_message_yourself(auth_client):
         "/api/messages/conversations/", {"username": "amina"}, format="json"
     )
     assert response.status_code == 400
+
+
+def test_photo_message(auth_client, client_for, user, other_user):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    from features.media import services as media_services
+
+    photo = media_services.upload_media(
+        owner=user,
+        kind="image",
+        uploaded_file=SimpleUploadedFile("photo.png", b"\x89PNG fake", content_type="image/png"),
+    )
+    conversation = auth_client.post(
+        "/api/messages/conversations/", {"username": "kofi"}, format="json"
+    ).data
+    url = f"/api/messages/conversations/{conversation['id']}/messages/"
+    sent = auth_client.post(url, {"media_id": str(photo.id)}, format="json")
+    assert sent.status_code == 201
+    assert sent.data["media"]["kind"] == "image" and sent.data["body"] == ""
+
+    inbox = client_for(other_user).get("/api/messages/conversations/").data["results"]
+    assert inbox[0]["last_message_preview"] == "📷 Photo"
+
+    # Le média d'un autre membre ne peut pas être joint.
+    kofi = client_for(other_user)
+    assert kofi.post(url, {"media_id": str(photo.id)}, format="json").status_code == 400

@@ -20,3 +20,4 @@ export { TagInput } from './TagInput';
 export { TimeAgo } from './TimeAgo';
 export { ToastProvider, useToast } from './Toast';
 export { defaultProfileColor, PROFILE_COLORS, type ProfileColor, profileColor, profileColorHex } from './profileColor';
+export { Pagination } from './Pagination';

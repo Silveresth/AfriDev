@@ -22,7 +22,9 @@ import { errorMessage } from '@/shared/api';
 import { useDebounced } from '@/shared/hooks';
 import { PageHeader } from '@/shared/layout';
 import { cn, formatCount } from '@/shared/lib';
-import { Avatar, Button, Card, CardSkeleton, EmptyState, ErrorNotice, Input, Segmented, StatusBadge, Tabs, TimeAgo, useToast } from '@/shared/ui';
+import { Avatar, Button, Card, CardSkeleton, EmptyState, ErrorNotice, Input, Segmented, StatusBadge, Tabs, TimeAgo, useToast,
+  Pagination,
+} from '@/shared/ui';
 
 import { type ContentAction, type ContentRow, type ContentType, useContent, useContentAction } from '../api';
 
@@ -87,8 +89,16 @@ export function ContentScreen() {
         </EmptyState>
       ) : (
         <Card className="overflow-hidden p-0">
-          <table className="hidden w-full text-left md:table">
-            <thead className="border-b border-line bg-container-low text-label-md font-bold tracking-wide text-ink-muted uppercase">
+          <div className="hidden overflow-x-auto lg:block">
+          <table className="w-full table-fixed text-left">
+            <colgroup>
+              <col className="w-[34%]" />
+              <col className="w-[18%]" />
+              <col className="w-[11%]" />
+              <col className="w-[15%]" />
+              <col className="w-[22%]" />
+            </colgroup>
+            <thead className="border-b border-line bg-container-low text-label-md text-ink-muted">
               <tr>
                 <th className="px-4 py-3 font-medium">Contenu</th>
                 <th className="px-4 py-3 font-medium">Auteur</th>
@@ -102,7 +112,7 @@ export function ContentScreen() {
             <tbody className="divide-y divide-line">
               {content.items.map((row) => (
                 <tr key={row.id} className={cn('align-top', row.removed && 'bg-danger-soft/20')}>
-                  <td className="max-w-md px-4 py-3">
+                  <td className="px-4 py-3">
                     <Title row={row} />
                   </td>
                   <td className="px-4 py-3">
@@ -121,7 +131,8 @@ export function ContentScreen() {
               ))}
             </tbody>
           </table>
-          <ul className="divide-y divide-line md:hidden">
+          </div>
+          <ul className="divide-y divide-line lg:hidden">
             {content.items.map((row) => (
               <li key={row.id} className={cn('space-y-3 p-4', row.removed && 'bg-danger-soft/20')}>
                 <Title row={row} />
@@ -136,11 +147,14 @@ export function ContentScreen() {
           </ul>
         </Card>
       )}
-      {content.hasNextPage ? (
-        <Button variant="ghost" className="mt-4 w-full" onClick={() => content.fetchNextPage()} loading={content.isFetchingNextPage}>
-          Charger plus
-        </Button>
-      ) : null}
+      <Pagination
+        page={content.page}
+        hasPrevious={content.hasPrevious}
+        hasNext={content.hasNext}
+        onPrevious={content.goPrevious}
+        onNext={content.goNext}
+        loading={content.isFetching}
+      />
     </>
   );
 }

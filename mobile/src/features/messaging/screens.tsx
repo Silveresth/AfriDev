@@ -1,10 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { MessageCircle, SendHorizontal } from 'lucide-react-native';
+import { ImagePlus, MessageCircle, Mic, SendHorizontal, Trash2 } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { errorMessage } from '@/shared/api';
+import { errorMessage, type Schemas } from '@/shared/api';
 import { useT } from '@/shared/i18n';
 import { timeAgo } from '@/shared/lib';
 import { useSession } from '@/shared/session';
@@ -12,6 +12,7 @@ import { radius, typography, useTheme } from '@/shared/theme';
 import { Avatar, EmptyState, ErrorState, Header, ListFooter, Loading, Text } from '@/shared/ui';
 
 import { type Conversation, type Message, useConversation, useInbox, useMarkRead, useSendMessage, useThread } from './api';
+import { ChatMedia, pickAndUploadMedia, useVoiceRecorder } from './media';
 
 /** Boîte de réception : une ligne par conversation, la plus récente en haut. */
 export function InboxScreen() {
@@ -146,18 +147,21 @@ function Bubble({ message, mine, seen }: { message: Message; mine: boolean; seen
   const { t } = useT();
   return (
     <View style={[styles.bubbleRow, mine ? styles.end : styles.start]}>
-      <View
-        style={[
-          styles.bubble,
-          mine
-            ? { backgroundColor: colors.primary, borderBottomRightRadius: 6 }
-            : { backgroundColor: colors.container, borderBottomLeftRadius: 6 },
-        ]}
-      >
-        <Text selectable style={{ color: mine ? colors.onPrimary : colors.ink }}>
-          {message.body}
-        </Text>
-      </View>
+      {message.media ? <ChatMedia media={message.media as Schemas['MediaOutput']} mine={mine} /> : null}
+      {message.body ? (
+        <View
+          style={[
+            styles.bubble,
+            mine
+              ? { backgroundColor: colors.primary, borderBottomRightRadius: 6 }
+              : { backgroundColor: colors.container, borderBottomLeftRadius: 6 },
+          ]}
+        >
+          <Text selectable style={{ color: mine ? colors.onPrimary : colors.ink }}>
+            {message.body}
+          </Text>
+        </View>
+      ) : null}
       {seen ? (
         <Text variant="caption" tone="faint">
           {t('dm.seen')}
@@ -172,36 +176,113 @@ function Composer({ conversationId }: { conversationId: string }) {
   const { t } = useT();
   const insets = useSafeAreaInsets();
   const send = useSendMessage(conversationId);
+  const voice = useVoiceRecorder();
   const [body, setBody] = useState('');
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const text = body.trim();
+
+  const run = async (label: string, task: () => Promise<string | null>) => {
+    setError(null);
+    setBusy(label);
+    try {
+      const mediaId = await task();
+      if (mediaId) await send.mutateAsync({ media_id: mediaId });
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const startVoice = async () => {
+    setError(null);
+    try {
+      await voice.start();
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  };
+
+  const sendVoice = () =>
+    run(t('dm.sending_voice'), async () => {
+      const uri = await voice.stop();
+      return uri ? voice.upload(uri) : null;
+    });
+
+  const failure = error ?? (send.isError ? errorMessage(send.error) : null);
+
   return (
     <View style={[styles.bar, { borderTopColor: colors.line, paddingBottom: insets.bottom + 8 }]}>
-      {send.isError ? (
+      {failure ? (
         <Text variant="caption" tone="danger">
-          {errorMessage(send.error)}
+          {failure}
         </Text>
       ) : null}
-      <View style={styles.inputRow}>
-        <TextInput
-          value={body}
-          onChangeText={setBody}
-          placeholder={t('dm.placeholder')}
-          placeholderTextColor={colors.inkFaint}
-          selectionColor={colors.primary}
-          multiline
-          maxLength={2000}
-          style={[typography.body, styles.input, { color: colors.ink, backgroundColor: colors.container }]}
-        />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('dm.send')}
-          disabled={!text || send.isPending}
-          onPress={() => send.mutate(text, { onSuccess: () => setBody('') })}
-          style={[styles.send, { backgroundColor: text ? colors.primary : colors.container }]}
-        >
-          <SendHorizontal size={18} color={text ? colors.onPrimary : colors.inkFaint} />
-        </Pressable>
-      </View>
+      {busy ? (
+        <View style={styles.busy}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text variant="caption" tone="muted">
+            {busy}
+          </Text>
+        </View>
+      ) : null}
+
+      {voice.recording ? (
+        <View style={styles.inputRow}>
+          <Pressable accessibilityLabel={t('dm.cancel_voice')} onPress={() => void voice.stop()} style={styles.iconButton}>
+            <Trash2 size={21} color={colors.inkMuted} />
+          </Pressable>
+          <View style={[styles.recording, { backgroundColor: colors.dangerSoft }]}>
+            <View style={[styles.recDot, { backgroundColor: colors.danger }]} />
+            <Text variant="bodyStrong" style={{ color: colors.danger }}>
+              {Math.floor(voice.seconds / 60)}:{String(voice.seconds % 60).padStart(2, '0')}
+            </Text>
+            <Text variant="small" tone="muted">
+              {t('dm.recording')}
+            </Text>
+          </View>
+          <Pressable accessibilityLabel={t('dm.send')} onPress={() => void sendVoice()} style={[styles.send, { backgroundColor: colors.primary }]}>
+            <SendHorizontal size={18} color={colors.onPrimary} />
+          </Pressable>
+        </View>
+      ) : (
+        <View style={styles.inputRow}>
+          <Pressable
+            accessibilityLabel={t('dm.attach')}
+            disabled={Boolean(busy)}
+            onPress={() => void run(t('dm.sending_media'), pickAndUploadMedia)}
+            style={styles.iconButton}
+          >
+            <ImagePlus size={22} color={colors.inkMuted} />
+          </Pressable>
+          <TextInput
+            value={body}
+            onChangeText={setBody}
+            placeholder={t('dm.placeholder')}
+            placeholderTextColor={colors.inkFaint}
+            selectionColor={colors.primary}
+            multiline
+            maxLength={2000}
+            style={[typography.body, styles.input, { color: colors.ink, backgroundColor: colors.container }]}
+          />
+          {text ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('dm.send')}
+              disabled={send.isPending}
+              onPress={() => send.mutate({ body: text }, { onSuccess: () => setBody('') })}
+              style={[styles.send, { backgroundColor: colors.primary }]}
+            >
+              <SendHorizontal size={18} color={colors.onPrimary} />
+            </Pressable>
+          ) : (
+            <Pressable accessibilityLabel={t('dm.voice')} disabled={Boolean(busy)} onPress={() => void startVoice()} style={styles.iconButton}>
+              <Mic size={22} color={colors.inkMuted} />
+            </Pressable>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -223,4 +304,8 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   input: { flex: 1, maxHeight: 120, minHeight: 42, borderRadius: 21, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10 },
   send: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
+  iconButton: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
+  busy: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  recording: { flex: 1, height: 42, borderRadius: 21, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16 },
+  recDot: { width: 10, height: 10, borderRadius: 5 },
 });
