@@ -147,6 +147,16 @@ export function useVote(post: Post) {
   });
 }
 
+/** Modification par l'auteur (ou le staff) : le post est remplacé partout où il s'affiche. */
+export function useUpdatePost(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { title: string; body: string; tags: string[] }) =>
+      unwrap(api.PATCH('/api/feed/{post_id}/', { params: { path: { post_id: id } }, body })),
+    onSuccess: (post) => replacePost(queryClient, post),
+  });
+}
+
 export function useDeletePost() {
   const queryClient = useQueryClient();
   return useMutation({

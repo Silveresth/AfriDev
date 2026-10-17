@@ -1,8 +1,6 @@
 'use client';
 
 import {
-  ThumbsDown,
-  ThumbsUp,
   BarChart3,
   CheckCircle2,
   Circle,
@@ -10,6 +8,7 @@ import {
   Ellipsis,
   Link2,
   MessageSquare,
+  Pencil,
   Pin,
   PinOff,
   Share2,
@@ -17,8 +16,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 import { BookmarkButton } from '@/features/bookmarks';
+import { EditTextDialog, InlineThread, ScorePill } from '@/features/engage';
 import { ReportButton } from '@/features/moderation';
 import { TranslateButton } from '@/features/translation';
 import { errorMessage } from '@/shared/api';
@@ -43,7 +44,7 @@ import {
   useToast,
 } from '@/shared/ui';
 
-import { type Post, useDeletePost, usePinPost, useScoreVote, useVote } from '../api';
+import { type Post, useDeletePost, usePinPost, useScoreVote, useUpdatePost, useVote } from '../api';
 
 /**
  * Carte de post / discussion, façon Dev.to : carte encadrée et cliquable.
@@ -62,6 +63,10 @@ export function PostCard({ post, detail = false, community: showCommunity = true
   const mine = Boolean(user && post.author?.id === user.id);
   // Modérateur du hub (ou staff) : épingler, supprimer le post d'un autre membre.
   const moderator = Boolean(post.viewer?.can_moderate);
+  const canEdit = mine || Boolean(user?.is_staff);
+  const update = useUpdatePost(post.id);
+  const [editing, setEditing] = useState(false);
+  const [threadOpen, setThreadOpen] = useState(false);
   const pin = usePinPost();
   const postTags = Array.isArray(post.tags) ? post.tags : [];
   const [community, ...rest] = postTags;
@@ -163,7 +168,7 @@ export function PostCard({ post, detail = false, community: showCommunity = true
                 <Clapperboard className="size-3.5" aria-hidden /> Vidéo
               </StatusBadge>
             ) : null}
-            {mine || moderator ? (
+            {canEdit || moderator ? (
               <Menu
                 className="w-52"
                 trigger={(props) => (
@@ -180,6 +185,11 @@ export function PostCard({ post, detail = false, community: showCommunity = true
                 <MenuItem onSelect={() => void navigator.clipboard.writeText(`${window.location.origin}${href}`).then(() => toast('Lien copié.'))}>
                   <Link2 aria-hidden /> Copier le lien
                 </MenuItem>
+                {canEdit ? (
+                  <MenuItem onSelect={() => setEditing(true)}>
+                    <Pencil aria-hidden /> Modifier
+                  </MenuItem>
+                ) : null}
                 {moderator && post.hub ? (
                   <MenuItem
                     onSelect={() =>
@@ -199,7 +209,7 @@ export function PostCard({ post, detail = false, community: showCommunity = true
                 <MenuItem
                   danger
                   onSelect={() => {
-                    if (!window.confirm(mine ? 'Supprimer ce post ?' : 'Supprimer ce post en tant que modérateur ?')) return;
+                    if (!window.confirm(mine ? 'Supprimer ce post ?' : 'Supprimer ce post en tant que modérateur ou admin ?')) return;
                     remove.mutate(post.id, { onSuccess: () => detail && router.push('/feed') });
                   }}
                 >
@@ -271,11 +281,16 @@ export function PostCard({ post, detail = false, community: showCommunity = true
             <span className="hidden sm:inline">commentaire{post.comment_count > 1 ? 's' : ''}</span>
           </span>
         ) : (
-          <Link href={href} className={cn(pillAction, 'max-sm:px-2')}>
+          <button
+            type="button"
+            onClick={() => setThreadOpen((value) => !value)}
+            aria-expanded={threadOpen}
+            className={cn(pillAction, 'max-sm:px-2', threadOpen && 'bg-container text-ink')}
+          >
             <MessageSquare className="size-4" aria-hidden /> {formatCount(post.comment_count)}
             <span className="hidden sm:inline">commentaire{post.comment_count > 1 ? 's' : ''}</span>
             <span className="sr-only sm:hidden">commentaires</span>
-          </Link>
+          </button>
         )}
         <button type="button" onClick={share} className={cn(pillAction, 'max-sm:px-1.5')}>
           <Share2 className="size-4" aria-hidden /> <span className="hidden sm:inline">Partager</span>
@@ -287,59 +302,24 @@ export function PostCard({ post, detail = false, community: showCommunity = true
           {!mine ? <ReportButton targetType="post" targetId={post.id} compact /> : null}
         </span>
       </footer>
+      {threadOpen && !detail ? <InlineThread kind="post" id={post.id} href={href} /> : null}
+      {editing ? (
+        <EditTextDialog
+          title="Modifier le post"
+          initial={{ title: post.title, body: post.body, tags: postTags }}
+          onSave={(content) => update.mutateAsync(content)}
+          onClose={() => setEditing(false)}
+        />
+      ) : null}
     </article>
   );
 }
 
-/** 👍 score 👎 : capsule à filet ; elle prend la couleur du vote donné. */
 function VotePill({ post }: { post: Post }) {
-  const { isAuthenticated } = useSession();
-  const router = useRouter();
   const vote = useScoreVote(post);
-  const mine = post.viewer?.post_vote ?? 0;
   // Un post mis en cache avant les votes ↑/↓ (cache hors ligne, ISR) n'a pas encore de score.
   const score = post.score ?? post.like_count ?? 0;
-  const cast = (value: 1 | -1) => {
-    if (!isAuthenticated) {
-      router.push(`/login?next=${encodeURIComponent(`/feed/${post.id}`)}`);
-      return;
-    }
-    vote.mutate(mine === value ? 0 : value);
-  };
-  return (
-    <div
-      className={cn(
-        'mr-0.5 inline-flex h-8 items-center rounded-lg border transition-colors sm:mr-1',
-        mine === 1
-          ? 'border-primary/30 bg-primary-soft text-primary-ink'
-          : mine === -1
-            ? 'border-downvote/30 bg-downvote-soft text-downvote'
-            : 'border-line bg-card text-ink',
-      )}
-    >
-      <button
-        type="button"
-        aria-label="Pouce levé"
-        aria-pressed={mine === 1}
-        onClick={() => cast(1)}
-        className="flex h-full w-8 items-center justify-center rounded-l-lg transition-colors hover:bg-primary-soft hover:text-primary"
-      >
-        <ThumbsUp className={cn('size-4', mine === 1 && 'fill-current')} aria-hidden />
-      </button>
-      <span className="min-w-[1.5rem] text-center text-body-sm font-semibold tabular-nums" aria-label={`Score : ${score}`}>
-        {formatCount(score)}
-      </span>
-      <button
-        type="button"
-        aria-label="Pouce baissé"
-        aria-pressed={mine === -1}
-        onClick={() => cast(-1)}
-        className="flex h-full w-8 items-center justify-center rounded-r-lg transition-colors hover:bg-downvote-soft hover:text-downvote"
-      >
-        <ThumbsDown className={cn('size-4', mine === -1 && 'fill-current')} aria-hidden />
-      </button>
-    </div>
-  );
+  return <ScorePill score={score} value={post.viewer?.post_vote ?? 0} onVote={(value) => vote.mutate(value)} loginNext={`/feed/${post.id}`} />;
 }
 
 /** Un clic dans le bloc ouvre la discussion, sauf sur un élément interactif, du code ou une sélection. */

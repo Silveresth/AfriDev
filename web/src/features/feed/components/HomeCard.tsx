@@ -16,6 +16,7 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { CardActions } from '@/features/engage';
 import { cn, formatCount } from '@/shared/lib';
 import { Avatar, CodeBlock, KarmaPill, LanguageLabel, StatusBadge, Tag, TimeAgo } from '@/shared/ui';
 
@@ -54,13 +55,14 @@ export function HomeCard({ item }: { item: HomeItem }) {
   return (
     <article
       onClick={(event) => {
-        if ((event.target as HTMLElement).closest('a, button, pre')) return;
+        if ((event.target as HTMLElement).closest('a, button, pre, input, textarea, form, dialog, [role="menu"]')) return;
+        if (window.getSelection()?.toString()) return;
         router.push(card.url);
       }}
       className="group relative cursor-pointer overflow-hidden rounded-2xl border border-line bg-card shadow-card transition-all hover:border-line-strong hover:shadow-raised"
     >
       <span className={cn('absolute inset-y-0 left-0 w-1', look.bar)} aria-hidden />
-      <div className="space-y-3 p-4 pl-5 sm:p-5 sm:pl-6">
+      <div className="space-y-3 p-4 pb-2 pl-5 sm:p-5 sm:pb-2 sm:pl-6">
         <header className="flex items-center gap-2.5">
           {author ? (
             <Link href={`/u/${author.username}`} className="shrink-0" aria-hidden tabIndex={-1}>
@@ -114,6 +116,7 @@ export function HomeCard({ item }: { item: HomeItem }) {
           <TypeAction type={type} meta={meta} url={card.url} />
         </footer>
       </div>
+      <CardActions item={item} />
     </article>
   );
 }

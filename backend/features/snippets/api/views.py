@@ -28,7 +28,12 @@ from .serializers import (
 
 
 def _owned(request, snippet_id):
-    snippet = selectors.get_owned_snippet(snippet_id=snippet_id, owner=request.user)
+    """Le sien ; le staff accède à tous (modération, correction)."""
+    snippet = (
+        selectors.get_snippet(snippet_id=snippet_id)
+        if request.user.is_staff
+        else selectors.get_owned_snippet(snippet_id=snippet_id, owner=request.user)
+    )
     if snippet is None:
         raise NotFound("Snippet introuvable.")
     return snippet
@@ -92,10 +97,9 @@ class SnippetDetailView(APIView):
     def patch(self, request, snippet_id):
         data = SnippetUpdateSerializer(data=request.data, partial=True)
         data.is_valid(raise_exception=True)
-        snippet = (
-            selectors.get_public_snippet(snippet_id=snippet_id) if request.user.is_staff else None
-        ) or _owned(request, snippet_id)
-        snippet = services.update_snippet(snippet=snippet, user=request.user, **data.validated_data)
+        snippet = services.update_snippet(
+            snippet=_owned(request, snippet_id), user=request.user, **data.validated_data
+        )
         return Response(SnippetOutputSerializer(snippet).data)
 
     @extend_schema(responses={204: None})

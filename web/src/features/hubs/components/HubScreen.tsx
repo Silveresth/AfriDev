@@ -1,16 +1,47 @@
 'use client';
 
-import { Code2, MapPin, MessagesSquare, Newspaper, PenSquare, ScrollText, ShieldCheck, UserPlus, UsersRound, X } from 'lucide-react';
+import {
+  Code2,
+  Ellipsis,
+  MapPin,
+  MessagesSquare,
+  Newspaper,
+  Pencil,
+  PenSquare,
+  ScrollText,
+  ShieldCheck,
+  Trash2,
+  UserPlus,
+  UsersRound,
+  X,
+} from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { ReportButton } from '@/features/moderation';
+import { errorMessage } from '@/shared/api';
 import { TwoColumns } from '@/shared/layout';
 import { formatCount } from '@/shared/lib';
 import { useSession } from '@/shared/session';
-import { Avatar, buttonClasses, Button, CardSkeleton, ErrorNotice, HubIcon, profileColorHex, SideCard, Tabs } from '@/shared/ui';
+import {
+  Avatar,
+  buttonClasses,
+  Button,
+  CardSkeleton,
+  ErrorNotice,
+  HubIcon,
+  Menu,
+  MenuItem,
+  profileColorHex,
+  SideCard,
+  Tabs,
+  useToast,
+} from '@/shared/ui';
 
-import { type Hub, useAssignModerator, useHub, useRemoveModerator } from '../api';
+import { type Hub, useAssignModerator, useDeleteHub, useHub, useRemoveModerator } from '../api';
 
+import { CreateHubDialog } from './CreateHubDialog';
 import { memberLabel, VerifiedMark } from './HubCard';
 import { HubMembers } from './HubMembers';
 import { JoinButton } from './JoinButton';
@@ -80,6 +111,54 @@ export function HubScreen({
   );
 }
 
+/** « … » du hub : modifier (modérateurs, staff), supprimer (créateur, staff). */
+function HubActions({ hub }: { hub: Hub }) {
+  const { user } = useSession();
+  const router = useRouter();
+  const toast = useToast();
+  const remove = useDeleteHub();
+  const [editing, setEditing] = useState(false);
+  const canEdit = Boolean(hub.viewer?.can_manage);
+  const canDelete = Boolean(hub.viewer?.is_creator || user?.is_staff);
+  if (!canEdit && !canDelete) return <ReportButton targetType="hub" targetId={hub.id} compact />;
+  return (
+    <>
+      <Menu
+        className="w-48"
+        trigger={(props) => (
+          <button type="button" aria-label="Gérer le hub" {...props} className={buttonClasses({ variant: 'outline', className: 'px-2.5' })}>
+            <Ellipsis className="size-4" aria-hidden />
+          </button>
+        )}
+      >
+        {canEdit ? (
+          <MenuItem onSelect={() => setEditing(true)}>
+            <Pencil aria-hidden /> Modifier le hub
+          </MenuItem>
+        ) : null}
+        {canDelete ? (
+          <MenuItem
+            danger
+            onSelect={() => {
+              if (!window.confirm(`Supprimer h/${hub.slug} ? Ses contenus ne seront plus rattachés à un hub.`)) return;
+              remove.mutate(hub.slug, {
+                onSuccess: () => {
+                  toast('Hub supprimé.');
+                  router.push('/hubs');
+                },
+                onError: (error) => toast(errorMessage(error), 'error'),
+              });
+            }}
+          >
+            <Trash2 aria-hidden /> Supprimer le hub
+          </MenuItem>
+        ) : null}
+      </Menu>
+      {editing ? <CreateHubDialog open hub={hub} onClose={() => setEditing(false)} /> : null}
+    </>
+  );
+}
+
 function HubHeader({ hub }: { hub: Hub }) {
   const { isAuthenticated } = useSession();
   return (
@@ -123,6 +202,7 @@ function HubHeader({ hub }: { hub: Hub }) {
             </Link>
           ) : null}
           <JoinButton hub={hub} size="md" />
+          {isAuthenticated ? <HubActions hub={hub} /> : null}
         </div>
       </div>
       {hub.description ? <p className="border-t border-line px-4 py-3 text-body-md text-ink-muted sm:px-5">{hub.description}</p> : null}

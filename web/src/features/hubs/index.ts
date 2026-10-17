@@ -6,3 +6,4 @@ export { HubScreen } from './components/HubScreen';
 export { HubsScreen } from './components/HubsScreen';
 export { HubAboutCard, HubNav, RecommendedHubsCard } from './components/HubWidgets';
 export { JoinButton } from './components/JoinButton';
+export { useDeleteHub, useUpdateHub } from './api';

@@ -4,3 +4,4 @@ export { HubSnippets } from './components/HubSnippets';
 export { MySnippetsScreen } from './components/MySnippetsScreen';
 export { SnippetDetail } from './components/SnippetDetail';
 export { SnippetEditorScreen } from './components/SnippetEditorScreen';
+export { useAddComment, useSnippetComments } from './api';

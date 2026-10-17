@@ -151,6 +151,19 @@ export function useRegenerateAiAnswer(questionId: string) {
   });
 }
 
+export function useUpdateQuestion(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { title: string; body: string; tags: string[] }) =>
+      unwrap(api.PATCH('/api/qa/questions/{question_id}/', { params: { path: { question_id: id } }, body })),
+    onSuccess: (question) => {
+      queryClient.setQueryData(qaKeys.detail(id), question);
+      void queryClient.invalidateQueries({ queryKey: ['qa', 'list'] });
+      void queryClient.invalidateQueries({ queryKey: ['feed', 'home'] });
+    },
+  });
+}
+
 export function useDeleteQuestion() {
   const queryClient = useQueryClient();
   return useMutation({

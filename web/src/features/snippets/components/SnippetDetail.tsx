@@ -4,6 +4,7 @@ import { CheckCircle2, Copy, GitBranch, History, Lock, Pencil, Trash2, WifiOff }
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { ReportButton } from '@/features/moderation';
 import { useSession } from '@/shared/session';
 import { formatBytes, utf8Size } from '@/shared/lib';
 import {
@@ -46,7 +47,7 @@ interface ViewModel {
 }
 
 export function SnippetDetail({ id, initial }: { id: string; initial?: PublicSnippet }) {
-  const { isAuthenticated, profile } = useSession();
+  const { isAuthenticated, profile, user } = useSession();
   const router = useRouter();
   const moderateDelete = useModerateDeleteSnippet();
   const publicSnippet = usePublicSnippet(id, initial);
@@ -126,12 +127,13 @@ export function SnippetDetail({ id, initial }: { id: string; initial?: PublicSni
             label={`Copier le code complet (${size})`}
             className={buttonClasses({ className: 'gap-2' })}
           />
-          {mine ? (
+          {mine || user?.is_staff ? (
             <ButtonLink href={`/snippets/${view.id}/edit`} variant="ghost">
               <Pencil className="size-4" aria-hidden /> Modifier
             </ButtonLink>
           ) : null}
-          {!mine && view.canModerate ? (
+          {!mine && view.isPublic && isAuthenticated ? <ReportButton targetType="snippet" targetId={view.id} /> : null}
+          {!mine && (view.canModerate || user?.is_staff) ? (
             <Button
               variant="ghost"
               className="text-danger hover:bg-danger-soft"

@@ -1,12 +1,13 @@
 'use client';
 
 import { answerSchema } from '@afridev/validation';
-import { ThumbsDown, ThumbsUp, ArrowLeft, CheckCircle2, RefreshCw, Send, Sparkles, Trash2 } from 'lucide-react';
+import { ThumbsDown, ThumbsUp, ArrowLeft, CheckCircle2, Pencil, RefreshCw, Send, Sparkles, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { BookmarkButton } from '@/features/bookmarks';
+import { EditTextDialog } from '@/features/engage';
 import { ReportButton } from '@/features/moderation';
 import { TranslateButton } from '@/features/translation';
 import { errorMessage } from '@/shared/api';
@@ -48,6 +49,7 @@ import {
   useDeleteQuestion,
   useQuestion,
   useRegenerateAiAnswer,
+  useUpdateQuestion,
 } from '../api';
 
 export function QuestionDetail({ id, initial, aside }: { id: string; initial?: Question; aside?: React.ReactNode }) {
@@ -76,6 +78,9 @@ function QuestionView({ question }: { question: Question }) {
   const router = useRouter();
   const remove = useDeleteQuestion();
   const mine = Boolean(user && question.author?.id === user.id);
+  const canEdit = mine || Boolean(user?.is_staff);
+  const update = useUpdateQuestion(question.id);
+  const [editing, setEditing] = useState(false);
   const name = question.author?.display_name || question.author?.username || 'Membre';
   const [community, ...tags] = question.tags;
 
@@ -139,8 +144,13 @@ function QuestionView({ question }: { question: Question }) {
           </span>
           <BookmarkButton target={{ type: 'question', id: question.id }} title={question.title} />
           <TranslateButton text={`${question.title}\n\n${question.body}`} />
-          <span className="ml-auto">
-            {mine || question.can_moderate ? (
+          <span className="ml-auto flex items-center">
+            {canEdit ? (
+              <button type="button" onClick={() => setEditing(true)} className={pillAction}>
+                <Pencil className="size-4" aria-hidden /> Modifier
+              </button>
+            ) : null}
+            {mine || question.can_moderate || user?.is_staff ? (
               <button
                 type="button"
                 onClick={async () => {
@@ -152,12 +162,21 @@ function QuestionView({ question }: { question: Question }) {
               >
                 <Trash2 className="size-4" aria-hidden /> Supprimer
               </button>
-            ) : (
-              <ReportButton targetType="question" targetId={question.id} compact />
-            )}
+            ) : null}
+            {!mine ? <ReportButton targetType="question" targetId={question.id} compact /> : null}
           </span>
         </div>
       </article>
+      {editing ? (
+        <EditTextDialog
+          title="Modifier la question"
+          bodyLabel="Détails"
+          minTitle={10}
+          initial={{ title: question.title, body: question.body, tags: question.tags }}
+          onSave={(content) => update.mutateAsync(content)}
+          onClose={() => setEditing(false)}
+        />
+      ) : null}
 
       <AiAnswer question={question} mine={mine} />
       <CommunityAnswers question={question} mine={mine} />
