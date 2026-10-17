@@ -31,7 +31,7 @@ function open(type: CardType, id: string, url: string) {
   else void openLink(`${PUBLIC_WEB_URL}${url}`);
 }
 
-/** Élément du fil d'accueil mixte : un post complet, ou une carte typée (accent par type). */
+/** Élément du fil d'accueil mixte : un post complet, ou une carte typée (badge coloré par type). */
 export const HomeRow = memo(function HomeRow({ item }: { item: HomeItem }) {
   if (item.type === 'post') return item.post ? <PostRow post={item.post} /> : null;
   return <HomeCardRow item={item} />;
@@ -50,7 +50,6 @@ function HomeCardRow({ item }: { item: HomeItem }) {
 
   return (
     <PressableScale scaleTo={0.99} onPress={() => open(type, item.id, card.url)} style={[styles.row, { borderBottomColor: colors.line }]}>
-      <View style={[styles.accent, { backgroundColor: look.color }]} />
       <View style={styles.body}>
         <View style={styles.inline}>
           <Avatar name={name} src={author?.avatar_url} size={22} />
@@ -260,7 +259,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   strong: { fontWeight: '700' },
   row: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth },
-  accent: { width: 3 },
   body: { flex: 1, gap: 8, paddingHorizontal: 16, paddingVertical: 14 },
   inline: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   badge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill },

@@ -25,11 +25,11 @@ import type { HomeItem } from '../api';
 type CardType = Exclude<HomeItem['type'], 'post'>;
 type Meta = Record<string, string | number | boolean | null | undefined>;
 
-const LOOK: Record<CardType, { label: string; icon: LucideIcon; tone: string; bar: string }> = {
-  question: { label: 'Entraide', icon: MessagesSquare, tone: 'bg-secondary-soft text-secondary-ink', bar: 'bg-secondary' },
-  snippet: { label: 'Snippet', icon: Code2, tone: 'bg-sky-500/12 text-sky-700 dark:text-sky-300', bar: 'bg-sky-500' },
-  project: { label: 'Projet open source', icon: FolderGit2, tone: 'bg-violet-500/12 text-violet-700 dark:text-violet-300', bar: 'bg-violet-500' },
-  job: { label: 'Opportunité', icon: BriefcaseBusiness, tone: 'bg-amber-500/14 text-amber-700 dark:text-amber-300', bar: 'bg-amber-500' },
+const LOOK: Record<CardType, { label: string; icon: LucideIcon; tone: string }> = {
+  question: { label: 'Entraide', icon: MessagesSquare, tone: 'bg-secondary-soft text-secondary-ink' },
+  snippet: { label: 'Snippet', icon: Code2, tone: 'bg-sky-500/12 text-sky-700 dark:text-sky-300' },
+  project: { label: 'Projet open source', icon: FolderGit2, tone: 'bg-violet-500/12 text-violet-700 dark:text-violet-300' },
+  job: { label: 'Opportunité', icon: BriefcaseBusiness, tone: 'bg-amber-500/14 text-amber-700 dark:text-amber-300' },
 };
 
 const CONTRACTS: Record<string, string> = {
@@ -61,8 +61,7 @@ export function HomeCard({ item }: { item: HomeItem }) {
       }}
       className="group relative cursor-pointer overflow-hidden rounded-2xl border border-line bg-card shadow-card transition-all hover:border-line-strong hover:shadow-raised"
     >
-      <span className={cn('absolute inset-y-0 left-0 w-1', look.bar)} aria-hidden />
-      <div className="space-y-3 p-4 pb-2 pl-5 sm:p-5 sm:pb-2 sm:pl-6">
+      <div className="space-y-3 p-4 pb-2 sm:p-5 sm:pb-2">
         <header className="flex items-center gap-2.5">
           {author ? (
             <Link href={`/u/${author.username}`} className="shrink-0" aria-hidden tabIndex={-1}>

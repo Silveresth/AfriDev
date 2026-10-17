@@ -48,7 +48,7 @@ function ReactableActions({ item, type, stats, url, title }: { item: HomeItem; t
 
   return (
     <>
-      <footer className="flex flex-wrap items-center gap-0.5 px-3 pb-3 sm:gap-1 sm:pl-5">
+      <footer className="flex flex-wrap items-center gap-0.5 px-3 pb-3 sm:gap-1 sm:px-4">
         <ScorePill score={stats.score} value={stats.viewer_vote} onVote={(value) => vote.mutate(value)} loginNext={url} />
         {type !== 'project' ? (
           <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className={cn(pillAction, open && 'bg-container text-ink')}>

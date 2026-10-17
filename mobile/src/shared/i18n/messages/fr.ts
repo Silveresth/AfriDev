@@ -68,8 +68,6 @@ const fr = {
   'oauth.cancelled': 'Connexion annulée.',
   'oauth.refused': '{provider} a refusé la connexion ({error}).',
   'oauth.incomplete': 'Réponse de connexion incomplète, recommencez.',
-  'oauth.connecting': 'Connexion avec {provider}…',
-  'oauth.welcome': 'Connecté, bienvenue !',
 
   // ── Traduction ──
   'translate.failed': 'Traduction indisponible pour le moment.',

@@ -5,8 +5,12 @@ from django.db.models import QuerySet
 from .models import Notification
 
 
-def list_notifications(*, user, unread_only: bool = False) -> QuerySet[Notification]:
+def list_notifications(
+    *, user, unread_only: bool = False, kind: str | None = None
+) -> QuerySet[Notification]:
     notifications = Notification.objects.alive().filter(recipient=user)
+    if kind:
+        notifications = notifications.filter(kind=kind)
     if unread_only:
         notifications = notifications.filter(read_at__isnull=True)
     return notifications

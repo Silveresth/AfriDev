@@ -37,6 +37,15 @@ export function useNotifications(unreadOnly: boolean) {
   );
 }
 
+/** Équipe : les nouvelles inscriptions sur la plateforme, dans un onglet à part. */
+export function useSignupNotifications(enabled: boolean) {
+  return useInfiniteList(
+    ['notifications', 'list', 'new_member'],
+    (cursor) => unwrap(api.GET('/api/notifications/', { params: { query: { cursor, kind: 'new_member' } } })),
+    { enabled },
+  );
+}
+
 /**
  * Applique tout de suite un changement aux listes en cache (toutes / non lues) et au compteur :
  * le panneau réagit sans attendre le serveur, puis on resynchronise.

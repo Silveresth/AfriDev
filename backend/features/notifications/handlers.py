@@ -3,8 +3,11 @@
 `data` = {"type": <post|question|snippet|project|guide>, "id": ...} : le client en déduit l'écran.
 """
 
+from django.db import transaction
 from django.dispatch import receiver
 
+from features.accounts import selectors as account_selectors
+from features.accounts.events import user_registered
 from features.discussions.events import comment_created
 from features.feed import selectors as feed_selectors
 from features.feed.events import post_liked
@@ -75,6 +78,26 @@ def on_user_followed(sender, follower_id, followed_id, **kwargs):
         title=f"{card['display_name']} vous suit désormais",
         data={"type": "profile", "id": card["username"]},
     )
+
+
+@receiver(user_registered)
+def on_user_registered(sender, user_id, username, display_name, **kwargs):
+    """L'équipe (staff) est prévenue de chaque nouvelle inscription sur la plateforme."""
+
+    def _announce():
+        for staff_id in account_selectors.list_staff_ids():
+            if staff_id == user_id:
+                continue
+            notify(
+                recipient_id=staff_id,
+                kind=Kind.NEW_MEMBER,
+                title=f"Nouvel inscrit : {display_name or username}",
+                body=f"@{username} vient de rejoindre AfriDev.",
+                data={"type": "profile", "id": username},
+            )
+
+    # Envoyé dans la transaction de création du compte : on attend qu'il existe vraiment.
+    transaction.on_commit(_announce)
 
 
 @receiver(answer_created)

@@ -2996,7 +2996,6 @@ export interface components {
             readonly id: string;
             /** Format: uuid */
             readonly project_id: string;
-            /** Format: int64 */
             readonly number: number;
             readonly title: string;
             /** Format: uri */
@@ -3229,13 +3228,10 @@ export interface components {
             readonly pinned: components["schemas"]["PinnedItem"][];
             readonly craft_score: number;
             readonly craft: components["schemas"]["Craft"];
-            /** Format: int64 */
             readonly karma_score: number;
             readonly karma_details: components["schemas"]["KarmaDetails"];
             readonly badges: components["schemas"]["ProfileBadge"][];
-            /** Format: int64 */
             readonly followers_count: number;
-            /** Format: int64 */
             readonly following_count: number;
             /** @description Le visiteur connecté suit-il ce membre ? (faux pour soi-même et les anonymes) */
             readonly is_following: boolean;
@@ -3310,9 +3306,10 @@ export interface components {
          *     * `application_received` - Nouvelle candidature
          *     * `application_answered` - Réponse à une candidature
          *     * `new_follower` - Nouvel abonné
+         *     * `new_member` - Nouvel inscrit (équipe)
          * @enum {string}
          */
-        NotificationKindEnum: "new_comment" | "comment_reply" | "post_liked" | "new_answer" | "answer_accepted" | "ai_answer_ready" | "snippet_flagged" | "content_hidden" | "guide_ready" | "application_received" | "application_answered" | "new_follower";
+        NotificationKindEnum: "new_comment" | "comment_reply" | "post_liked" | "new_answer" | "answer_accepted" | "ai_answer_ready" | "snippet_flagged" | "content_hidden" | "guide_ready" | "application_received" | "application_answered" | "new_follower" | "new_member";
         /** @enum {unknown} */
         NullEnum: null;
         OAuthInputRequest: {
@@ -3827,13 +3824,10 @@ export interface components {
             readonly pinned: components["schemas"]["PinnedItem"][];
             readonly craft_score: number;
             readonly craft: components["schemas"]["Craft"];
-            /** Format: int64 */
             readonly karma_score: number;
             readonly karma_details: components["schemas"]["KarmaDetails"];
             readonly badges: components["schemas"]["ProfileBadge"][];
-            /** Format: int64 */
             readonly followers_count: number;
-            /** Format: int64 */
             readonly following_count: number;
             /** @description Le visiteur connecté suit-il ce membre ? (faux pour soi-même et les anonymes) */
             readonly is_following: boolean;
@@ -4138,7 +4132,6 @@ export interface components {
             /** Format: date-time */
             readonly published_at: string | null;
             readonly ai_review: unknown;
-            /** Format: int64 */
             readonly comment_count: number;
             /** Format: date-time */
             readonly created_at: string;
@@ -4159,7 +4152,6 @@ export interface components {
          *     n'ont pas de champs faussement optionnels.
          */
         SnippetVersion: {
-            /** Format: int64 */
             readonly number: number;
             readonly content: string;
             /** Format: date-time */
@@ -6921,6 +6913,8 @@ export interface operations {
             query?: {
                 /** @description Curseur de la page suivante */
                 cursor?: string;
+                /** @description Un seul type (ex. new_member). */
+                kind?: string;
                 /** @description 20 par défaut, 50 maximum */
                 page_size?: number;
                 unread?: boolean;

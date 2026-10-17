@@ -51,3 +51,14 @@ def test_mark_all_read(user):
     services.notify(recipient_id=user.id, kind="new_comment", title="B")
     assert services.mark_all_read(user=user) == 2
     assert selectors.unread_count(user=user) == 0
+
+
+@pytest.mark.django_db(transaction=True)
+def test_staff_is_told_about_new_signups(make_user):
+    from features.notifications import selectors as notification_selectors
+
+    admin = make_user("cheffe", is_staff=True)
+    make_user("newcomer")
+    notes = list(notification_selectors.list_notifications(user=admin))
+    assert [n.kind for n in notes] == ["new_member"]
+    assert notes[0].data == {"type": "profile", "id": "newcomer"}

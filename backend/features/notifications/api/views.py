@@ -28,14 +28,25 @@ from .serializers import (
 
 class NotificationListView(APIView):
     @extend_schema(
-        parameters=[*CURSOR_PARAMETERS, OpenApiParameter("unread", bool, required=False)],
+        parameters=[
+            *CURSOR_PARAMETERS,
+            OpenApiParameter("unread", bool, required=False),
+            OpenApiParameter(
+                "kind", str, required=False, description="Un seul type (ex. new_member)."
+            ),
+        ],
         responses=paginated(NotificationSerializer),
     )
     def get(self, request):
         unread = request.query_params.get("unread", "").lower() in ("1", "true")
         paginator = CursorPagination()
         page = paginator.paginate_queryset(
-            selectors.list_notifications(user=request.user, unread_only=unread), request
+            selectors.list_notifications(
+                user=request.user,
+                unread_only=unread,
+                kind=request.query_params.get("kind") or None,
+            ),
+            request,
         )
         return paginator.get_paginated_response(NotificationSerializer(page, many=True).data)
 

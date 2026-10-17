@@ -19,11 +19,13 @@ import {
   Sparkles,
   Trash2,
   UserPlus,
+  UserRoundPlus,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { cn } from '@/shared/lib';
+import { useSession } from '@/shared/session';
 import { Button, ErrorNotice, Menu, MenuItem, MenuSeparator, Skeleton, TimeAgo } from '@/shared/ui';
 
 import {
@@ -34,6 +36,7 @@ import {
   useMarkAllRead,
   useMarkRead,
   useNotifications,
+  useSignupNotifications,
   useUnreadCount,
 } from '../api';
 
@@ -49,7 +52,11 @@ const KIND_STYLE: Record<string, { icon: LucideIcon; tone: string; label: string
   guide_ready: { icon: BookOpen, tone: 'bg-secondary-soft text-on-secondary-soft', label: 'Guide d’onboarding' },
   application_received: { icon: UserPlus, tone: 'bg-secondary-soft text-on-secondary-soft', label: 'Candidature' },
   application_answered: { icon: Handshake, tone: 'bg-container text-ink-muted', label: 'Candidature' },
+  new_follower: { icon: UserPlus, tone: 'bg-primary-soft text-primary-ink', label: 'Nouvel abonné' },
+  new_member: { icon: UserRoundPlus, tone: 'bg-secondary-soft text-on-secondary-soft', label: 'Nouvel inscrit' },
 };
+
+type Tab = 'all' | 'unread' | 'members';
 
 function groupOf(date: string): string {
   const age = Date.now() - new Date(date).getTime();
@@ -63,10 +70,14 @@ function groupOf(date: string): string {
  * contenu, ou déplie le texte complet), et actions unitaires ou globales (tout lire, tout effacer).
  */
 export function NotificationPanel({ id, onClose }: { id: string; onClose: () => void }) {
-  const [tab, setTab] = useState<'all' | 'unread'>('all');
+  const [tab, setTab] = useState<Tab>('all');
   const [confirmClear, setConfirmClear] = useState(false);
+  const { user } = useSession();
+  const isStaff = Boolean(user?.is_staff);
   const { data: unread = 0 } = useUnreadCount();
-  const list = useNotifications(tab === 'unread');
+  const regular = useNotifications(tab === 'unread');
+  const signups = useSignupNotifications(isStaff && tab === 'members');
+  const list = tab === 'members' ? signups : regular;
   const markAll = useMarkAllRead();
   const clear = useClearNotifications();
 
@@ -128,7 +139,8 @@ export function NotificationPanel({ id, onClose }: { id: string; onClose: () => 
             [
               { value: 'all', label: 'Toutes' },
               { value: 'unread', label: 'Non lues', count: unread },
-            ] as const
+              ...(isStaff ? [{ value: 'members', label: 'Nouveaux inscrits' }] : []),
+            ] as Array<{ value: Tab; label: string; count?: number }>
           ).map((option) => {
             const active = tab === option.value;
             return (
@@ -144,7 +156,7 @@ export function NotificationPanel({ id, onClose }: { id: string; onClose: () => 
                 )}
               >
                 {option.label}
-                {'count' in option && option.count ? (
+                {option.count ? (
                   <span className="rounded-full bg-primary-soft px-1.5 text-label-sm font-semibold text-primary-ink tabular-nums">
                     {option.count}
                   </span>
@@ -197,7 +209,9 @@ export function NotificationPanel({ id, onClose }: { id: string; onClose: () => 
             <span className="mb-3 flex size-12 items-center justify-center rounded-2xl border border-line bg-container-low text-ink-faint">
               {tab === 'unread' ? <CheckCheck className="size-5" aria-hidden /> : <BellOff className="size-5" aria-hidden />}
             </span>
-            <p className="font-semibold text-ink">{tab === 'unread' ? 'Vous êtes à jour' : 'Aucune notification'}</p>
+            <p className="font-semibold text-ink">
+              {tab === 'unread' ? 'Vous êtes à jour' : tab === 'members' ? 'Aucune nouvelle inscription' : 'Aucune notification'}
+            </p>
             <p className="mt-1 max-w-64 text-body-sm text-ink-muted">
               Réponses à vos questions, mentions et alertes de sécurité arriveront ici en direct.
             </p>

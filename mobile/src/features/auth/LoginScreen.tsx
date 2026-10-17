@@ -1,12 +1,12 @@
 import { useMutation } from '@tanstack/react-query';
-import { AtSign, CheckCircle2, Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react-native';
+import { AtSign, Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api, ApiError, errorMessage, PUBLIC_WEB_URL, unwrap } from '@/shared/api';
-import { BrandLoader, BrandTile } from '@/shared/brand';
+import { BrandTile } from '@/shared/brand';
 import { type Key, useT } from '@/shared/i18n';
 import { openLink } from '@/shared/lib';
 import { haptic, Shake } from '@/shared/motion';
@@ -27,35 +27,6 @@ import {
 import { GitHubLogo, GoogleLogo } from './ProviderLogos';
 
 type Mode = 'login' | 'register';
-
-const CONNECTING_MS = 900;
-const WELCOME_MS = 1000;
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/** Plein écran pendant l'échange du code OAuth, puis confirmation avant l'accueil. */
-function OAuthTransition({ phase, provider }: { phase: 'connecting' | 'welcome'; provider: string }) {
-  const { colors } = useTheme();
-  const { t } = useT();
-  return (
-    <Animated.View entering={FadeIn.duration(220)} style={[StyleSheet.absoluteFill, styles.transition, { backgroundColor: colors.background }]}>
-      {phase === 'connecting' ? (
-        <Animated.View key="connecting" entering={FadeIn.duration(200)} style={styles.transitionBody}>
-          <BrandLoader size={64} />
-          <Text variant="bodyStrong" tone="muted">
-            {t('oauth.connecting', { provider })}
-          </Text>
-        </Animated.View>
-      ) : (
-        <Animated.View key="welcome" entering={ZoomIn.springify().damping(12)} style={styles.transitionBody}>
-          <View style={[styles.check, { backgroundColor: colors.secondarySoft }]}>
-            <CheckCircle2 size={44} color={colors.secondaryInk} />
-          </View>
-          <Text variant="headline">{t('oauth.welcome')}</Text>
-        </Animated.View>
-      )}
-    </Animated.View>
-  );
-}
 
 const USERNAME = /^[A-Za-z0-9_]{3,30}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -174,7 +145,6 @@ export function LoginScreen() {
   const [shakes, setShakes] = useState(0);
   const [pendingProvider, setPendingProvider] = useState<OAuthProvider | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [transition, setTransition] = useState<'connecting' | 'welcome' | null>(null);
   const usernameStatus = useUsernameStatus(mode === 'register' ? username : '');
 
   // Nouveau compte : l'accueil s'ouvre de lui-même après la connexion (needs_onboarding).
@@ -210,31 +180,12 @@ export function LoginScreen() {
     onError: fail,
   });
 
-  // Retour du navigateur : écran de transition (logo animé, puis « bienvenue ») avant l'accueil,
-  // pour que la connexion ne donne pas l'impression d'un saut brusque.
   const oauth = useMutation({
-    mutationFn: async (provider: OAuthProvider) => {
-      let returnedAt = 0;
-      const response = await signInWithProvider(provider, () => {
-        returnedAt = Date.now();
-        setTransition('connecting');
-      });
-      await wait(Math.max(0, CONNECTING_MS - (Date.now() - returnedAt)));
-      return response;
-    },
+    mutationFn: (provider: OAuthProvider) => signInWithProvider(provider),
     onMutate: (provider) => setPendingProvider(provider),
     onSettled: () => setPendingProvider(null),
-    onSuccess: async (response) => {
-      if (response.tokens && !response.mfa_required) {
-        haptic.success();
-        setTransition('welcome');
-        await wait(WELCOME_MS);
-      }
-      setTransition(null);
-      finish(response);
-    },
+    onSuccess: finish,
     onError: (error) => {
-      setTransition(null);
       if (!(error instanceof OAuthCancelled)) fail();
     },
   });
@@ -481,7 +432,6 @@ export function LoginScreen() {
           </View>
         )}
       </ScrollView>
-      {transition ? <OAuthTransition phase={transition} provider={PROVIDER_LABELS[pendingProvider ?? 'google']} /> : null}
     </KeyboardAvoidingView>
   );
 }
@@ -490,9 +440,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, gap: 20 },
   hero: { gap: 6 },
-  transition: { alignItems: 'center', justifyContent: 'center', zIndex: 10 },
-  transitionBody: { alignItems: 'center', gap: 16 },
-  check: { width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center' },
   form: { gap: 14 },
   fields: { gap: 12 },
   oauth: { flexDirection: 'row', gap: 10 },
