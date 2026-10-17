@@ -17,7 +17,7 @@ function cursorOf(url: string | null | undefined): string | undefined {
 export function useInfiniteList<T>(
   queryKey: QueryKey,
   fetchPage: (cursor: string | undefined) => Promise<Page<T>>,
-  options: { enabled?: boolean } = {},
+  options: { enabled?: boolean; refetchInterval?: number } = {},
 ) {
   const query = useInfiniteQuery({
     queryKey,
@@ -25,6 +25,7 @@ export function useInfiniteList<T>(
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => cursorOf(last.next),
     enabled: options.enabled,
+    refetchInterval: options.refetchInterval,
   });
   const items = query.data?.pages.flatMap((page) => page.results) ?? [];
   const loadMore = () => {

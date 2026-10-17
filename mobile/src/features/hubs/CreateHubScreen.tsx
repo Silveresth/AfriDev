@@ -11,6 +11,7 @@ import { radius, typography, useTheme } from '@/shared/theme';
 import { Button, Header, HUB_ICON_COMPONENTS, HubIcon, Text, TextField, useToast } from '@/shared/ui';
 
 import { useCreateHub, useHub, useUpdateHub } from './api';
+import { HubImagesField } from './HubImagesField';
 
 const MAX_RULES = 10;
 
@@ -42,11 +43,15 @@ export function CreateHubScreen() {
   const [rules, setRules] = useState<string[]>([]);
   const [rule, setRule] = useState('');
   const [loaded, setLoaded] = useState(false);
+  const [bannerUrl, setBannerUrl] = useState('');
+  // Photo du hub : une image envoyée remplace l'icône du catalogue.
+  const [imageUrl, setImageUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
   const editing = Boolean(editSlug);
   const saving = create.isPending || update.isPending;
   const failure = create.error ?? update.error;
   const slug = editing ? editSlug : (customSlug ?? slugify(name));
-  const canSubmit = name.trim().length >= 2 && slug.length >= 3 && !saving;
+  const canSubmit = name.trim().length >= 2 && slug.length >= 3 && !saving && !uploading;
   const meta = HUB_ICONS.find((item) => item.key === icon);
 
   useEffect(() => {
@@ -57,6 +62,8 @@ export function CreateHubScreen() {
     setDescription(hub.description);
     setCountry(hub.target_country);
     setRules(hub.rules);
+    setBannerUrl(hub.banner_url);
+    if (/^https?:\/\//.test(hub.icon)) setImageUrl(hub.icon);
     if (resolved.kind === 'icon') setIcon(resolved.icon.key);
     setLoaded(true);
   }, [existing.data, loaded]);
@@ -71,7 +78,8 @@ export function CreateHubScreen() {
   const submit = () => {
     const fields = {
       name: name.trim(),
-      icon: hubIconValue(icon),
+      icon: imageUrl || hubIconValue(icon),
+      banner_url: bannerUrl,
       description: description.trim(),
       target_country: country.trim(),
       rules: rule.trim() ? [...rules, rule.trim()] : rules,
@@ -115,9 +123,20 @@ export function CreateHubScreen() {
         }
       />
       <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+        <HubImagesField
+          name={name || 'Hub'}
+          bannerUrl={bannerUrl}
+          imageUrl={imageUrl}
+          onBusyChange={setUploading}
+          onChange={(changes) => {
+            if (changes.banner !== undefined) setBannerUrl(changes.banner);
+            if (changes.image !== undefined) setImageUrl(changes.image);
+          }}
+        />
+
         {/* Aperçu : ce que verront les membres. */}
         <View style={[styles.preview, { backgroundColor: colors.surface, borderColor: colors.line }]}>
-          <HubIcon icon={hubIconValue(icon)} name={name || 'Hub'} size={52} />
+          <HubIcon icon={imageUrl || hubIconValue(icon)} name={name || 'Hub'} size={52} />
           <View style={styles.flex}>
             <Text variant="headline" numberOfLines={1}>
               {name.trim() || t('hubs.name')}

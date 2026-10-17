@@ -1,11 +1,11 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { CalendarDays, GitBranch, Info, Link2, MapPin, Pencil, Share2, Sparkles, UserCheck, UserPlus } from 'lucide-react-native';
+import { CalendarDays, GitBranch, Info, Link2, MapPin, Pencil, Share2, Sparkles, UserCheck } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
+import { useOpenConversation } from '@/features/messaging/api';
 import { absoluteUrl, errorMessage } from '@/shared/api';
 import { useDataSaver } from '@/shared/data-saver';
 import { t } from '@/shared/i18n';
@@ -20,25 +20,10 @@ import { SPECIAL_BADGES } from './badges';
 import { OpenToWork, shareProfile } from './sections';
 import { SocialLinks } from './social';
 
-/** Dégradé d'assombrissement : haut sombre (lisibilité), bas fondu dans la couleur de fond. */
-function BannerShade({ background }: { background: string }) {
-  return (
-    <Svg style={StyleSheet.absoluteFill} preserveAspectRatio="none">
-      <Defs>
-        <LinearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#000" stopOpacity="0.4" />
-          <Stop offset="0.45" stopColor="#000" stopOpacity="0.05" />
-          <Stop offset="1" stopColor={background} stopOpacity="1" />
-        </LinearGradient>
-      </Defs>
-      <Rect width="100%" height="100%" fill="url(#shade)" />
-    </Svg>
-  );
-}
-
 /**
- * En-tête immersif : bannière plein cadre, grand avatar centré qui la chevauche, statuts spéciaux,
- * statistiques en 3 colonnes, action principale, bio Markdown et réseaux sociaux.
+ * En-tête façon TikTok : nom en grand et @pseudo à gauche, avatar rond à droite, compteurs
+ * Suivis / Followers / J'aime, puis Suivre · Message · partager, et la bio.
+ * La bannière (facultative) s'affiche en bandeau au-dessus.
  */
 export function ProfileHeader({ profile, isMe }: { profile: PublicProfile; isMe: boolean }) {
   const { colors } = useTheme();
@@ -50,52 +35,62 @@ export function ProfileHeader({ profile, isMe }: { profile: PublicProfile; isMe:
 
   return (
     <View>
-      <Animated.View entering={FadeIn.duration(400)} style={[styles.banner, { backgroundColor: accent }]}>
-        {banner ? <Image source={{ uri: banner }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} cachePolicy="memory-disk" /> : null}
-        <BannerShade background={colors.background} />
-        <PressableScale
-          scaleTo={0.9}
-          accessibilityLabel={t('feed.share')}
-          onPress={() => shareProfile(profile.username, name)}
-          style={styles.share}
-        >
-          <Share2 size={17} color="#FFFFFF" />
-        </PressableScale>
-      </Animated.View>
+      {banner ? (
+        <Animated.View entering={FadeIn.duration(300)} style={styles.banner}>
+          <Image source={{ uri: banner }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} cachePolicy="memory-disk" />
+        </Animated.View>
+      ) : null}
 
       <View style={styles.body}>
-        <Animated.View entering={ZoomIn.springify().damping(13).delay(120)} style={[styles.avatarRing, { backgroundColor: colors.background }]}>
-          <Avatar name={name} src={profile.avatar_url} color={accent} size={120} />
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(160).duration(360)} style={styles.identity}>
-          <View style={styles.nameRow}>
-            <Text variant="display" numberOfLines={2} style={styles.center}>
-              {name}
+        <Animated.View entering={FadeInDown.duration(320)} style={styles.top}>
+          <View style={styles.identity}>
+            <View style={styles.nameRow}>
+              <Text style={[styles.name, { color: colors.ink }]} numberOfLines={2}>
+                {name}
+              </Text>
+              {special.map((badge) => {
+                const { icon: Icon, color } = SPECIAL_BADGES[badge.code]!;
+                return (
+                  <View key={badge.code} accessibilityLabel={badge.label} style={[styles.special, { backgroundColor: `${color}22`, borderColor: `${color}55` }]}>
+                    <Icon size={13} color={color} />
+                  </View>
+                );
+              })}
+            </View>
+            <Text tone="muted" style={styles.handle}>
+              @{profile.username}
             </Text>
-            {special.map((badge) => {
-              const { icon: Icon, color } = SPECIAL_BADGES[badge.code]!;
-              return (
-                <View key={badge.code} accessibilityLabel={badge.label} style={[styles.special, { backgroundColor: `${color}22`, borderColor: `${color}55` }]}>
-                  <Icon size={15} color={color} />
-                </View>
-              );
-            })}
+            <StatsBar profile={profile} accent={accent} />
           </View>
-          <Text tone="muted" style={styles.center}>
-            @{profile.username}
-            {profile.stack?.length ? ` · ${profile.stack.slice(0, 3).join(', ')}` : ''}
-          </Text>
+          <Animated.View entering={ZoomIn.springify().damping(14).delay(80)}>
+            <Avatar name={name} src={profile.avatar_url} color={accent} size={96} />
+          </Animated.View>
         </Animated.View>
 
-        <StatsBar profile={profile} accent={accent} />
-
-        <View style={styles.action}>
+        <View style={styles.actions}>
           {isMe ? (
-            <Button label={t('profile.edit_mine')} icon={Pencil} variant="secondary" block onPress={() => router.push('/edit-profile')} />
+            <View style={styles.flex}>
+              <Button label={t('profile.edit_mine')} icon={Pencil} variant="primary" block onPress={() => router.push('/edit-profile')} />
+            </View>
           ) : (
-            <FollowButton profile={profile} />
+            <>
+              <View style={styles.flex}>
+                <FollowButton profile={profile} />
+              </View>
+              <View style={styles.flex}>
+                <MessageButton username={profile.username} />
+              </View>
+            </>
           )}
+          <PressableScale
+            scaleTo={0.9}
+            accessibilityRole="button"
+            accessibilityLabel={t('feed.share')}
+            onPress={() => shareProfile(profile.username, name)}
+            style={[styles.round, { backgroundColor: colors.container }]}
+          >
+            <Share2 size={19} color={colors.ink} />
+          </PressableScale>
         </View>
 
         {profile.bio ? (
@@ -152,7 +147,7 @@ function FollowButton({ profile }: { profile: PublicProfile }) {
   return (
     <Button
       label={t(following ? 'profile.following_state' : 'profile.follow')}
-      icon={following ? UserCheck : UserPlus}
+      icon={following ? UserCheck : undefined}
       variant={following ? 'secondary' : 'primary'}
       block
       onPress={() => {
@@ -167,43 +162,72 @@ function FollowButton({ profile }: { profile: PublicProfile }) {
   );
 }
 
-/** [Abonnements] | [Abonnés] | [Craft Score] : les deux premiers ouvrent la liste, le 3e le détail. */
+/** Ouvre (ou crée) la conversation privée avec ce membre. */
+function MessageButton({ username }: { username: string }) {
+  const { isAuthenticated } = useSession();
+  const toast = useToast();
+  const open = useOpenConversation();
+  return (
+    <Button
+      label={t('dm.message')}
+      variant="secondary"
+      block
+      loading={open.isPending}
+      onPress={() => {
+        if (!isAuthenticated) {
+          router.push('/login');
+          return;
+        }
+        open.mutate(username, {
+          onSuccess: (conversation) => router.push(`/messages/${conversation.id}`),
+          onError: (error) => toast(errorMessage(error), 'error'),
+        });
+      }}
+    />
+  );
+}
+
+/** « 946 Suivis · 16 478 Followers · 270 332 J'aime » puis le Craft Score (détail au toucher). */
 function StatsBar({ profile, accent }: { profile: PublicProfile; accent: string }) {
   const { colors } = useTheme();
   const [list, setList] = useState<'followers' | 'following' | null>(null);
   const [craftOpen, setCraftOpen] = useState(false);
+  const likes = (profile.craft.creation.breakdown.post_upvotes ?? 0) + (profile.craft.help.breakdown.answer_upvotes ?? 0);
   const cells = [
-    { key: 'following', value: profile.following_count, label: t('profile.following_count'), onPress: () => setList('following') },
-    { key: 'followers', value: profile.followers_count, label: t('profile.followers_count'), onPress: () => setList('followers') },
-    { key: 'craft', value: profile.craft.score, label: t('profile.karma'), onPress: () => setCraftOpen(true) },
+    { key: 'following', value: profile.following_count, label: t('profile.following_short'), onPress: () => setList('following') },
+    { key: 'followers', value: profile.followers_count, label: t('profile.followers_short'), onPress: () => setList('followers') },
+    { key: 'likes', value: likes, label: t('profile.likes'), onPress: undefined },
   ];
   return (
     <>
       <View style={styles.stats}>
-        {cells.map((cell, index) => (
+        {cells.map((cell) => (
           <PressableScale
             key={cell.key}
             scaleTo={0.94}
             onPress={cell.onPress}
+            disabled={!cell.onPress}
             accessibilityRole="button"
             accessibilityLabel={`${formatCount(cell.value)} ${cell.label}`}
-            style={[styles.stat, index ? { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colors.line } : null]}
+            style={styles.stat}
           >
-            <View style={styles.inline}>
-              {cell.key === 'craft' ? <Sparkles size={15} color={accent} /> : null}
-              <Text variant="title" style={cell.key === 'craft' ? { color: accent } : null}>
-                {formatCount(cell.value)}
-              </Text>
-            </View>
-            <View style={styles.inline}>
-              <Text variant="caption" tone="muted">
-                {cell.label}
-              </Text>
-              {cell.key === 'craft' ? <Info size={11} color={colors.inkFaint} /> : null}
-            </View>
+            <Text style={[styles.statValue, { color: colors.ink }]}>{formatCount(cell.value)}</Text>
+            <Text variant="small" tone="muted">
+              {cell.label}
+            </Text>
           </PressableScale>
         ))}
       </View>
+      <PressableScale scaleTo={0.96} onPress={() => setCraftOpen(true)} style={[styles.craft, { backgroundColor: colors.container }]}>
+        <Sparkles size={13} color={accent} />
+        <Text variant="caption" style={{ color: accent, fontWeight: '700' }}>
+          {formatCount(profile.craft.score)}
+        </Text>
+        <Text variant="caption" tone="muted">
+          {t('profile.karma')}
+        </Text>
+        <Info size={11} color={colors.inkFaint} />
+      </PressableScale>
       <CraftSheet profile={profile} visible={craftOpen} onClose={() => setCraftOpen(false)} />
       <FollowSheet username={profile.username} kind={list} onClose={() => setList(null)} />
     </>
@@ -291,28 +315,22 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { textAlign: 'center' },
   inline: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  banner: { height: 190, overflow: 'hidden' },
-  share: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.35)',
-  },
-  body: { alignItems: 'center', paddingHorizontal: 16, paddingBottom: 12, gap: 14, marginTop: -78 },
-  avatarRing: { padding: 5, borderRadius: 70 },
-  identity: { alignItems: 'center', gap: 4 },
-  nameRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  special: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  stats: { flexDirection: 'row', alignSelf: 'stretch' },
-  stat: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 6 },
-  action: { alignSelf: 'stretch', paddingHorizontal: 24 },
+  banner: { height: 120, overflow: 'hidden' },
+  body: { paddingHorizontal: 18, paddingTop: 18, paddingBottom: 12, gap: 14 },
+  top: { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
+  identity: { flex: 1, gap: 2 },
+  name: { fontSize: 30, lineHeight: 36, fontWeight: '800', letterSpacing: -0.6 },
+  handle: { fontSize: 16 },
+  nameRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
+  special: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  stats: { flexDirection: 'row', gap: 22, marginTop: 12 },
+  stat: { gap: 1 },
+  statValue: { fontSize: 20, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  craft: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 10, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  round: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
   bio: { alignSelf: 'stretch' },
-  facts: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 16, rowGap: 6 },
+  facts: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 6 },
   otw: { alignSelf: 'stretch' },
   sheetBody: { paddingHorizontal: 20, paddingBottom: 24, gap: 12 },
   sheetList: { maxHeight: 460 },

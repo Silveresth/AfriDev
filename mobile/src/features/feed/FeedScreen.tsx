@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
-import { Bell, Rows3, UsersRound } from 'lucide-react-native';
+import { Bell, MessageCircle, Rows3, UsersRound } from 'lucide-react-native';
 import { useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
+import { useUnreadMessages } from '@/features/messaging';
 import { useUnreadCount } from '@/features/notifications';
 import { CreateButton } from '@/shared/layout/CreateButton';
 import { type Key, useT } from '@/shared/i18n';
@@ -20,6 +21,7 @@ export function FeedScreen() {
   const { colors } = useTheme();
   const { t } = useT();
   const unread = useUnreadCount();
+  const unreadMessages = useUnreadMessages();
   const [scope, setScope] = useState<HomeScope>('for_you');
   const [filter, setFilter] = useState<HomeFilter>('all');
   const feed = useHomeFeed(filter, scope);
@@ -29,7 +31,12 @@ export function FeedScreen() {
       <Header
         title="AfriDev"
         large
-        right={<IconButton icon={Bell} label={t('nav.notifications')} badge={unread.data} onPress={() => router.push('/notifications')} />}
+        right={
+          <>
+            <IconButton icon={MessageCircle} label={t('dm.title')} badge={unreadMessages.data} onPress={() => router.push('/messages')} />
+            <IconButton icon={Bell} label={t('nav.notifications')} badge={unread.data} onPress={() => router.push('/notifications')} />
+          </>
+        }
       />
       <View style={[styles.scopes, { borderBottomColor: colors.line }]} accessibilityRole="tablist">
         {(['for_you', 'following'] as const).map((value) => {

@@ -69,6 +69,8 @@ function Navigator() {
           <Stack.Screen name="hub-members/[slug]" />
           <Stack.Screen name="u/[username]" />
           <Stack.Screen name="notifications" />
+          <Stack.Screen name="messages/index" />
+          <Stack.Screen name="messages/[id]" />
           <Stack.Screen name="settings/index" />
           <Stack.Screen name="settings/notifications" />
           <Stack.Screen name="settings/privacy" />

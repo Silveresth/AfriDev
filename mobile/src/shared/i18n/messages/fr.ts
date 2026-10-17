@@ -587,8 +587,21 @@ const fr = {
   'modify.snippet': 'Modifier le snippet',
   'modify.hub': 'Modifier le hub',
   'modify.saved': 'Modifications enregistrées.',
+  // ── Messages directs ──
+  'dm.title': 'Messages',
+  'dm.message': 'Message',
+  'dm.empty': 'Aucune conversation',
+  'dm.empty_body': 'Ouvrez le profil d’un membre et touchez « Message » pour lui écrire.',
+  'dm.placeholder': 'Votre message…',
+  'dm.send': 'Envoyer',
+  'dm.you': 'Vous :',
+  'dm.seen': 'Vu',
+  'dm.say_hi': 'Dites bonjour 👋',
+  'profile.following_short': 'Suivis',
+  'profile.followers_short': 'Followers',
+  'profile.likes': 'J’aime',
+  'hubs.image': 'Photo du hub',
 } as const;
-
 export default fr;
 export type MobileKey = keyof typeof fr;
 export type MobileMessages = Partial<Record<MobileKey, string>>;

@@ -558,6 +558,18 @@ const en: MobileMessages = {
   'modify.snippet': 'Edit snippet',
   'modify.hub': 'Edit hub',
   'modify.saved': 'Changes saved.',
+  'dm.title': 'Messages',
+  'dm.message': 'Message',
+  'dm.empty': 'No conversations',
+  'dm.empty_body': 'Open a member’s profile and tap “Message” to write to them.',
+  'dm.placeholder': 'Your message…',
+  'dm.send': 'Send',
+  'dm.you': 'You:',
+  'dm.seen': 'Seen',
+  'dm.say_hi': 'Say hi 👋',
+  'profile.following_short': 'Following',
+  'profile.followers_short': 'Followers',
+  'profile.likes': 'Likes',
+  'hubs.image': 'Hub picture',
 };
-
 export default en;
