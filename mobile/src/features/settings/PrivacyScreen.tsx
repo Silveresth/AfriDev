@@ -1,6 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
-import { AlertTriangle, Copy, Download, FileJson, KeyRound, Plus, Trash2 } from 'lucide-react-native';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { AlertTriangle, Copy, Download, FileJson, KeyRound, Plus, Trash2, UserX } from 'lucide-react-native';
+import { useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 
@@ -12,7 +13,7 @@ import { useSession } from '@/shared/session';
 import { mono, radius, useTheme } from '@/shared/theme';
 import { Badge, Button, Header, Row, Section, Switch, Text, TextField, useToast } from '@/shared/ui';
 
-import { exportMyData, useAccessTokenActions, useAccessTokens } from './api';
+import { exportMyData, useAccessTokenActions, useAccessTokens, useDeleteAccount } from './api';
 
 const EXPIRIES: { value: number | null; label: () => string }[] = [
   { value: 30, label: () => t('priv.days', { count: 30 }) },
@@ -178,14 +179,74 @@ function ExportSection() {
   );
 }
 
+function DeleteAccountSection() {
+  const { colors } = useTheme();
+  const { user, signOut } = useSession();
+  const toast = useToast();
+  const remove = useDeleteAccount();
+  const [secret, setSecret] = useState('');
+  const hasPassword = user?.has_password ?? true;
+
+  const submit = () =>
+    Alert.alert(t('priv.delete'), t('priv.delete_warning'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('priv.delete_button'),
+        style: 'destructive',
+        onPress: () =>
+          remove.mutate(hasPassword ? { password: secret, confirm: '' } : { password: '', confirm: secret }, {
+            onSuccess: () => {
+              haptic.success();
+              toast(t('priv.deleted'));
+              signOut();
+              router.replace('/feed');
+            },
+            onError: (error) => toast(errorMessage(error), 'error'),
+          }),
+      },
+    ]);
+
+  return (
+    <Section index={2} icon={UserX} title={t('priv.delete')} description={t('priv.delete_desc')}>
+      <View style={[styles.pad, styles.gap]}>
+        <View style={[styles.inline, styles.warning, { backgroundColor: colors.dangerSoft }]}>
+          <AlertTriangle size={16} color={colors.danger} />
+          <Text variant="small" style={[styles.flex, { color: colors.danger }]}>
+            {t('priv.delete_warning')}
+          </Text>
+        </View>
+        <TextField
+          label={hasPassword ? t('priv.delete_password') : t('priv.delete_confirm', { name: user?.username ?? '' })}
+          value={secret}
+          onChangeText={setSecret}
+          secureTextEntry={hasPassword}
+          autoCapitalize="none"
+          autoCorrect={false}
+          textContentType={hasPassword ? 'password' : 'none'}
+        />
+        <Button label={t('priv.delete_button')} icon={Trash2} variant="danger" block disabled={!secret.trim()} loading={remove.isPending} onPress={submit} />
+      </View>
+    </Section>
+  );
+}
+
 export function PrivacyScreen() {
   const { colors } = useTheme();
+  const scroll = useRef<ScrollView>(null);
+  const { focus } = useLocalSearchParams<{ focus?: string }>();
   return (
     <KeyboardAvoidingView behavior="padding" style={[styles.flex, { backgroundColor: colors.surface }]}>
       <Header title={t('set.privacy')} back />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        ref={scroll}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        // Depuis « Supprimer mon compte » des réglages : on arrive directement sur la section.
+        onContentSizeChange={() => (focus === 'delete' ? scroll.current?.scrollToEnd({ animated: true }) : undefined)}
+      >
         <TokensSection />
         <ExportSection />
+        <DeleteAccountSection />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -199,6 +260,7 @@ const styles = StyleSheet.create({
   gapSm: { gap: 6 },
   inline: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   created: { gap: 10, padding: 12, borderRadius: radius.md },
+  warning: { padding: 12, borderRadius: radius.md, alignItems: 'flex-start' },
   token: { fontFamily: mono, fontSize: 12, padding: 10, borderRadius: radius.sm, borderWidth: StyleSheet.hairlineWidth * 2 },
   segmented: { flexDirection: 'row', padding: 4, borderRadius: radius.md, gap: 4 },
   segment: { flex: 1, height: 36, borderRadius: radius.sm + 2, alignItems: 'center', justifyContent: 'center' },

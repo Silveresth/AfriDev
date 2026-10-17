@@ -22,6 +22,7 @@ from .serializers import (
     AccessTokenSerializer,
     AuthResponseSerializer,
     CreatedAccessTokenSerializer,
+    DeleteAccountSerializer,
     LoginInputSerializer,
     MFALoginInputSerializer,
     OAuthInputSerializer,
@@ -365,6 +366,19 @@ class AccessTokenDetailView(APIView):
     @extend_schema(responses={204: None})
     def delete(self, request, token_id):
         security.revoke_access_token(user=request.user, token_id=token_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DeleteAccountView(APIView):
+    """Suppression définitive du compte, depuis le web comme depuis l'appli."""
+
+    permission_classes = [NotPersonalAccessToken]
+
+    @extend_schema(request=DeleteAccountSerializer, responses={204: None})
+    def post(self, request):
+        data = DeleteAccountSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        services.delete_account(user=request.user, **data.validated_data)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

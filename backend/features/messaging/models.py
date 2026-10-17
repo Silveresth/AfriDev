@@ -24,6 +24,10 @@ class Conversation(BaseModel):
     )
     low_read_at = models.DateTimeField(null=True, blank=True)
     high_read_at = models.DateTimeField(null=True, blank=True)
+    # « Supprimer la discussion » (pour soi seul) : les messages antérieurs disparaissent du fil,
+    # et la conversation de la boîte de réception jusqu'au prochain message.
+    low_cleared_at = models.DateTimeField(null=True, blank=True)
+    high_cleared_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         constraints = [
@@ -41,6 +45,9 @@ class Conversation(BaseModel):
     def read_at_for(self, user_id):
         return self.low_read_at if self.user_low_id == user_id else self.high_read_at
 
+    def cleared_at_for(self, user_id):
+        return self.low_cleared_at if self.user_low_id == user_id else self.high_cleared_at
+
 
 class Message(BaseModel):
     conversation = models.ForeignKey(
@@ -52,6 +59,16 @@ class Message(BaseModel):
     body = models.TextField(max_length=2000, blank=True)
     # Photo, vidéo ou message vocal (features.media), facultatif ; référence sans clé étrangère.
     media_id = models.UUIDField(null=True, blank=True)
+    # Réponse à un message précis (texte, photo, vidéo ou vocal), cité au-dessus de la bulle.
+    reply_to = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    edited_at = models.DateTimeField(null=True, blank=True)
+    # « Supprimer pour tout le monde » : contenu effacé, la bulle reste (« Message supprimé »).
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    # « Supprimer pour moi » : masqué chez l'un des deux seulement.
+    hidden_for_sender = models.BooleanField(default=False)
+    hidden_for_recipient = models.BooleanField(default=False)
 
     class Meta:
         indexes = [models.Index(fields=["conversation", "-created_at"])]

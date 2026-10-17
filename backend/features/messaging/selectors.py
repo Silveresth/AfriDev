@@ -1,6 +1,6 @@
 """Lectures. Seul point d'entrée en lecture pour les autres features."""
 
-from django.db.models import Count, Q, QuerySet
+from django.db.models import Count, F, Q, QuerySet
 
 from .models import Conversation, Message
 
@@ -10,8 +10,17 @@ def _mine(user_id) -> Q:
 
 
 def list_conversations(*, user_id) -> QuerySet[Conversation]:
-    """Conversations ayant au moins un message, la plus récente d'abord."""
-    return Conversation.objects.alive().filter(_mine(user_id), last_message_at__isnull=False)
+    """Conversations ayant au moins un message, la plus récente d'abord ; une discussion
+    supprimée par le membre ne revient qu'avec un nouveau message."""
+    not_cleared_low = Q(user_low_id=user_id) & (
+        Q(low_cleared_at__isnull=True) | Q(last_message_at__gt=F("low_cleared_at"))
+    )
+    not_cleared_high = Q(user_high_id=user_id) & (
+        Q(high_cleared_at__isnull=True) | Q(last_message_at__gt=F("high_cleared_at"))
+    )
+    return Conversation.objects.alive().filter(
+        not_cleared_low | not_cleared_high, last_message_at__isnull=False
+    )
 
 
 def get_conversation(*, conversation_id, user_id) -> Conversation | None:
@@ -19,8 +28,26 @@ def get_conversation(*, conversation_id, user_id) -> Conversation | None:
     return Conversation.objects.alive().filter(_mine(user_id), id=conversation_id).first()
 
 
-def list_messages(*, conversation_id) -> QuerySet[Message]:
-    return Message.objects.alive().filter(conversation_id=conversation_id)
+def list_messages(*, conversation: Conversation, user_id) -> QuerySet[Message]:
+    """Fil tel que le voit ce membre : sans ce qu'il a supprimé pour lui."""
+    messages = (
+        Message.objects.alive()
+        .filter(conversation_id=conversation.id)
+        .exclude(Q(sender_id=user_id, hidden_for_sender=True))
+        .exclude(Q(hidden_for_recipient=True) & ~Q(sender_id=user_id))
+        .select_related("reply_to")
+    )
+    cleared_at = conversation.cleared_at_for(user_id)
+    return messages.filter(created_at__gt=cleared_at) if cleared_at else messages
+
+
+def get_message(*, conversation: Conversation, message_id) -> Message | None:
+    return (
+        Message.objects.alive()
+        .select_related("conversation")
+        .filter(conversation_id=conversation.id, id=message_id)
+        .first()
+    )
 
 
 def unread_counts(*, conversations, user_id) -> dict:
@@ -34,7 +61,10 @@ def unread_counts(*, conversations, user_id) -> dict:
     if not conversations:
         return {}
     rows = (
-        Message.objects.alive().filter(condition).values("conversation_id").annotate(n=Count("id"))
+        Message.objects.alive()
+        .filter(condition, hidden_for_recipient=False, revoked_at__isnull=True)
+        .values("conversation_id")
+        .annotate(n=Count("id"))
     )
     return {row["conversation_id"]: row["n"] for row in rows}
 

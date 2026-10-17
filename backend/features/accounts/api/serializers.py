@@ -12,6 +12,9 @@ from ..models import User
 
 class UserSerializer(ReadOnlyModelSerializer):
     two_factor_enabled = serializers.BooleanField(read_only=True)
+    has_password = serializers.SerializerMethodField(
+        help_text="Faux pour un compte SMS / GitHub / Google : la suppression demande le pseudo."
+    )
 
     class Meta:
         model = User
@@ -25,7 +28,11 @@ class UserSerializer(ReadOnlyModelSerializer):
             "is_staff",
             "is_superuser",
             "two_factor_enabled",
+            "has_password",
         ]
+
+    def get_has_password(self, user) -> bool:
+        return user.has_usable_password()
 
 
 class TokensSerializer(serializers.Serializer):
@@ -51,6 +58,18 @@ class MFALoginInputSerializer(serializers.Serializer):
 
 class TOTPCodeSerializer(serializers.Serializer):
     code = serializers.RegexField(r"^\d{6}$")
+
+
+class DeleteAccountSerializer(serializers.Serializer):
+    password = serializers.CharField(
+        required=False, allow_blank=True, default="", help_text="Comptes avec mot de passe."
+    )
+    confirm = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default="",
+        help_text="Nom d'utilisateur retapé (comptes sans mot de passe : SMS, GitHub, Google).",
+    )
 
 
 class TOTPSetupSerializer(serializers.Serializer):

@@ -68,24 +68,96 @@ export function useOpenConversation() {
   });
 }
 
+// Mêmes délais que le serveur (et que WhatsApp).
+export const EDIT_WINDOW_MS = 15 * 60 * 1000;
+export const REVOKE_WINDOW_MS = 2 * 24 * 3600 * 1000;
+
+const age = (message: Message) => Date.now() - new Date(message.created_at).getTime();
+export const canEdit = (message: Message, userId?: string) =>
+  message.sender_id === userId && !message.revoked && age(message) < EDIT_WINDOW_MS;
+export const canRevoke = (message: Message, userId?: string) =>
+  message.sender_id === userId && !message.revoked && age(message) < REVOKE_WINDOW_MS;
+
+type Thread = InfiniteData<Page<Message>>;
+
+function patchThread(queryClient: ReturnType<typeof useQueryClient>, conversationId: string, change: (messages: Message[]) => Message[]) {
+  queryClient.setQueryData<Thread>(messageKeys.thread(conversationId), (data) =>
+    data ? { ...data, pages: data.pages.map((page) => ({ ...page, results: change(page.results) })) } : data,
+  );
+}
+
 export function useSendMessage(conversationId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { body?: string; media_id?: string }) =>
+    mutationFn: (input: { body?: string; media_id?: string; reply_to_id?: string | null }) =>
       unwrap(
         api.POST('/api/messages/conversations/{conversation_id}/messages/', {
           params: { path: { conversation_id: conversationId } },
-          body: { body: input.body ?? '', media_id: input.media_id ?? null },
+          body: { body: input.body ?? '', media_id: input.media_id ?? null, reply_to_id: input.reply_to_id ?? null },
         }),
       ),
     onSuccess: (message) => {
       // Le message apparaît aussitôt en bas du fil, sans attendre le prochain rafraîchissement.
-      queryClient.setQueryData<InfiniteData<Page<Message>>>(messageKeys.thread(conversationId), (data) =>
+      queryClient.setQueryData<Thread>(messageKeys.thread(conversationId), (data) =>
         data
           ? { ...data, pages: data.pages.map((page, index) => (index === 0 ? { ...page, results: [message, ...page.results] } : page)) }
           : data,
       );
       void queryClient.invalidateQueries({ queryKey: messageKeys.inbox });
+    },
+  });
+}
+
+export function useEditMessage(conversationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; body: string }) =>
+      unwrap(
+        api.PATCH('/api/messages/conversations/{conversation_id}/messages/{message_id}/', {
+          params: { path: { conversation_id: conversationId, message_id: input.id } },
+          body: { body: input.body },
+        }),
+      ),
+    onSuccess: (message) => {
+      patchThread(queryClient, conversationId, (messages) => messages.map((m) => (m.id === message.id ? message : m)));
+      void queryClient.invalidateQueries({ queryKey: messageKeys.inbox });
+    },
+  });
+}
+
+/** Messages sélectionnés : supprimés pour moi, ou pour tout le monde (« Message supprimé »). */
+export function useDeleteMessages(conversationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { ids: string[]; forEveryone: boolean }) =>
+      unwrap(
+        api.POST('/api/messages/conversations/{conversation_id}/messages/delete/', {
+          params: { path: { conversation_id: conversationId } },
+          body: { ids: input.ids, for_everyone: input.forEveryone },
+        }),
+      ),
+    onSuccess: (_result, { ids, forEveryone }) => {
+      const selected = new Set(ids);
+      patchThread(queryClient, conversationId, (messages) =>
+        forEveryone
+          ? messages.map((m) => (selected.has(m.id) ? { ...m, body: '', media: null, edited_at: null, revoked: true } : m))
+          : messages.filter((m) => !selected.has(m.id)),
+      );
+      void queryClient.invalidateQueries({ queryKey: messageKeys.inbox });
+    },
+  });
+}
+
+/** « Supprimer la discussion » pour moi : l'autre membre garde l'historique. */
+export function useClearConversation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (conversationId: string) =>
+      unwrap(api.POST('/api/messages/conversations/{conversation_id}/clear/', { params: { path: { conversation_id: conversationId } } })),
+    onSuccess: (_result, conversationId) => {
+      queryClient.removeQueries({ queryKey: messageKeys.thread(conversationId) });
+      void queryClient.invalidateQueries({ queryKey: messageKeys.inbox });
+      void queryClient.invalidateQueries({ queryKey: messageKeys.unread });
     },
   });
 }

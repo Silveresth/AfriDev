@@ -262,6 +262,33 @@ def reset_password(*, uid: str, token: str, password: str) -> User:
     return user
 
 
+# ── Suppression du compte (RGPD, article 17) ──
+
+
+@transaction.atomic
+def delete_account(*, user: User, password: str = "", confirm: str = "") -> None:
+    """Supprime définitivement le compte et tout ce qui s'y rattache (profil, publications,
+    messages, médias…). Mot de passe exigé s'il existe ; sinon (SMS, GitHub, Google) le membre
+    retape son nom d'utilisateur."""
+    from features.hubs import services as hub_services
+    from features.profiles import services as profile_services
+
+    if user.is_superuser:
+        raise PermissionDeniedError(
+            "Un compte administrateur ne peut pas être supprimé depuis l'application."
+        )
+    if user.has_usable_password():
+        if not user.check_password(password or ""):
+            raise InvalidCredentialsError("Mot de passe incorrect.")
+    elif (confirm or "").strip().lower() != user.username.lower():
+        raise DomainError(
+            "Tapez votre nom d'utilisateur pour confirmer.", code="confirmation_mismatch"
+        )
+    profile_services.forget_follows(user_id=user.id)
+    hub_services.forget_member(user_id=user.id)
+    user.delete()
+
+
 # ── Back-office : gestion des membres ──
 
 

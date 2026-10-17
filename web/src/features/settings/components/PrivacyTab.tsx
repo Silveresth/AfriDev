@@ -8,20 +8,23 @@ import {
   Plus,
   ShieldCheck,
   Trash2,
+  UserX,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { errorMessage } from '@/shared/api';
 import { useSession } from '@/shared/session';
-import { Button, Card, CardHeader, CopyButton, Skeleton, StatusBadge, Switch, TimeAgo, useToast } from '@/shared/ui';
+import { Button, Card, CardHeader, CopyButton, Dialog, Skeleton, StatusBadge, Switch, TimeAgo, useToast } from '@/shared/ui';
 
-import { downloadMyData, useAccessTokenActions, useAccessTokens } from '../api';
+import { downloadMyData, useAccessTokenActions, useAccessTokens, useDeleteAccount } from '../api';
 
 export function PrivacyTab() {
   return (
     <div className="space-y-6">
       <TokensCard />
       <ExportCard />
+      <DeleteAccountCard />
     </div>
   );
 }
@@ -227,6 +230,80 @@ function ExportCard() {
         Posts, questions, réponses, snippets, commentaires, collections et profil. Les secrets (mot de passe,
         clés de double authentification) ne sont jamais inclus.
       </p>
+    </Card>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+ * Suppression du compte (RGPD, droit à l'effacement)
+ * ───────────────────────────────────────────────────────────── */
+function DeleteAccountCard() {
+  const { user, signOut } = useSession();
+  const router = useRouter();
+  const remove = useDeleteAccount();
+  const [open, setOpen] = useState(false);
+  const [secret, setSecret] = useState('');
+  const hasPassword = user?.has_password ?? true;
+
+  function close() {
+    setOpen(false);
+    setSecret('');
+    remove.reset();
+  }
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    remove.mutate(hasPassword ? { password: secret, confirm: '' } : { password: '', confirm: secret }, {
+      onSuccess: () => {
+        signOut();
+        router.replace('/');
+      },
+    });
+  }
+
+  return (
+    <Card className="space-y-4 border-danger/40 p-5">
+      <CardHeader
+        icon={<UserX className="size-4 text-danger" />}
+        title="Supprimer mon compte"
+        subtitle="Définitif : profil, publications, messages et médias sont effacés"
+        action={
+          <Button variant="outline" size="sm" className="border-danger/50 text-danger hover:bg-danger-soft" onClick={() => setOpen(true)}>
+            <Trash2 className="size-4" aria-hidden /> Supprimer
+          </Button>
+        }
+      />
+      <Dialog open={open} onClose={close} title="Supprimer votre compte ?">
+        <form onSubmit={submit} className="space-y-4">
+          <p className="flex items-start gap-2.5 rounded-xl bg-danger-soft px-4 py-3 text-body-sm text-on-danger-soft">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+            Cette action est irréversible. Pensez à exporter vos données avant de continuer.
+          </p>
+          <div className="space-y-1">
+            <label htmlFor="delete-secret" className="block text-xs font-bold text-ink">
+              {hasPassword ? 'Votre mot de passe' : `Tapez « ${user?.username ?? ''} » pour confirmer`}
+            </label>
+            <input
+              id="delete-secret"
+              type={hasPassword ? 'password' : 'text'}
+              autoComplete={hasPassword ? 'current-password' : 'off'}
+              value={secret}
+              onChange={(event) => setSecret(event.target.value)}
+              required
+              className="h-10 w-full rounded-xl border border-line-strong bg-card px-3 text-body-sm text-ink focus:border-danger focus:ring-4 focus:ring-danger/12 focus:outline-none"
+            />
+          </div>
+          {remove.isError ? <p className="text-body-sm text-danger">{errorMessage(remove.error)}</p> : null}
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button type="button" variant="ghost" onClick={close}>
+              Annuler
+            </Button>
+            <Button type="submit" loading={remove.isPending} disabled={!secret.trim()} className="bg-danger text-white hover:bg-danger/90">
+              Supprimer définitivement
+            </Button>
+          </div>
+        </form>
+      </Dialog>
     </Card>
   );
 }

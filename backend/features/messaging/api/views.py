@@ -13,6 +13,9 @@ from features.profiles import selectors as profile_selectors
 from .. import selectors, services
 from .serializers import (
     ConversationSerializer,
+    DeletedCountSerializer,
+    MessageDeleteSerializer,
+    MessageEditSerializer,
     MessageInputSerializer,
     MessageSerializer,
     OpenConversationSerializer,
@@ -87,7 +90,7 @@ class MessageListView(APIView):
         conversation = _conversation(request, conversation_id)
         paginator = CursorPagination()
         page = paginator.paginate_queryset(
-            selectors.list_messages(conversation_id=conversation.id), request
+            selectors.list_messages(conversation=conversation, user_id=request.user.id), request
         )
         return paginator.get_paginated_response(
             MessageSerializer(present_messages(page), many=True).data
@@ -106,10 +109,65 @@ class MessageListView(APIView):
             sender=request.user,
             body=data.validated_data["body"],
             media_id=data.validated_data.get("media_id"),
+            reply_to_id=data.validated_data.get("reply_to_id"),
         )
         return Response(
             MessageSerializer(present_messages([message])[0]).data, status=status.HTTP_201_CREATED
         )
+
+
+class MessageDetailView(APIView):
+    @extend_schema(
+        operation_id="messages_edit",
+        request=MessageEditSerializer,
+        responses=MessageSerializer,
+        description="Modifier son message (15 minutes au plus après l'envoi).",
+    )
+    def patch(self, request, conversation_id, message_id):
+        data = MessageEditSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        message = selectors.get_message(
+            conversation=_conversation(request, conversation_id), message_id=message_id
+        )
+        if message is None:
+            raise NotFound("Message introuvable.")
+        message = services.edit_message(
+            message=message, user=request.user, body=data.validated_data["body"]
+        )
+        return Response(MessageSerializer(present_messages([message])[0]).data)
+
+
+class MessageDeleteView(APIView):
+    @extend_schema(
+        operation_id="messages_delete",
+        request=MessageDeleteSerializer,
+        responses=DeletedCountSerializer,
+        description="Supprime les messages sélectionnés, pour moi ou pour tout le monde.",
+    )
+    def post(self, request, conversation_id):
+        data = MessageDeleteSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        deleted = services.delete_messages(
+            conversation=_conversation(request, conversation_id),
+            user=request.user,
+            message_ids=data.validated_data["ids"],
+            for_everyone=data.validated_data["for_everyone"],
+        )
+        return Response({"deleted": deleted})
+
+
+class ClearConversationView(APIView):
+    @extend_schema(
+        operation_id="messages_conversations_clear",
+        request=None,
+        responses={204: None},
+        description="Supprime la discussion pour moi (l'autre membre la garde).",
+    )
+    def post(self, request, conversation_id):
+        services.clear_conversation(
+            conversation=_conversation(request, conversation_id), user=request.user
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MarkReadView(APIView):

@@ -74,3 +74,87 @@ def test_photo_message(auth_client, client_for, user, other_user):
     # Le média d'un autre membre ne peut pas être joint.
     kofi = client_for(other_user)
     assert kofi.post(url, {"media_id": str(photo.id)}, format="json").status_code == 400
+
+    # Répondre précisément à la photo : elle est citée au-dessus de la réponse.
+    reply = kofi.post(url, {"body": "Belle vue !", "reply_to_id": sent.data["id"]}, format="json")
+    assert reply.status_code == 201
+    assert reply.data["reply_to"]["id"] == sent.data["id"]
+    assert reply.data["reply_to"]["media"]["kind"] == "image"
+
+
+def _chat(auth_client):
+    conversation = auth_client.post(
+        "/api/messages/conversations/", {"username": "kofi"}, format="json"
+    ).data
+    return conversation["id"], f"/api/messages/conversations/{conversation['id']}/messages/"
+
+
+def test_edit_message(auth_client, client_for, other_user):
+    from datetime import timedelta
+
+    from features.messaging.models import Message
+
+    _, url = _chat(auth_client)
+    sent = auth_client.post(url, {"body": "Rendez-vous à 18h"}, format="json").data
+    edited = auth_client.patch(f"{url}{sent['id']}/", {"body": "Rendez-vous à 19h"}, format="json")
+    assert edited.status_code == 200
+    assert edited.data["body"] == "Rendez-vous à 19h" and edited.data["edited_at"]
+    inbox = client_for(other_user).get("/api/messages/conversations/").data["results"]
+    assert inbox[0]["last_message_preview"] == "Rendez-vous à 19h"
+
+    # Seul l'auteur modifie, et pas après 15 minutes.
+    kofi = client_for(other_user)
+    assert kofi.patch(f"{url}{sent['id']}/", {"body": "x"}, format="json").status_code == 403
+    Message.objects.filter(id=sent["id"]).update(
+        created_at=Message.objects.get(id=sent["id"]).created_at - timedelta(minutes=16)
+    )
+    late = auth_client.patch(f"{url}{sent['id']}/", {"body": "20h"}, format="json")
+    assert late.status_code == 400 and late.data["error"]["code"] == "edit_expired"
+
+
+def test_delete_for_me_and_for_everyone(auth_client, client_for, other_user):
+    _, url = _chat(auth_client)
+    kofi = client_for(other_user)
+    first = auth_client.post(url, {"body": "Un"}, format="json").data
+    second = auth_client.post(url, {"body": "Deux"}, format="json").data
+    theirs = kofi.post(url, {"body": "Trois"}, format="json").data
+
+    # Sélection multiple, supprimée pour moi : l'autre voit toujours tout.
+    hidden = auth_client.post(f"{url}delete/", {"ids": [first["id"], theirs["id"]]}, format="json")
+    assert hidden.data == {"deleted": 2}
+    assert [m["body"] for m in auth_client.get(url).data["results"]] == ["Deux"]
+    assert len(kofi.get(url).data["results"]) == 3
+
+    # Pour tout le monde : seulement ses propres messages.
+    refused = auth_client.post(
+        f"{url}delete/", {"ids": [theirs["id"]], "for_everyone": True}, format="json"
+    )
+    assert refused.status_code == 403
+    revoked = auth_client.post(
+        f"{url}delete/", {"ids": [second["id"]], "for_everyone": True}, format="json"
+    )
+    assert revoked.data == {"deleted": 1}
+    seen_by_kofi = {m["id"]: m for m in kofi.get(url).data["results"]}
+    assert seen_by_kofi[second["id"]]["revoked"] is True
+    assert seen_by_kofi[second["id"]]["body"] == ""
+    # Un message supprimé ne peut plus être cité.
+    quote = kofi.post(url, {"body": "?", "reply_to_id": second["id"]}, format="json")
+    assert quote.status_code == 400
+
+
+def test_clear_conversation(auth_client, client_for, other_user):
+    conversation_id, url = _chat(auth_client)
+    kofi = client_for(other_user)
+    auth_client.post(url, {"body": "Salut"}, format="json")
+    kofi.post(url, {"body": "Hello"}, format="json")
+
+    clear = auth_client.post(f"/api/messages/conversations/{conversation_id}/clear/")
+    assert clear.status_code == 204
+    assert auth_client.get(url).data["results"] == []
+    assert auth_client.get("/api/messages/conversations/").data["results"] == []
+    assert len(kofi.get(url).data["results"]) == 2  # l'autre garde tout
+
+    # Un nouveau message fait revenir la discussion, sans l'historique effacé.
+    kofi.post(url, {"body": "Tu es là ?"}, format="json")
+    assert len(auth_client.get("/api/messages/conversations/").data["results"]) == 1
+    assert [m["body"] for m in auth_client.get(url).data["results"]] == ["Tu es là ?"]

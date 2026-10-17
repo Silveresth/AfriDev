@@ -3,7 +3,7 @@
 from urllib.parse import urlsplit
 
 from django.db import IntegrityError, transaction
-from django.db.models import F
+from django.db.models import F, Q
 from django.db.models.functions import Greatest
 
 from core.exceptions import DomainError, NotFoundError, PermissionDeniedError
@@ -323,6 +323,17 @@ def unfollow(*, follower, followed: Profile) -> bool:
     if deleted:
         _shift_follow_counts(follower_id=follower.id, followed_id=followed.user_id, delta=-1)
     return bool(deleted)
+
+
+@transaction.atomic
+def forget_follows(*, user_id) -> None:
+    """Avant la suppression d'un compte : ses abonnements disparaissent, et les compteurs des
+    membres qu'il suivait (ou qui le suivaient) sont corrigés."""
+    for follow in UserFollow.objects.filter(Q(follower_id=user_id) | Q(followed_id=user_id)):
+        _shift_follow_counts(
+            follower_id=follow.follower_id, followed_id=follow.followed_id, delta=-1
+        )
+    UserFollow.objects.filter(Q(follower_id=user_id) | Q(followed_id=user_id)).delete()
 
 
 def recount_follows() -> int:

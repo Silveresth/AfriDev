@@ -101,6 +101,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/accounts/me/delete/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Suppression définitive du compte, depuis le web comme depuis l'appli. */
+        post: operations["accounts_me_delete_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/accounts/me/export/": {
         parameters: {
             query?: never;
@@ -601,6 +618,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/discussions/target-comments/{comment_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["discussions_target_comments_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/discussions/targets/{target_type}/{target_id}/comments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Commentaires sous un projet ou une offre d'emploi (target_type : project | job). */
+        get: operations["discussions_target_comments_list"];
+        put?: never;
+        /** @description Commentaires sous un projet ou une offre d'emploi (target_type : project | job). */
+        post: operations["discussions_target_comments_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events/": {
         parameters: {
             query?: never;
@@ -1049,6 +1100,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/links/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Aperçu d'un lien externe pour la visionneuse interne du site. */
+        get: operations["links_preview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/matchmaking/applications/{application_id}/": {
         parameters: {
             query?: never;
@@ -1278,6 +1346,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/messages/conversations/{conversation_id}/clear/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Supprime la discussion pour moi (l'autre membre la garde). */
+        post: operations["messages_conversations_clear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/messages/conversations/{conversation_id}/messages/": {
         parameters: {
             query?: never;
@@ -1289,6 +1374,40 @@ export interface paths {
         get: operations["messages_list"];
         put?: never;
         post: operations["messages_send"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/messages/conversations/{conversation_id}/messages/{message_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Modifier son message (15 minutes au plus après l'envoi). */
+        patch: operations["messages_edit"];
+        trace?: never;
+    };
+    "/api/messages/conversations/{conversation_id}/messages/delete/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Supprime les messages sélectionnés, pour moi ou pour tout le monde. */
+        post: operations["messages_delete"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2078,9 +2197,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * @description /api/reactions/<type>/<id>/ (question, snippet, projet, offre) : score (GET) et vote
+         *     (POST, 0 = retrait).
+         */
+        get: operations["reactions_summary"];
         put?: never;
-        /** @description POST /api/reactions/<question|snippet|project>/<id>/ : vote ↑/↓ (0 = retrait). */
+        /**
+         * @description /api/reactions/<type>/<id>/ (question, snippet, projet, offre) : score (GET) et vote
+         *     (POST, 0 = retrait).
+         */
         post: operations["reactions_vote"];
         delete?: never;
         options?: never;
@@ -2568,9 +2694,10 @@ export interface components {
          *     * `question` - Question
          *     * `snippet` - Snippet
          *     * `project` - Projet
+         *     * `job` - Offre d'emploi
          * @enum {string}
          */
-        BookmarkTargetTypeEnum: "post" | "question" | "snippet" | "project";
+        BookmarkTargetTypeEnum: "post" | "question" | "snippet" | "project" | "job";
         Candidate: {
             /** Format: uuid */
             id: string;
@@ -2769,6 +2896,21 @@ export interface components {
             sync: components["schemas"]["SyncStats"];
             timeline: components["schemas"]["TimelinePoint"][];
             unanswered_questions: components["schemas"]["UnansweredQuestion"][];
+        };
+        DeleteAccountRequest: {
+            /**
+             * @description Comptes avec mot de passe.
+             * @default
+             */
+            password: string;
+            /**
+             * @description Nom d'utilisateur retapé (comptes sans mot de passe : SMS, GitHub, Google).
+             * @default
+             */
+            confirm: string;
+        };
+        DeletedCount: {
+            deleted: number;
         };
         DeviceInputRequest: {
             token: string;
@@ -2980,7 +3122,7 @@ export interface components {
             matched_tags: string[];
             post: components["schemas"]["PostOutput"] | null;
             card: components["schemas"]["HomeCard"] | null;
-            /** @description null pour un post ou une offre. */
+            /** @description null pour un post. */
             stats: components["schemas"]["HomeStats"] | null;
         };
         /**
@@ -3094,6 +3236,7 @@ export interface components {
             readonly id: string;
             /** Format: uuid */
             readonly project_id: string;
+            /** Format: int64 */
             readonly number: number;
             readonly title: string;
             /** Format: uri */
@@ -3183,6 +3326,17 @@ export interface components {
         LikeInputRequest: {
             liked: boolean;
         };
+        LinkPreview: {
+            url: string;
+            final_url: string;
+            status: number;
+            title: string;
+            description: string;
+            image: string;
+            site_name: string;
+            /** @description Affichable dans un cadre (iframe). */
+            frameable: boolean;
+        };
         LoginInputRequest: {
             /** @description Nom d'utilisateur ou e-mail. */
             identifier: string;
@@ -3259,8 +3413,22 @@ export interface components {
             body: string;
             /** @description Même forme que /api/media/<id>/. */
             media: unknown;
+            /** @description Message cité (réponse). */
+            reply_to: components["schemas"]["QuotedMessage"] | null;
+            /** Format: date-time */
+            edited_at: string | null;
+            /** @description Supprimé pour tout le monde. */
+            revoked: boolean;
             /** Format: date-time */
             created_at: string;
+        };
+        MessageDeleteRequest: {
+            ids: string[];
+            /**
+             * @description Vrai : effacé chez les deux (ses propres messages, 2 jours).
+             * @default false
+             */
+            for_everyone: boolean;
         };
         MessageInputRequest: {
             /** @default  */
@@ -3270,6 +3438,11 @@ export interface components {
              * @description Photo, vidéo ou vocal déjà envoyé (/api/media/).
              */
             media_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Message de la conversation auquel on répond.
+             */
+            reply_to_id?: string | null;
         };
         /**
          * @description * `PUT` - PUT
@@ -3346,10 +3519,13 @@ export interface components {
             readonly pinned: components["schemas"]["PinnedItem"][];
             readonly craft_score: number;
             readonly craft: components["schemas"]["Craft"];
+            /** Format: int64 */
             readonly karma_score: number;
             readonly karma_details: components["schemas"]["KarmaDetails"];
             readonly badges: components["schemas"]["ProfileBadge"][];
+            /** Format: int64 */
             readonly followers_count: number;
+            /** Format: int64 */
             readonly following_count: number;
             /** @description Le visiteur connecté suit-il ce membre ? (faux pour soi-même et les anonymes) */
             readonly is_following: boolean;
@@ -3629,6 +3805,13 @@ export interface components {
             previous: string | null;
             results: components["schemas"]["SnippetOutput"][];
         };
+        PaginatedTargetCommentOutputList: {
+            /** Format: uri */
+            next: string | null;
+            /** Format: uri */
+            previous: string | null;
+            results: components["schemas"]["TargetCommentOutput"][];
+        };
         PasswordResetConfirmRequest: {
             uid: string;
             token: string;
@@ -3682,6 +3865,9 @@ export interface components {
         PatchedMemberUpdateRequest: {
             is_active?: boolean;
             is_staff?: boolean;
+        };
+        PatchedMessageEditRequest: {
+            body?: string;
         };
         PatchedPostUpdateRequest: {
             title?: string;
@@ -3965,10 +4151,13 @@ export interface components {
             readonly pinned: components["schemas"]["PinnedItem"][];
             readonly craft_score: number;
             readonly craft: components["schemas"]["Craft"];
+            /** Format: int64 */
             readonly karma_score: number;
             readonly karma_details: components["schemas"]["KarmaDetails"];
             readonly badges: components["schemas"]["ProfileBadge"][];
+            /** Format: int64 */
             readonly followers_count: number;
+            /** Format: int64 */
             readonly following_count: number;
             /** @description Le visiteur connecté suit-il ce membre ? (faux pour soi-même et les anonymes) */
             readonly is_following: boolean;
@@ -4052,6 +4241,15 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        QuotedMessage: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            sender_id: string;
+            body: string;
+            media: unknown;
+            revoked: boolean;
         };
         ReactionInputRequest: {
             /**
@@ -4273,6 +4471,7 @@ export interface components {
             /** Format: date-time */
             readonly published_at: string | null;
             readonly ai_review: unknown;
+            /** Format: int64 */
             readonly comment_count: number;
             /** Format: date-time */
             readonly created_at: string;
@@ -4293,6 +4492,7 @@ export interface components {
          *     n'ont pas de champs faussement optionnels.
          */
         SnippetVersion: {
+            /** Format: int64 */
             readonly number: number;
             readonly content: string;
             /** Format: date-time */
@@ -4397,6 +4597,24 @@ export interface components {
             otpauth_url: string;
             qr_svg: string;
         };
+        TargetCommentInputRequest: {
+            body: string;
+            /** Format: uuid */
+            parent_id?: string | null;
+        };
+        TargetCommentOutput: {
+            /** Format: uuid */
+            id: string;
+            target_type: string;
+            /** Format: uuid */
+            target_id: string;
+            /** Format: uuid */
+            parent_id: string | null;
+            body: string;
+            author: components["schemas"]["Author"] | null;
+            /** Format: date-time */
+            created_at: string;
+        };
         /**
          * @description * `fr` - Français
          *     * `en` - English
@@ -4425,9 +4643,11 @@ export interface components {
          *     * `snippet` - Snippet
          *     * `project` - Projet
          *     * `hub` - Hub
+         *     * `job` - Offre d'emploi
+         *     * `target_comment` - Commentaire (projet ou offre)
          * @enum {string}
          */
-        TargetTypeEnum: "post" | "comment" | "question" | "answer" | "snippet" | "project" | "hub";
+        TargetTypeEnum: "post" | "comment" | "question" | "answer" | "snippet" | "project" | "hub" | "job" | "target_comment";
         TimelinePoint: {
             /** Format: date */
             day: string;
@@ -4569,6 +4789,8 @@ export interface components {
              */
             readonly is_superuser: boolean;
             readonly two_factor_enabled: boolean;
+            /** @description Faux pour un compte SMS / GitHub / Google : la suppression demande le pseudo. */
+            readonly has_password: boolean;
         };
         UsernameStatus: {
             available: boolean;
@@ -4827,6 +5049,30 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["User"];
                 };
+            };
+        };
+    };
+    accounts_me_delete_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DeleteAccountRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DeleteAccountRequest"];
+                "multipart/form-data": components["schemas"]["DeleteAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -5512,7 +5758,7 @@ export interface operations {
         parameters: {
             query: {
                 target_id: string;
-                target_type: "post" | "project" | "question" | "snippet";
+                target_type: "job" | "post" | "project" | "question" | "snippet";
             };
             header?: never;
             path: {
@@ -5685,6 +5931,81 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SummaryOutput"];
+                };
+            };
+        };
+    };
+    discussions_target_comments_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    discussions_target_comments_list: {
+        parameters: {
+            query?: {
+                /** @description Curseur de la page suivante */
+                cursor?: string;
+                /** @description 20 par défaut, 50 maximum */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                target_id: string;
+                target_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedTargetCommentOutputList"];
+                };
+            };
+        };
+    };
+    discussions_target_comments_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                target_id: string;
+                target_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TargetCommentInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TargetCommentInputRequest"];
+                "multipart/form-data": components["schemas"]["TargetCommentInputRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TargetCommentOutput"];
                 };
             };
         };
@@ -6688,6 +7009,27 @@ export interface operations {
             };
         };
     };
+    links_preview: {
+        parameters: {
+            query: {
+                url: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkPreview"];
+                };
+            };
+        };
+    };
     matchmaking_applications_destroy: {
         parameters: {
             query?: never;
@@ -7044,6 +7386,26 @@ export interface operations {
             };
         };
     };
+    messages_conversations_clear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     messages_list: {
         parameters: {
             query?: {
@@ -7097,6 +7459,61 @@ export interface operations {
             };
         };
     };
+    messages_edit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedMessageEditRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedMessageEditRequest"];
+                "multipart/form-data": components["schemas"]["PatchedMessageEditRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+        };
+    };
+    messages_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessageDeleteRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MessageDeleteRequest"];
+                "multipart/form-data": components["schemas"]["MessageDeleteRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeletedCount"];
+                };
+            };
+        };
+    };
     messages_mark_read: {
         parameters: {
             query?: never;
@@ -7146,7 +7563,7 @@ export interface operations {
                 page_size?: number;
                 source?: "ai" | "member";
                 status?: "dismissed" | "hidden" | "open";
-                target_type?: "answer" | "comment" | "hub" | "post" | "project" | "question" | "snippet";
+                target_type?: "answer" | "comment" | "hub" | "job" | "post" | "project" | "question" | "snippet" | "target_comment";
             };
             header?: never;
             path?: never;
@@ -8534,6 +8951,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AcceptedJob"];
+                };
+            };
+        };
+    };
+    reactions_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                target_id: string;
+                target_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReactionSummary"];
                 };
             };
         };

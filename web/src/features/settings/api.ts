@@ -55,6 +55,13 @@ export function useAccessTokenActions() {
   return { create, revoke };
 }
 
+/** Suppression définitive du compte (RGPD, droit à l'effacement). */
+export function useDeleteAccount() {
+  return useMutation({
+    mutationFn: (body: Schemas['DeleteAccountRequest']) => unwrap(api.POST('/api/accounts/me/delete/', { body })),
+  });
+}
+
 /** Télécharge toutes mes données (JSON) : RGPD, droit à la portabilité. */
 export async function downloadMyData(username: string) {
   const data = await unwrap(api.GET('/api/accounts/me/export/'));

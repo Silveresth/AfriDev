@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import {
   Bell,
+  Bookmark,
   ExternalLink,
   Gauge,
   HardDrive,
@@ -15,6 +16,7 @@ import {
   Moon,
   Palette,
   Sun,
+  UserX,
 } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
@@ -163,6 +165,7 @@ export function SettingsScreen() {
         ) : null}
 
         <Section index={1}>
+          <Row icon={Bookmark} label={t('bm.title')} detail={t('bm.settings_desc')} onPress={() => router.push('/bookmarks')} />
           <Row icon={Bell} label={t('nav.notifications')} detail={t('set.notifications_desc')} onPress={() => router.push('/settings/notifications')} />
           <Row icon={Lock} label={t('set.privacy')} detail={t('set.privacy_desc')} onPress={() => router.push('/settings/privacy')} last />
         </Section>
@@ -209,7 +212,10 @@ export function SettingsScreen() {
         </Section>
 
         <Section index={7}>
-          <Row icon={LogOut} label={t('auth.logout')} danger onPress={confirmSignOut} last />
+          <Row icon={LogOut} label={t('auth.logout')} danger onPress={confirmSignOut} last={!user} />
+          {user ? (
+            <Row icon={UserX} label={t('priv.delete')} detail={t('priv.delete_desc')} danger onPress={() => router.push('/settings/privacy?focus=delete')} last />
+          ) : null}
         </Section>
       </ScrollView>
     </View>

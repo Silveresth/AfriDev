@@ -171,6 +171,16 @@ def _remove_membership(hub: Hub, user) -> None:
 
 
 @transaction.atomic
+def forget_member(*, user_id) -> None:
+    """Avant la suppression d'un compte : il quitte tous ses hubs (compteurs corrigés)."""
+    hub_ids = list(HubMembership.objects.filter(user_id=user_id).values_list("hub_id", flat=True))
+    HubMembership.objects.filter(user_id=user_id).delete()
+    Hub.objects.filter(id__in=hub_ids, member_count__gt=0).update(
+        member_count=F("member_count") - 1
+    )
+
+
+@transaction.atomic
 def remove_member(
     *, hub: Hub, admin_user, target_user, ban: bool = False, reason: str = ""
 ) -> None:

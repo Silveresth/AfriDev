@@ -15,6 +15,32 @@ class MessageInputSerializer(serializers.Serializer):
         allow_null=True,
         help_text="Photo, vidéo ou vocal déjà envoyé (/api/media/).",
     )
+    reply_to_id = serializers.UUIDField(
+        required=False, allow_null=True, help_text="Message de la conversation auquel on répond."
+    )
+
+
+class MessageEditSerializer(serializers.Serializer):
+    body = serializers.CharField(max_length=2000, allow_blank=True)
+
+
+class MessageDeleteSerializer(serializers.Serializer):
+    ids = serializers.ListField(child=serializers.UUIDField(), min_length=1, max_length=100)
+    for_everyone = serializers.BooleanField(
+        default=False, help_text="Vrai : effacé chez les deux (ses propres messages, 2 jours)."
+    )
+
+
+class DeletedCountSerializer(serializers.Serializer):
+    deleted = serializers.IntegerField()
+
+
+class QuotedMessageSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    sender_id = serializers.UUIDField()
+    body = serializers.CharField(allow_blank=True)
+    media = serializers.JSONField(allow_null=True)
+    revoked = serializers.BooleanField()
 
 
 class MessageSerializer(serializers.Serializer):
@@ -22,18 +48,39 @@ class MessageSerializer(serializers.Serializer):
     sender_id = serializers.UUIDField()
     body = serializers.CharField(allow_blank=True)
     media = serializers.JSONField(allow_null=True, help_text="Même forme que /api/media/<id>/.")
+    reply_to = QuotedMessageSerializer(allow_null=True, help_text="Message cité (réponse).")
+    edited_at = serializers.DateTimeField(allow_null=True)
+    revoked = serializers.BooleanField(help_text="Supprimé pour tout le monde.")
     created_at = serializers.DateTimeField()
 
 
 def present_messages(messages) -> list[dict]:
     messages = list(messages)
-    media = media_selectors.describe_many(asset_ids={m.media_id for m in messages})
+    quoted = [m.reply_to for m in messages if m.reply_to_id and m.reply_to]
+    media = media_selectors.describe_many(
+        asset_ids={m.media_id for m in messages} | {q.media_id for q in quoted}
+    )
+
+    def _quote(q):
+        if q is None or q.deleted_at:
+            return None
+        return {
+            "id": q.id,
+            "sender_id": q.sender_id,
+            "body": q.body,
+            "media": media.get(q.media_id),
+            "revoked": q.revoked_at is not None,
+        }
+
     return [
         {
             "id": m.id,
             "sender_id": m.sender_id,
             "body": m.body,
             "media": media.get(m.media_id),
+            "reply_to": _quote(m.reply_to) if m.reply_to_id else None,
+            "edited_at": m.edited_at,
+            "revoked": m.revoked_at is not None,
             "created_at": m.created_at,
         }
         for m in messages
