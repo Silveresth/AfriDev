@@ -28,7 +28,7 @@ export class OAuthCancelled extends Error {}
  * appli → API /start → fournisseur → API /callback → retour appli (exp:// ou afridev://) avec le
  * code, échangé ensuite contre les jetons. Les identifiants OAuth restent sur le serveur.
  */
-export async function signInWithProvider(provider: OAuthProvider): Promise<AuthResponse> {
+export async function signInWithProvider(provider: OAuthProvider, onReturn?: () => void): Promise<AuthResponse> {
   const returnUrl = Linking.createURL('oauth');
   // Renvoyé tel quel par l'API : prouve que ce retour répond bien à cette demande.
   const nonce = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
@@ -47,6 +47,7 @@ export async function signInWithProvider(provider: OAuthProvider): Promise<AuthR
     );
   }
   if (!read('code')) throw new ApiError(t('oauth.incomplete'), 'oauth_failed', 400);
+  onReturn?.();
 
   return unwrap(
     api.POST('/api/accounts/oauth/{provider}/', {

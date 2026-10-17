@@ -64,6 +64,8 @@ const en: MobileMessages = {
   'oauth.cancelled': 'Sign-in cancelled.',
   'oauth.refused': '{provider} refused the sign-in ({error}).',
   'oauth.incomplete': 'Incomplete sign-in response, please try again.',
+  'oauth.connecting': 'Signing in with {provider}…',
+  'oauth.welcome': 'Signed in, welcome!',
 
   'translate.failed': 'Translation unavailable right now.',
   'create.label': 'Create',
