@@ -13,9 +13,10 @@ const config: ExpoConfig = {
   scheme: 'afridev', // liens profonds : afridev://u/<username>
   // runtimeVersion suit cette version : à augmenter à chaque ajout de module natif
   // (0.3.0 : expo-image-picker / expo-image-manipulator ; 0.4.0 : expo-notifications / expo-device ;
-  // 0.5.0 : expo-updates ; 0.6.0 : expo-audio / expo-video pour les messages vocaux et vidéo),
-  // sinon EAS Update enverrait ce JS à d'anciens binaires qui n'ont pas ces modules.
-  version: '0.6.0',
+  // 0.5.0 : expo-updates ; 0.6.0 : expo-audio / expo-video pour les messages vocaux et vidéo ;
+  // 0.7.0 : react-native-webview pour le navigateur interne), sinon EAS Update enverrait ce JS
+  // à d'anciens binaires qui n'ont pas ces modules.
+  version: '0.7.0',
   orientation: 'portrait',
   userInterfaceStyle: 'automatic',
   icon: './src/assets/icon.png',

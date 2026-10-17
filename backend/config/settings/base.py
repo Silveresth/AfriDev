@@ -164,6 +164,8 @@ REST_FRAMEWORK = {
         # Recherche par le sens (un embedding Voyage par requête non mise en cache).
         "semantic": env("SEMANTIC_SEARCH_QUOTA", default="120/hour"),
         "otp": env("OTP_QUOTA", default="5/hour"),
+        # Visionneuse interne des liens externes (aperçu titre / image).
+        "link_preview": env("LINK_PREVIEW_QUOTA", default="300/hour"),
     },
 }
 

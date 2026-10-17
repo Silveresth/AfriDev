@@ -10,7 +10,7 @@ import { useT } from '@/shared/i18n';
 import { timeAgo } from '@/shared/lib';
 import { useSession } from '@/shared/session';
 import { radius, typography, useTheme } from '@/shared/theme';
-import { Avatar, Button, Text } from '@/shared/ui';
+import { Button, ProfileAvatar, Text } from '@/shared/ui';
 
 import { type Comment, useSendComment } from './api';
 
@@ -48,7 +48,7 @@ export function CommentRow({ row, onReply }: { row: ThreadRow; onReply: (comment
   return (
     <View style={[styles.comment, { marginLeft: 16 + depth * 14 }, depth ? { borderLeftColor: colors.line, borderLeftWidth: 2, paddingLeft: 12 } : null]}>
       <View style={styles.byline}>
-        <Avatar name={name} src={author?.avatar_url} size={22} />
+        <ProfileAvatar author={author} size={28} />
         <Text variant="caption" style={styles.strong} onPress={author ? () => router.push(`/u/${author.username}`) : undefined}>
           {name}
         </Text>

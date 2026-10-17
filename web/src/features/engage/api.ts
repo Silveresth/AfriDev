@@ -1,14 +1,82 @@
 'use client';
 
 import type { Schemas } from '@afridev/api-client';
-import { type InfiniteData, type QueryClient, useMutation, useQueryClient } from '@tanstack/react-query';
+import { type InfiniteData, type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api, unwrap } from '@/shared/api';
-import type { Page } from '@/shared/query';
+import { type Page, useInfiniteList } from '@/shared/query';
 
 type HomeItem = Schemas['HomeItem'];
 export type HomeStats = NonNullable<HomeItem['stats']>;
-export type ReactType = 'question' | 'snippet' | 'project';
+export type ReactType = 'question' | 'snippet' | 'project' | 'job';
+/** Contenus dont les commentaires vivent dans /api/discussions/targets/. */
+export type TargetType = 'project' | 'job';
+export type TargetComment = Schemas['TargetCommentOutput'];
+
+const targetKeys = {
+  comments: (type: TargetType, id: string) => ['target-comments', type, id] as const,
+  reaction: (type: ReactType, id: string) => ['reactions', type, id] as const,
+};
+
+/** Commentaires d'un projet ou d'une offre, du plus ancien au plus récent. */
+export function useTargetComments(type: TargetType, id: string) {
+  return useInfiniteList(targetKeys.comments(type, id), (cursor) =>
+    unwrap(
+      api.GET('/api/discussions/targets/{target_type}/{target_id}/comments/', {
+        params: { path: { target_type: type, target_id: id }, query: { cursor } },
+      }),
+    ),
+  );
+}
+
+export function useTargetCommentActions(type: TargetType, id: string) {
+  const queryClient = useQueryClient();
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: targetKeys.comments(type, id) });
+    void queryClient.invalidateQueries({ queryKey: ['feed', 'home'] });
+  };
+  const send = useMutation({
+    mutationFn: (input: { body: string; parent_id?: string | null }) =>
+      unwrap(
+        api.POST('/api/discussions/targets/{target_type}/{target_id}/comments/', {
+          params: { path: { target_type: type, target_id: id } },
+          body: { body: input.body, parent_id: input.parent_id ?? null },
+        }),
+      ),
+    onSuccess: refresh,
+  });
+  const remove = useMutation({
+    mutationFn: (commentId: string) =>
+      unwrap(api.DELETE('/api/discussions/target-comments/{comment_id}/', { params: { path: { comment_id: commentId } } })),
+    onSuccess: refresh,
+  });
+  return { send, remove };
+}
+
+/** Score et vote du visiteur sur une page détail (projet, offre…), vote affiché tout de suite. */
+export function useReaction(type: ReactType, id: string) {
+  const queryClient = useQueryClient();
+  const key = targetKeys.reaction(type, id);
+  const summary = useQuery({
+    queryKey: key,
+    queryFn: () => unwrap(api.GET('/api/reactions/{target_type}/{target_id}/', { params: { path: { target_type: type, target_id: id } } })),
+  });
+  const vote = useMutation({
+    mutationFn: (value: -1 | 0 | 1) =>
+      unwrap(api.POST('/api/reactions/{target_type}/{target_id}/', { params: { path: { target_type: type, target_id: id } }, body: { value } })),
+    onMutate: (value) => {
+      const previous = queryClient.getQueryData<Schemas['ReactionSummary']>(key);
+      if (previous) queryClient.setQueryData(key, { ...previous, viewer_vote: value, score: previous.score - previous.viewer_vote + value });
+      return { previous };
+    },
+    onError: (_error, _value, context) => queryClient.setQueryData(key, context?.previous),
+    onSuccess: (data) => {
+      queryClient.setQueryData(key, data);
+      patchHomeStats(queryClient, id, { score: data.score, viewer_vote: data.viewer_vote });
+    },
+  });
+  return { summary, vote };
+}
 
 /** Met à jour les compteurs d'une carte du fil d'accueil, partout où elle est affichée. */
 function patchHomeStats(queryClient: QueryClient, id: string, stats: Partial<HomeStats>) {
@@ -44,9 +112,11 @@ export function useDeleteCard() {
     mutationFn: async ({ type, id }: { type: ReactType; id: string }) => {
       if (type === 'question') await unwrap(api.DELETE('/api/qa/questions/{question_id}/', { params: { path: { question_id: id } } }));
       else if (type === 'snippet') await unwrap(api.DELETE('/api/snippets/public/{snippet_id}/', { params: { path: { snippet_id: id } } }));
+      else if (type === 'job') await unwrap(api.DELETE('/api/job-board/{job_id}/', { params: { path: { job_id: id } } }));
       else await unwrap(api.DELETE('/api/projects/{project_id}/', { params: { path: { project_id: id } } }));
     },
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['jobs'] });
       void queryClient.invalidateQueries({ queryKey: ['feed'] });
       void queryClient.invalidateQueries({ queryKey: ['qa'] });
       void queryClient.invalidateQueries({ queryKey: ['snippets'] });

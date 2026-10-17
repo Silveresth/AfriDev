@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 
 import { DataSaverSync } from '@/shared/data-saver';
 import { LangProvider } from '@/shared/i18n';
+import { InAppBrowserProvider, LinkInterceptor } from '@/shared/links';
 import { OutboxSync, PowerSyncProvider } from '@/shared/offline';
 import { QueryProvider } from '@/shared/query';
 import { SessionProvider } from '@/shared/session';
@@ -36,10 +37,13 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         <PowerSyncProvider>
           <ToastProvider>
             <LangProvider>
-              <ThemeSync />
-              <DataSaverSync />
-              <OutboxSync />
-              {children}
+              <InAppBrowserProvider>
+                <ThemeSync />
+                <DataSaverSync />
+                <OutboxSync />
+                <LinkInterceptor />
+                {children}
+              </InAppBrowserProvider>
             </LangProvider>
           </ToastProvider>
         </PowerSyncProvider>

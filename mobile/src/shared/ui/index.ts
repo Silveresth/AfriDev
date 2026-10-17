@@ -1,4 +1,4 @@
-export { Avatar } from './Avatar';
+export { Avatar, ProfileAvatar } from './Avatar';
 export { Button, IconButton } from './Button';
 export { type ChipOption, Chips } from './Chips';
 export { Header } from './Header';

@@ -1,6 +1,6 @@
 'use client';
 
-import { Bookmark, Code2, FolderGit2, FolderPlus, Globe, Lock, MessagesSquare, Newspaper, Pencil, Trash2, Upload, X } from 'lucide-react';
+import { Bookmark, BriefcaseBusiness, Code2, FolderGit2, FolderPlus, Globe, Lock, MessagesSquare, Newspaper, Pencil, Trash2, Upload, X } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -40,6 +40,7 @@ const TYPES = {
   question: { label: 'Question', icon: MessagesSquare },
   snippet: { label: 'Snippet', icon: Code2 },
   project: { label: 'Projet', icon: FolderGit2 },
+  job: { label: 'Offre', icon: BriefcaseBusiness },
 };
 
 /** /bookmarks : dossiers de marque-pages (« Mes snippets Django », « Trucs & astuces SQL »). */

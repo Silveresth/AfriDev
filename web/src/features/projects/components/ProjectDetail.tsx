@@ -4,6 +4,7 @@ import { ArrowRight, CircleDot, ExternalLink, Github, Pencil, RefreshCw, Star, T
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { DetailActions, TargetComments } from '@/features/engage';
 import { ApplyButton, OwnerPanel } from '@/features/matchmaking';
 import { ProjectGuide } from '@/features/onboarding-agent';
 import { TwoColumns } from '@/shared/layout';
@@ -158,6 +159,9 @@ function ProjectView({ project, mine }: { project: Project; mine: boolean }) {
               </Button>
             </div>
           ) : null}
+          <div className="mt-4 border-t border-line pt-3">
+            <DetailActions type="project" id={project.id} title={project.name} path={`/projects/${project.id}`} mine={mine} />
+          </div>
         </div>
       </Card>
 
@@ -165,6 +169,7 @@ function ProjectView({ project, mine }: { project: Project; mine: boolean }) {
         <ProjectGuide projectId={project.id} repoUrl={project.repo_url} />
       </Card>
       <GoodFirstIssues projectId={project.id} />
+      <TargetComments type="project" id={project.id} ownerId={owner?.id} />
     </>
   );
 }

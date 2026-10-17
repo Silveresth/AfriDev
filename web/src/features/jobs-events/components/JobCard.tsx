@@ -1,6 +1,7 @@
 'use client';
 
-import { Banknote, Building2, Ellipsis, ExternalLink, Globe2, MapPin, Trash2, XCircle } from 'lucide-react';
+import { Banknote, Building2, Ellipsis, ExternalLink, Globe2, MapPin, MessageSquare, Trash2, XCircle } from 'lucide-react';
+import Link from 'next/link';
 
 import { useSession } from '@/shared/session';
 import { buttonClasses, communityColor, Menu, MenuItem, StatusBadge, Tag, TimeAgo, useToast } from '@/shared/ui';
@@ -35,7 +36,11 @@ export function JobCard({ job }: { job: Job }) {
       <div className="flex items-start gap-3.5">
         <CompanyMark name={job.company} />
         <div className="min-w-0 flex-1">
-          <h3 className="text-body-lg font-semibold text-ink">{job.title}</h3>
+          <h3 className="text-body-lg font-semibold text-ink">
+            <Link href={`/jobs/${job.id}`} className="hover:text-primary-ink hover:underline">
+              {job.title}
+            </Link>
+          </h3>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm text-ink-muted">
             <span className="inline-flex items-center gap-1">
               <Building2 className="size-3.5" aria-hidden /> {job.company}
@@ -99,11 +104,16 @@ export function JobCard({ job }: { job: Job }) {
           Publiée <TimeAgo date={job.created_at} />
           {job.author ? ` par ${job.author.display_name}` : ''}
         </span>
-        {job.is_active ? (
-          <a href={job.apply_url} target="_blank" rel="noopener noreferrer nofollow" className={buttonClasses({ size: 'sm' })}>
-            Postuler <ExternalLink className="size-3.5" aria-hidden />
-          </a>
-        ) : null}
+        <span className="flex flex-wrap gap-2">
+          <Link href={`/jobs/${job.id}#comments`} className={buttonClasses({ variant: 'ghost', size: 'sm' })}>
+            <MessageSquare className="size-3.5" aria-hidden /> Discuter
+          </Link>
+          {job.is_active ? (
+            <a href={job.apply_url} rel="noopener noreferrer nofollow" className={buttonClasses({ size: 'sm' })}>
+              Postuler <ExternalLink className="size-3.5" aria-hidden />
+            </a>
+          ) : null}
+        </span>
       </div>
     </article>
   );

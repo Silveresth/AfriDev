@@ -39,6 +39,8 @@ const TARGETS = {
   snippet: 'Snippet',
   project: 'Projet',
   hub: 'Hub',
+  job: 'Offre d’emploi',
+  target_comment: 'Commentaire (projet / offre)',
 } as const;
 const REASONS: Record<string, string> = {
   spam: 'Spam ou publicité',

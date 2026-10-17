@@ -15,6 +15,8 @@ class Report(BaseModel):
         SNIPPET = "snippet", "Snippet"
         PROJECT = "project", "Projet"
         HUB = "hub", "Hub"
+        JOB = "job", "Offre d'emploi"
+        TARGET_COMMENT = "target_comment", "Commentaire (projet ou offre)"
 
     class Reason(models.TextChoices):
         SPAM = "spam", "Spam ou publicité"

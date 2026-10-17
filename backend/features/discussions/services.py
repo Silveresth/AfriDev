@@ -6,9 +6,90 @@ from django.db import transaction
 
 from core.exceptions import DomainError, NotFoundError, PermissionDeniedError
 from features.feed import selectors as feed_selectors
+from features.jobs_events import selectors as jobs_selectors
+from features.projects import selectors as project_selectors
 
-from .events import comment_created, comment_deleted, comment_restored
-from .models import Comment, ThreadSummary
+from .events import comment_created, comment_deleted, comment_restored, target_comment_created
+from .models import Comment, TargetComment, ThreadSummary
+
+# ── Projets et offres d'emploi ──
+
+
+def _target_owner_id(target_type: str, target_id):
+    """Auteur du projet ou de l'offre ; None si le contenu n'existe pas (ou plus)."""
+    if target_type == TargetComment.TargetType.PROJECT:
+        project = project_selectors.get_project(project_id=target_id)
+        return project.owner_id if project else None
+    if target_type == TargetComment.TargetType.JOB:
+        job = jobs_selectors.get_job(job_id=target_id)
+        return job.author_id if job else None
+    raise DomainError("Type de contenu inconnu.", code="invalid_target")
+
+
+@transaction.atomic
+def create_target_comment(
+    *, author, target_type: str, target_id, body: str, parent_id=None
+) -> TargetComment:
+    body = (body or "").strip()
+    if not body:
+        raise DomainError("Le commentaire est vide.", code="invalid_comment")
+    owner_id = _target_owner_id(target_type, target_id)
+    if owner_id is None:
+        raise NotFoundError("Contenu introuvable.")
+    parent = None
+    if parent_id:
+        parent = (
+            TargetComment.objects.alive()
+            .filter(id=parent_id, target_type=target_type, target_id=target_id)
+            .first()
+        )
+        if parent is None:
+            raise NotFoundError("Commentaire parent introuvable.")
+    comment = TargetComment.objects.create(
+        target_type=target_type, target_id=target_id, author=author, body=body, parent=parent
+    )
+    transaction.on_commit(
+        lambda: target_comment_created.send(
+            sender=TargetComment,
+            comment_id=comment.id,
+            target_type=target_type,
+            target_id=target_id,
+            owner_id=owner_id,
+            author_id=author.id,
+            parent_author_id=parent.author_id if parent else None,
+            text=body,
+        )
+    )
+    return comment
+
+
+def delete_target_comment(*, comment: TargetComment, user) -> None:
+    """Auteur du commentaire, auteur du projet / de l'offre, ou équipe de modération."""
+    allowed = (
+        comment.author_id == user.id
+        or getattr(user, "is_staff", False)
+        or _target_owner_id(comment.target_type, comment.target_id) == user.id
+    )
+    if not allowed:
+        raise PermissionDeniedError("Vous ne pouvez pas supprimer ce commentaire.")
+    comment.soft_delete()
+
+
+def hide_target_comment(*, comment_id) -> bool:
+    """Masquage par la modération."""
+    comment = TargetComment.objects.alive().filter(id=comment_id).first()
+    if comment:
+        comment.soft_delete()
+    return comment is not None
+
+
+def restore_target_comment(*, comment_id) -> bool:
+    comment = TargetComment.objects.filter(id=comment_id, deleted_at__isnull=False).first()
+    if comment:
+        comment.deleted_at = None
+        comment.save(update_fields=["deleted_at", "updated_at"])
+    return comment is not None
+
 
 # Nombre de nouveaux commentaires qui déclenche un nouveau résumé IA.
 SUMMARY_MIN_COMMENTS = 5

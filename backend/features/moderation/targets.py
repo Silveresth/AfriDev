@@ -13,6 +13,8 @@ from features.feed import selectors as feed_selectors
 from features.feed import services as feed_services
 from features.hubs import selectors as hub_selectors
 from features.hubs import services as hub_services
+from features.jobs_events import selectors as jobs_selectors
+from features.jobs_events import services as jobs_services
 from features.projects import selectors as project_selectors
 from features.projects import services as project_services
 from features.qa import selectors as qa_selectors
@@ -97,6 +99,28 @@ def _project(target_id, include_hidden=False):
     )
 
 
+def _job(target_id, include_hidden=False):
+    job = jobs_selectors.get_job(job_id=target_id, include_hidden=include_hidden)
+    if job is None:
+        return None
+    return Content(
+        f"{job.title} — {job.company}\n\n{job.description}",
+        job.author_id,
+        f"/jobs/{job.id}",
+        job.deleted_at is not None,
+    )
+
+
+def _target_comment(target_id, include_hidden=False):
+    comment = discussion_selectors.get_target_comment(
+        comment_id=target_id, include_hidden=include_hidden
+    )
+    if comment is None:
+        return None
+    url = f"/{'projects' if comment.target_type == 'project' else 'jobs'}/{comment.target_id}"
+    return Content(comment.body, comment.author_id, url, comment.deleted_at is not None)
+
+
 def _hub(target_id, include_hidden=False):
     hub = hub_selectors.get_hub(hub_id=target_id, include_hidden=include_hidden)
     if hub is None:
@@ -144,5 +168,15 @@ TARGETS: dict[str, Target] = {
         load=_hub,
         hide=lambda i: hub_services.hide_hub(hub_id=i),
         restore=lambda i: hub_services.restore_hub(hub_id=i),
+    ),
+    "job": Target(
+        load=_job,
+        hide=lambda i: jobs_services.hide_item(kind="job", item_id=i),
+        restore=lambda i: jobs_services.restore_item(kind="job", item_id=i),
+    ),
+    "target_comment": Target(
+        load=_target_comment,
+        hide=lambda i: discussion_services.hide_target_comment(comment_id=i),
+        restore=lambda i: discussion_services.restore_target_comment(comment_id=i),
     ),
 }

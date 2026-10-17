@@ -75,7 +75,12 @@ function Navigator() {
           <Stack.Screen name="settings/notifications" />
           <Stack.Screen name="settings/privacy" />
           <Stack.Screen name="settings/language" />
+          <Stack.Screen name="project/[id]" />
+          <Stack.Screen name="job/[id]" />
+          <Stack.Screen name="bookmarks" />
         </Stack.Protected>
+        {/* Navigateur interne : aussi avant connexion (mot de passe oublié, CGU…). */}
+        <Stack.Screen name="browser" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Protected guard={!isAuthenticated}>
           <Stack.Screen name="login" options={{ animation: 'fade' }} />
         </Stack.Protected>

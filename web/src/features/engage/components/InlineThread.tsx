@@ -13,7 +13,9 @@ import { errorMessage } from '@/shared/api';
 import { useSession } from '@/shared/session';
 import { Avatar, buttonClasses, Button, Skeleton, Textarea, TimeAgo } from '@/shared/ui';
 
-export type ThreadKind = 'post' | 'snippet' | 'question';
+import { useTargetCommentActions, useTargetComments } from '../api';
+
+export type ThreadKind = 'post' | 'snippet' | 'question' | 'project' | 'job';
 
 interface Line {
   id: string;
@@ -28,7 +30,25 @@ const PREVIEW = 3;
 export function InlineThread({ kind, id, href }: { kind: ThreadKind; id: string; href: string }) {
   if (kind === 'post') return <PostThread id={id} href={href} />;
   if (kind === 'snippet') return <SnippetThread id={id} href={href} />;
+  if (kind === 'project' || kind === 'job') return <TargetThread type={kind} id={id} href={href} />;
   return <AnswerThread id={id} href={href} />;
+}
+
+function TargetThread({ type, id, href }: { type: 'project' | 'job'; id: string; href: string }) {
+  const comments = useTargetComments(type, id);
+  const { send } = useTargetCommentActions(type, id);
+  return (
+    <Thread
+      lines={comments.items}
+      loading={comments.isPending}
+      href={href}
+      empty="Aucun commentaire pour l'instant : lancez la discussion."
+      placeholder="Écrire un commentaire…"
+      onSend={async (body) => {
+        await send.mutateAsync({ body });
+      }}
+    />
+  );
 }
 
 function PostThread({ id, href }: { id: string; href: string }) {

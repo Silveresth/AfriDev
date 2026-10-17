@@ -6,7 +6,7 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
-from core.views import HealthView, JobStatusView
+from core.views import HealthView, JobStatusView, LinkPreviewView
 from features.feed.api.views import HubFeedView
 
 urlpatterns = [
@@ -14,6 +14,7 @@ urlpatterns = [
     path("django-admin/", admin.site.urls),
     path("api/health/", HealthView.as_view(), name="health"),
     path("api/jobs/<uuid:job_id>/", JobStatusView.as_view(), name="job-status"),
+    path("api/links/preview/", LinkPreviewView.as_view(), name="link-preview"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),
     path("api/accounts/", include("features.accounts.api.urls")),

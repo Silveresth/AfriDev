@@ -4,6 +4,7 @@ from django.db import IntegrityError, transaction
 
 from core.exceptions import ConflictError, DomainError, NotFoundError, PermissionDeniedError
 from features.feed import selectors as feed_selectors
+from features.jobs_events import selectors as jobs_selectors
 from features.projects import selectors as project_selectors
 from features.qa import selectors as qa_selectors
 from features.snippets import selectors as snippet_selectors
@@ -16,6 +17,7 @@ TARGET_FIELDS = {
     "snippet": "snippet_id",
     "question": "question_id",
     "project": "project_id",
+    "job": "job_id",
 }
 DEFAULT_COLLECTION = "Favoris"
 MAX_COLLECTIONS = 50
@@ -96,6 +98,8 @@ def _target_exists(*, target_type: str, target_id, user) -> bool:
         return bool(qa_selectors.question_summaries(question_ids=[target_id]))
     if target_type == "project":
         return bool(project_selectors.project_summaries(project_ids=[target_id]))
+    if target_type == "job":
+        return bool(jobs_selectors.job_summaries(job_ids=[target_id]))
     return bool(snippet_selectors.snippet_summaries(snippet_ids=[target_id], viewer_id=user.id))
 
 

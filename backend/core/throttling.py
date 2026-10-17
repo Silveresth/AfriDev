@@ -13,6 +13,12 @@ class SemanticSearchThrottle(UserRateThrottle):
     scope = "semantic"
 
 
+class LinkPreviewThrottle(UserRateThrottle):
+    """Aperçus de liens (visionneuse interne) : par utilisateur, sinon par adresse IP."""
+
+    scope = "link_preview"
+
+
 class OTPThrottle(AnonRateThrottle):
     """Limite les envois de SMS (coût et abus) par adresse IP."""
 

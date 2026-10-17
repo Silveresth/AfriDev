@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { errorMessage } from '@/shared/api';
 import { Button, Dialog, Field, FieldGroup, FormError, Input, Select, TagInput, Textarea, ToggleRow, useToast } from '@/shared/ui';
 
-import { type ContractType, CONTRACTS, useJobActions } from '../api';
+import { type ContractType, CONTRACTS, type Job, useJobActions } from '../api';
 
 const EMPTY = {
   title: '',
@@ -21,10 +21,26 @@ const EMPTY = {
   salary_range: '',
 };
 
-export function JobFormDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { create } = useJobActions();
+/** Publier une offre, ou modifier `job` (auteur ou équipe). */
+export function JobFormDialog({ open, onClose, job }: { open: boolean; onClose: () => void; job?: Job }) {
+  const { create, update } = useJobActions();
   const toast = useToast();
-  const [form, setForm] = useState(EMPTY);
+  const [form, setForm] = useState(() =>
+    job
+      ? {
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          country: job.country,
+          is_remote: job.is_remote,
+          contract_type: job.contract_type,
+          description: job.description,
+          apply_url: job.apply_url,
+          stack: job.stack,
+          salary_range: job.salary_range,
+        }
+      : EMPTY,
+  );
   const [error, setError] = useState<string | null>(null);
   const set = <K extends keyof typeof EMPTY>(key: K, value: (typeof EMPTY)[K]) => setForm((current) => ({ ...current, [key]: value }));
 
@@ -32,9 +48,14 @@ export function JobFormDialog({ open, onClose }: { open: boolean; onClose: () =>
     event.preventDefault();
     setError(null);
     try {
-      await create.mutateAsync(form);
-      toast('Offre publiée sur le Job Board.');
-      setForm(EMPTY);
+      if (job) {
+        await update.mutateAsync({ id: job.id, ...form });
+        toast('Offre mise à jour.');
+      } else {
+        await create.mutateAsync(form);
+        toast('Offre publiée sur le Job Board.');
+        setForm(EMPTY);
+      }
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -42,8 +63,8 @@ export function JobFormDialog({ open, onClose }: { open: boolean; onClose: () =>
   }
 
   return (
-    <Dialog open={open} onClose={onClose} title="Publier une offre" className="w-[min(40rem,calc(100vw-2rem))]">
-      <p className="-mt-1 mb-5 text-body-sm text-ink-muted">Gratuit, et visible tout de suite sur le Job Board.</p>
+    <Dialog open={open} onClose={onClose} title={job ? "Modifier l'offre" : 'Publier une offre'} className="w-[min(40rem,calc(100vw-2rem))]">
+      {!job ? <p className="-mt-1 mb-5 text-body-sm text-ink-muted">Gratuit, et visible tout de suite sur le Job Board.</p> : null}
       <form onSubmit={submit} className="space-y-6">
         <FieldGroup title="Le poste">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -100,8 +121,8 @@ export function JobFormDialog({ open, onClose }: { open: boolean; onClose: () =>
           <Button variant="ghost" onClick={onClose}>
             Annuler
           </Button>
-          <Button type="submit" loading={create.isPending}>
-            Publier l&apos;offre
+          <Button type="submit" loading={create.isPending || update.isPending}>
+            {job ? 'Enregistrer' : "Publier l'offre"}
           </Button>
         </div>
       </form>

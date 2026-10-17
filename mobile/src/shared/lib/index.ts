@@ -1,5 +1,5 @@
+import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 
 import { PUBLIC_WEB_URL } from '@/shared/api';
 import { type Key, t } from '@/shared/i18n';
@@ -135,6 +135,18 @@ function normalizeInternalPath(pathname: string): string | null {
   const snippetMatch = clean.match(/^\/snippets?\/([0-9a-f-]{36})$/i);
   if (snippetMatch) return `/snippet/${snippetMatch[1]}`;
 
+  // Projet : /projects/[id] (route web) ou /project/[id] -> /project/[id]
+  const projectMatch = clean.match(/^\/projects?\/([0-9a-f-]{36})$/i);
+  if (projectMatch) return `/project/${projectMatch[1]}`;
+
+  // Offre d'emploi : /jobs/[id] (route web) ou /job/[id] -> /job/[id]
+  const jobMatch = clean.match(/^\/jobs?\/([0-9a-f-]{36})$/i);
+  if (jobMatch) return `/job/${jobMatch[1]}`;
+
+  // Marque-pages
+  if (clean === '/bookmarks') return '/bookmarks';
+  if (clean === '/messages') return '/messages';
+
   // Hub : /h/[slug] -> /h/[slug]
   const hubMatch = clean.match(/^\/h\/([^/?#]+)/i);
   if (hubMatch) return `/h/${hubMatch[1]}`;
@@ -166,31 +178,41 @@ export function notificationRoute(data: unknown): string | null {
   if (type === 'question') return `/question/${id}`;
   if (type === 'snippet') return `/snippet/${id}`;
   if (type === 'profile') return `/u/${id}`;
+  if (type === 'project') return `/project/${id}`;
+  if (type === 'job') return `/job/${id}`;
   return null;
 }
 
-/** Notifications sans écran dans l'appli (projet, guide, espace contributeur) : page du site. */
+/** Notifications sans écran dans l'appli (guide, espace contributeur) : page du site, en interne. */
 export function notificationWebUrl(data: unknown): string | null {
   const { type, id } = (data ?? {}) as { type?: string; id?: string };
   if (!id) return null;
-  const path = { project: `/projects/${id}`, guide: `/projects/guides/${id}`, welcome: `/projects/welcome/${id}` }[type ?? ''];
+  const path = { guide: `/projects/guides/${id}`, welcome: `/projects/welcome/${id}` }[type ?? ''];
   return path ? `${PUBLIC_WEB_URL}${path}` : null;
 }
 
-/** Ouvre un lien dans l'application si c'est une ressource interne, ou dans le navigateur intégré. */
+/**
+ * Tout s'ouvre dans l'appli : écran natif pour une page AfriDev, navigateur interne (WebView)
+ * pour un site externe ; mailto:, tel: et sms: vont à l'appli du téléphone prévue pour.
+ */
 export function openLink(url: string) {
-  const internalRoute = resolveInternalRoute(url);
+  const trimmed = (url ?? '').trim();
+  const internalRoute = resolveInternalRoute(trimmed);
   if (internalRoute) {
     try {
-      router.push(internalRoute as any);
+      router.push(internalRoute as never);
       return Promise.resolve();
     } catch {
-      // repli navigateur si le routage échoue
+      // repli : navigateur interne
     }
   }
-
-  return WebBrowser.openBrowserAsync(url, {
-    presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-    controlsColor: '#C84B20',
-  }).catch(() => undefined);
+  if (trimmed.startsWith('/')) {
+    router.push({ pathname: '/browser', params: { url: `${PUBLIC_WEB_URL}${trimmed}` } });
+    return Promise.resolve();
+  }
+  if (/^https?:\/\//i.test(trimmed)) {
+    router.push({ pathname: '/browser', params: { url: trimmed } });
+    return Promise.resolve();
+  }
+  return Linking.openURL(trimmed).catch(() => undefined);
 }

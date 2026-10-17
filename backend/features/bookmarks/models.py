@@ -4,7 +4,7 @@ from django.db.models import Q
 
 from core.models import BaseModel
 
-TARGET_FIELDS = ("post_id", "snippet_id", "question_id", "project_id")
+TARGET_FIELDS = ("post_id", "snippet_id", "question_id", "project_id", "job_id")
 
 
 def _exactly_one(fields) -> Q:
@@ -55,12 +55,13 @@ class BookmarkItem(BaseModel):
     snippet_id = models.UUIDField(null=True, blank=True, db_index=True)
     question_id = models.UUIDField(null=True, blank=True, db_index=True)
     project_id = models.UUIDField(null=True, blank=True, db_index=True)
+    job_id = models.UUIDField(null=True, blank=True, db_index=True)
 
     class Meta:
         constraints = [
             models.CheckConstraint(
                 condition=_exactly_one(TARGET_FIELDS),
-                name="bookmarks_item_one_target_v2",
+                name="bookmarks_item_one_target_v3",
             ),
             *[
                 models.UniqueConstraint(

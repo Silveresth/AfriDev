@@ -19,6 +19,28 @@ class Comment(BaseModel):
         indexes = [models.Index(fields=["post_id", "created_at"])]
 
 
+class TargetComment(BaseModel):
+    """Commentaire sous un projet ou une offre d'emploi (les posts ont leur propre fil)."""
+
+    class TargetType(models.TextChoices):
+        PROJECT = "project", "Projet"
+        JOB = "job", "Offre d'emploi"
+
+    target_type = models.CharField(max_length=10, choices=TargetType.choices)
+    # Référence sans clé étrangère (features.projects / features.jobs_events).
+    target_id = models.UUIDField()
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="target_comments"
+    )
+    parent = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.CASCADE, related_name="replies"
+    )
+    body = models.TextField(max_length=2000)
+
+    class Meta:
+        indexes = [models.Index(fields=["target_type", "target_id", "created_at"])]
+
+
 class ThreadSummary(BaseModel):
     """Résumé IA en 3 points d'un fil de commentaires, recalculé quand le fil grossit."""
 

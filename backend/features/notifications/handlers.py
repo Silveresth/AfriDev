@@ -8,7 +8,7 @@ from django.dispatch import receiver
 
 from features.accounts import selectors as account_selectors
 from features.accounts.events import user_registered
-from features.discussions.events import comment_created
+from features.discussions.events import comment_created, target_comment_created
 from features.feed import selectors as feed_selectors
 from features.feed.events import post_liked
 from features.matchmaking.events import application_answered, application_submitted
@@ -48,6 +48,30 @@ def on_comment_created(sender, comment_id, post_id, author_id, parent_author_id,
             data=data,
         )
     if parent_author_id and parent_author_id not in (author_id, post_author_id):
+        notify(
+            recipient_id=parent_author_id,
+            kind=Kind.COMMENT_REPLY,
+            title=f"{_name(author_id)} vous a répondu",
+            body=_excerpt(text),
+            data=data,
+        )
+
+
+@receiver(target_comment_created)
+def on_target_comment_created(
+    sender, comment_id, target_type, target_id, owner_id, author_id, parent_author_id, text, **kw
+):
+    data = {"type": target_type, "id": str(target_id), "comment_id": str(comment_id)}
+    what = "votre projet" if target_type == "project" else "votre offre d'emploi"
+    if owner_id and owner_id != author_id:
+        notify(
+            recipient_id=owner_id,
+            kind=Kind.NEW_COMMENT,
+            title=f"{_name(author_id)} a commenté {what}",
+            body=_excerpt(text),
+            data=data,
+        )
+    if parent_author_id and parent_author_id not in (author_id, owner_id):
         notify(
             recipient_id=parent_author_id,
             kind=Kind.COMMENT_REPLY,

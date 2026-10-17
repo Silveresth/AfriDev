@@ -76,6 +76,11 @@ export function useJobActions() {
     mutationFn: (body: JobInput) => unwrap(api.POST('/api/job-board/', { body })),
     onSuccess: refresh,
   });
+  const update = useMutation({
+    mutationFn: ({ id, ...body }: Schemas['PatchedJobUpdateRequest'] & { id: string }) =>
+      unwrap(api.PATCH('/api/job-board/{job_id}/', { params: { path: { job_id: id } }, body })),
+    onSuccess: refresh,
+  });
   const close = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) =>
       unwrap(api.PATCH('/api/job-board/{job_id}/', { params: { path: { job_id: id } }, body: { is_active: active } })),
@@ -85,7 +90,15 @@ export function useJobActions() {
     mutationFn: (id: string) => unwrap(api.DELETE('/api/job-board/{job_id}/', { params: { path: { job_id: id } } })),
     onSuccess: refresh,
   });
-  return { create, close, remove };
+  return { create, update, close, remove };
+}
+
+export function useJob(id: string, initial?: Job) {
+  return useQuery({
+    queryKey: ['jobs', 'detail', id],
+    queryFn: () => unwrap(api.GET('/api/job-board/{job_id}/', { params: { path: { job_id: id } } })),
+    initialData: initial,
+  });
 }
 
 export function useEvents(filters: EventFilters = {}) {

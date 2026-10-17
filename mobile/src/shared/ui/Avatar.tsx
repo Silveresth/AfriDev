@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { absoluteUrl } from '@/shared/api';
 import { useDataSaver } from '@/shared/data-saver';
@@ -37,6 +38,30 @@ export function Avatar({ name, src, size = 36, color }: { name: string; src?: st
         />
       ) : null}
     </View>
+  );
+}
+
+/** Photo de profil qui ouvre le profil ; zone tactile d'au moins 44 px même pour un petit cercle. */
+export function ProfileAvatar({
+  author,
+  size = 36,
+}: {
+  author: { username: string; display_name?: string | null; avatar_url?: string | null } | null | undefined;
+  size?: number;
+}) {
+  const name = author?.display_name || author?.username || '?';
+  const slop = Math.max(6, (44 - size) / 2);
+  if (!author) return <Avatar name={name} size={size} />;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={name}
+      hitSlop={slop}
+      onPress={() => router.push(`/u/${author.username}`)}
+      style={({ pressed }) => (pressed ? { opacity: 0.7 } : null)}
+    >
+      <Avatar name={name} src={author.avatar_url} size={size} />
+    </Pressable>
   );
 }
 

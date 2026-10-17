@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from core.serializers import AuthorSerializer
 from features.feed import selectors as feed_selectors
+from features.jobs_events import selectors as jobs_selectors
 from features.profiles import selectors as profile_selectors
 from features.projects import selectors as project_selectors
 from features.qa import selectors as qa_selectors
@@ -12,12 +13,14 @@ TARGET_TYPES = [
     ("question", "Question"),
     ("snippet", "Snippet"),
     ("project", "Projet"),
+    ("job", "Offre d'emploi"),
 ]
 HREFS = {
     "post": "/feed/{}",
     "question": "/questions/{}",
     "snippet": "/snippets/{}",
     "project": "/projects/{}",
+    "job": "/jobs/{}",
 }
 
 
@@ -101,6 +104,7 @@ def present_items(items, *, viewer) -> list[dict]:
             snippet_ids=by_type["snippet"], viewer_id=viewer.id
         ),
         "project": project_selectors.project_summaries(project_ids=by_type["project"]),
+        "job": jobs_selectors.job_summaries(job_ids=by_type["job"]),
     }
     authors = profile_selectors.author_cards(
         user_ids={s["author_id"] for group in summaries.values() for s in group.values()}

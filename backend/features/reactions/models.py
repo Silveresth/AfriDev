@@ -14,6 +14,7 @@ class Reaction(BaseModel):
         QUESTION = "question", "Question"
         SNIPPET = "snippet", "Snippet"
         PROJECT = "project", "Projet"
+        JOB = "job", "Offre d'emploi"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reactions"

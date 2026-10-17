@@ -11,7 +11,9 @@ import { useRequireAuth } from '@/shared/session';
 import { radius, useTheme } from '@/shared/theme';
 import { Text, useToast } from '@/shared/ui';
 
-import { type SaveType, shareContent, useIsSaved, useToggleSave } from './api';
+import { SaveSheet } from '@/features/bookmarks';
+
+import { type SaveType, shareContent, useSavedIn, useToggleSave } from './api';
 import { CommentsSheet, type ThreadKind } from './CommentsSheet';
 import { type MoreActions, MoreSheet } from './MoreSheet';
 
@@ -51,7 +53,7 @@ export function ActionBar({ vote, thread, share, save, more }: ActionBarProps) {
       <Round label={t('feed.share')} onPress={() => shareContent(share.title, share.path)}>
         <Share2 size={17} color={colors.inkMuted} />
       </Round>
-      {save ? <SaveButton type={save.type} id={save.id} /> : null}
+      {save ? <SaveButton type={save.type} id={save.id} title={share.title} /> : null}
       {hasMore ? (
         <Round label={t('act.more')} onPress={() => setMoreOpen(true)}>
           <MoreHorizontal size={18} color={colors.inkMuted} />
@@ -64,36 +66,60 @@ export function ActionBar({ vote, thread, share, save, more }: ActionBarProps) {
   );
 }
 
-function SaveButton({ type, id }: { type: SaveType; id: string }) {
+/** Toucher : « Enregistrer dans… » (choix des collections) ; appui long : enregistrement rapide. */
+function SaveButton({ type, id, title }: { type: SaveType; id: string; title: string }) {
   const { colors } = useTheme();
   const { t } = useT();
   const toast = useToast();
   const requireAuth = useRequireAuth();
-  const saved = useIsSaved(type, id);
+  const savedIn = useSavedIn(type, id);
+  const saved = savedIn.length > 0;
   const toggle = useToggleSave();
+  const [open, setOpen] = useState(false);
   return (
-    <Round
-      label={t(saved ? 'act.saved' : 'feed.bookmark')}
-      selected={saved}
-      onPress={() =>
-        requireAuth(() => {
-          haptic.tap();
-          toggle.mutate(
-            { type, id },
-            {
-              onSuccess: (added) => toast(t(added ? 'act.saved_toast' : 'act.unsaved_toast')),
-              onError: (error) => toast(errorMessage(error), 'error'),
-            },
-          );
-        })
-      }
-    >
-      <Bookmark size={17} color={saved ? colors.primary : colors.inkMuted} fill={saved ? colors.primary : 'transparent'} />
-    </Round>
+    <>
+      <Round
+        label={t(saved ? 'act.saved' : 'feed.bookmark')}
+        selected={saved}
+        onPress={() =>
+          requireAuth(() => {
+            haptic.tap();
+            setOpen(true);
+          })
+        }
+        onLongPress={() =>
+          requireAuth(() => {
+            haptic.select();
+            toggle.mutate(
+              { type, id },
+              {
+                onSuccess: (added) => toast(t(added ? 'act.saved_toast' : 'act.unsaved_toast')),
+                onError: (error) => toast(errorMessage(error), 'error'),
+              },
+            );
+          })
+        }
+      >
+        <Bookmark size={17} color={saved ? colors.primary : colors.inkMuted} fill={saved ? colors.primary : 'transparent'} />
+      </Round>
+      {open ? <SaveSheet target={{ type, id }} title={title} savedIn={savedIn} visible onClose={() => setOpen(false)} /> : null}
+    </>
   );
 }
 
-function Round({ label, selected, onPress, children }: { label: string; selected?: boolean; onPress: () => void; children: React.ReactNode }) {
+function Round({
+  label,
+  selected,
+  onPress,
+  onLongPress,
+  children,
+}: {
+  label: string;
+  selected?: boolean;
+  onPress: () => void;
+  onLongPress?: () => void;
+  children: React.ReactNode;
+}) {
   const { colors } = useTheme();
   return (
     <Pressable
@@ -102,6 +128,7 @@ function Round({ label, selected, onPress, children }: { label: string; selected
       accessibilityState={selected === undefined ? undefined : { selected }}
       hitSlop={4}
       onPress={onPress}
+      onLongPress={onLongPress}
       style={({ pressed }) => [styles.round, { backgroundColor: pressed ? colors.containerHigh : colors.container }]}
     >
       {children}

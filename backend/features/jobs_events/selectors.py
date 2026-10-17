@@ -74,7 +74,7 @@ def home_candidates(*, before=None, limit: int, author_ids=None) -> list[dict]:
             "tags": list(j.stack or []),
             "author_id": j.author_id,
             "sort_at": j.created_at,
-            "url": "/jobs",
+            "url": f"/jobs/{j.id}",
             "popularity": 0,
             "meta": {
                 "company": j.company,
@@ -89,8 +89,22 @@ def home_candidates(*, before=None, limit: int, author_ids=None) -> list[dict]:
     ]
 
 
-def get_job(*, job_id) -> JobOffer | None:
-    return JobOffer.objects.alive().filter(id=job_id).first()
+def get_job(*, job_id, include_hidden: bool = False) -> JobOffer | None:
+    jobs = JobOffer.objects.all() if include_hidden else JobOffer.objects.alive()
+    return jobs.filter(id=job_id).first()
+
+
+def job_summaries(*, job_ids) -> dict:
+    """{job_id: {title, excerpt, author_id, created_at}} (marque-pages)."""
+    return {
+        j.id: {
+            "title": f"{j.title} — {j.company}",
+            "excerpt": " ".join(j.description.split())[:200],
+            "author_id": j.author_id,
+            "created_at": j.created_at,
+        }
+        for j in JobOffer.objects.alive().filter(id__in=list(job_ids))
+    }
 
 
 def list_events(

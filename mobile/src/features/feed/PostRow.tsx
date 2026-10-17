@@ -11,7 +11,7 @@ import { useT } from '@/shared/i18n';
 import { plainText, timeAgo } from '@/shared/lib';
 import { useSession } from '@/shared/session';
 import { radius, useTheme } from '@/shared/theme';
-import { Avatar, HubRoleBadge, PinnedBadge, TagRow, Text, useToast } from '@/shared/ui';
+import { HubRoleBadge, PinnedBadge, ProfileAvatar, TagRow, Text, useToast } from '@/shared/ui';
 
 import { imageOf, type Post, useDeletePost, useScoreVote } from './api';
 
@@ -22,7 +22,7 @@ export function PostByline({ post, showHub = true }: { post: Post; showHub?: boo
   const name = author?.display_name || author?.username || t('member');
   return (
     <View style={styles.byline}>
-      <Avatar name={name} src={author?.avatar_url} size={22} />
+      <ProfileAvatar author={author} size={36} />
       <Text variant="caption" numberOfLines={1} style={styles.flex}>
         {showHub && post.hub ? (
           <Text variant="caption" style={styles.strong} onPress={() => router.push(`/h/${post.hub!.slug}`)}>

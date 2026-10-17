@@ -19,6 +19,38 @@ class CommentOutputSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField()
 
 
+class TargetCommentInputSerializer(serializers.Serializer):
+    body = serializers.CharField(max_length=2000)
+    parent_id = serializers.UUIDField(required=False, allow_null=True)
+
+
+class TargetCommentOutputSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    target_type = serializers.CharField()
+    target_id = serializers.UUIDField()
+    parent_id = serializers.UUIDField(allow_null=True)
+    body = serializers.CharField()
+    author = AuthorSerializer(allow_null=True)
+    created_at = serializers.DateTimeField()
+
+
+def present_target_comments(comments) -> list[dict]:
+    comments = list(comments)
+    authors = profile_selectors.author_cards(user_ids={c.author_id for c in comments})
+    return [
+        {
+            "id": comment.id,
+            "target_type": comment.target_type,
+            "target_id": comment.target_id,
+            "parent_id": comment.parent_id,
+            "body": comment.body,
+            "author": authors.get(comment.author_id),
+            "created_at": comment.created_at,
+        }
+        for comment in comments
+    ]
+
+
 class SummaryOutputSerializer(serializers.Serializer):
     post_id = serializers.UUIDField()
     points = serializers.ListField(child=serializers.CharField())

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from core.serializers import AuthorSerializer, HubSummarySerializer
+from features.discussions import selectors as discussion_selectors
 from features.hubs import selectors as hub_selectors
 from features.media import selectors as media_selectors
 from features.profiles import selectors as profile_selectors
@@ -9,7 +10,9 @@ from features.reactions import selectors as reaction_selectors
 from .. import selectors
 from ..models import Post
 
-REACTABLE = ("question", "snippet", "project")
+REACTABLE = ("question", "snippet", "project", "job")
+# Projets et offres : commentaires dans features.discussions (TargetComment).
+COMMENTED_TARGETS = ("project", "job")
 
 
 class PostInputSerializer(serializers.Serializer):
@@ -178,7 +181,7 @@ class HomeItemSerializer(serializers.Serializer):
     )
     post = PostOutputSerializer(allow_null=True)
     card = HomeCardSerializer(allow_null=True)
-    stats = HomeStatsSerializer(allow_null=True, help_text="null pour un post ou une offre.")
+    stats = HomeStatsSerializer(allow_null=True, help_text="null pour un post.")
 
 
 class HomePageSerializer(serializers.Serializer):
@@ -208,16 +211,26 @@ def present_home(cards: list[dict], *, viewer, interests) -> list[dict]:
         )
         for kind in REACTABLE
     }
+    target_comments = {
+        kind: discussion_selectors.target_comment_counts(
+            target_type=kind, target_ids=[card["id"] for card in cards if card["type"] == kind]
+        )
+        for kind in COMMENTED_TARGETS
+    }
 
     def stats(card):
         if card["type"] not in REACTABLE:
             return None
         summary = reactions[card["type"]].get(card["id"], {})
         meta = card["meta"]
+        if card["type"] in COMMENTED_TARGETS:
+            comment_count = target_comments[card["type"]].get(card["id"], 0)
+        else:
+            comment_count = meta.get("answer_count", meta.get("comment_count", 0))
         return {
             "score": summary.get("score", 0),
             "viewer_vote": summary.get("viewer_vote", 0),
-            "comment_count": meta.get("answer_count", meta.get("comment_count", 0)),
+            "comment_count": comment_count,
             "can_manage": is_staff or (viewer_id is not None and card["author_id"] == viewer_id),
         }
 

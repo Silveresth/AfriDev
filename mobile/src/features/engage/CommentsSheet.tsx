@@ -11,9 +11,11 @@ import { useT } from '@/shared/i18n';
 import { timeAgo } from '@/shared/lib';
 import { useSession } from '@/shared/session';
 import { radius, typography, useTheme } from '@/shared/theme';
-import { Avatar, Button, ListFooter, Sheet, Text } from '@/shared/ui';
+import { Button, ListFooter, ProfileAvatar, Sheet, Text } from '@/shared/ui';
 
-export type ThreadKind = 'post' | 'snippet' | 'question';
+import { useTargetCommentActions, useTargetComments } from './api';
+
+export type ThreadKind = 'post' | 'snippet' | 'question' | 'project' | 'job';
 
 interface Line {
   id: string;
@@ -38,6 +40,8 @@ const DETAIL: Record<ThreadKind, (id: string) => string> = {
   post: (id) => `/post/${id}`,
   snippet: (id) => `/snippet/${id}`,
   question: (id) => `/question/${id}`,
+  project: (id) => `/project/${id}`,
+  job: (id) => `/job/${id}`,
 };
 
 /** Commentaires (post, snippet) ou réponses (question) dans une feuille, sans quitter le fil. */
@@ -47,11 +51,37 @@ export function CommentsSheet({ kind, id, visible, onClose }: { kind: ThreadKind
     onClose();
     router.push(DETAIL[kind](id) as never);
   };
-  const Body = kind === 'post' ? PostThread : kind === 'snippet' ? SnippetThread : AnswerThread;
   return (
     <Sheet visible={visible} onClose={onClose}>
-      <Body id={id} onSeeAll={seeAll} />
+      {kind === 'project' || kind === 'job' ? (
+        <TargetThread type={kind} id={id} onSeeAll={seeAll} />
+      ) : kind === 'post' ? (
+        <PostThread id={id} onSeeAll={seeAll} />
+      ) : kind === 'snippet' ? (
+        <SnippetThread id={id} onSeeAll={seeAll} />
+      ) : (
+        <AnswerThread id={id} onSeeAll={seeAll} />
+      )}
     </Sheet>
+  );
+}
+
+function TargetThread({ type, id, onSeeAll }: { type: 'project' | 'job'; id: string; onSeeAll: () => void }) {
+  const { t } = useT();
+  const comments = useTargetComments(type, id);
+  const { send } = useTargetCommentActions(type, id);
+  return (
+    <Thread
+      title={t('act.comments_title')}
+      lines={comments.items}
+      loading={comments.isPending}
+      empty={t('act.first_comment')}
+      placeholder={t('comment.placeholder')}
+      sending={send.isPending}
+      error={send.error}
+      onSend={(body, done) => send.mutate({ body }, { onSuccess: done })}
+      onSeeAll={onSeeAll}
+    />
   );
 }
 
@@ -190,7 +220,7 @@ function LineRow({ line }: { line: Line }) {
   const name = line.author?.display_name || line.author?.username || t('member');
   return (
     <View style={styles.line}>
-      <Avatar name={name} src={line.author?.avatar_url} size={28} />
+      <ProfileAvatar author={line.author} size={32} />
       <View style={styles.flex}>
         <Text variant="caption">
           <Text variant="caption" style={styles.strong}>

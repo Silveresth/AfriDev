@@ -22,13 +22,14 @@ type HomeItem = Schemas['HomeItem'];
 const EDIT_PAGES: Partial<Record<ReactType, (id: string) => string>> = {
   snippet: (id) => `/snippets/${id}/edit`,
   project: (id) => `/projects/${id}/edit`,
+  job: (id) => `/jobs/${id}?edit=1`,
 };
 
 /** Pied d'une carte du fil d'accueil : voter, commenter, partager, enregistrer, signaler, gérer. */
 export function CardActions({ item }: { item: HomeItem }) {
   const card = item.card;
   if (!card) return null;
-  if (item.type === 'job' || item.type === 'post' || !item.stats) {
+  if (item.type === 'post' || !item.stats) {
     return (
       <footer className="flex items-center gap-1 px-3 pb-3 sm:px-4">
         <ShareButton path={card.url} title={card.title} />
@@ -50,12 +51,10 @@ function ReactableActions({ item, type, stats, url, title }: { item: HomeItem; t
     <>
       <footer className="flex flex-wrap items-center gap-0.5 px-3 pb-3 sm:gap-1 sm:px-4">
         <ScorePill score={stats.score} value={stats.viewer_vote} onVote={(value) => vote.mutate(value)} loginNext={url} />
-        {type !== 'project' ? (
-          <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className={cn(pillAction, open && 'bg-container text-ink')}>
-            <MessageSquare className="size-4" aria-hidden /> {formatCount(stats.comment_count)}
-            <span className="hidden sm:inline">{type === 'question' ? 'réponse(s)' : 'commentaire(s)'}</span>
-          </button>
-        ) : null}
+        <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className={cn(pillAction, open && 'bg-container text-ink')}>
+          <MessageSquare className="size-4" aria-hidden /> {formatCount(stats.comment_count)}
+          <span className="hidden sm:inline">{type === 'question' ? 'réponse(s)' : 'commentaire(s)'}</span>
+        </button>
         <ShareButton path={url} title={title} />
         <span className="ml-auto flex items-center">
           <BookmarkButton target={{ type, id: item.id }} title={title} />
@@ -99,7 +98,7 @@ function ReactableActions({ item, type, stats, url, title }: { item: HomeItem; t
           ) : null}
         </span>
       </footer>
-      {open && type !== 'project' ? <InlineThread kind={type} id={item.id} href={url} /> : null}
+      {open ? <InlineThread kind={type} id={item.id} href={url} /> : null}
       {editing && type === 'question' ? <EditQuestion id={item.id} onClose={() => setEditing(false)} /> : null}
     </>
   );

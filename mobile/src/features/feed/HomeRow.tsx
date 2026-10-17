@@ -9,7 +9,7 @@ import { type Key, useT } from '@/shared/i18n';
 import { formatCount, languageColor, openLink, timeAgo } from '@/shared/lib';
 import { PressableScale } from '@/shared/motion';
 import { radius, useTheme } from '@/shared/theme';
-import { Avatar, CodeBlock, TagRow, Text, useToast } from '@/shared/ui';
+import { CodeBlock, ProfileAvatar, TagRow, Text, useToast } from '@/shared/ui';
 
 import type { HomeItem } from './api';
 import { PostRow } from './PostRow';
@@ -24,11 +24,9 @@ const LOOK: Record<CardType, { icon: LucideIcon; color: string }> = {
   job: { icon: BriefcaseBusiness, color: '#D97706' },
 };
 
-/** Questions et snippets ont un écran dans l'appli ; projets et offres s'ouvrent sur le site. */
-function open(type: CardType, id: string, url: string) {
-  if (type === 'question') router.push(`/question/${id}`);
-  else if (type === 'snippet') router.push(`/snippet/${id}`);
-  else void openLink(`${PUBLIC_WEB_URL}${url}`);
+/** Chaque type a son écran natif dans l'appli. */
+function open(type: CardType, id: string) {
+  router.push(`/${type}/${id}`);
 }
 
 /** Élément du fil d'accueil mixte : un post complet, ou une carte typée (badge coloré par type). */
@@ -49,10 +47,10 @@ function HomeCardRow({ item }: { item: HomeItem }) {
   const name = author?.display_name || author?.username || t('member');
 
   return (
-    <PressableScale scaleTo={0.99} onPress={() => open(type, item.id, card.url)} style={[styles.row, { borderBottomColor: colors.line }]}>
+    <PressableScale scaleTo={0.99} onPress={() => open(type, item.id)} style={[styles.row, { borderBottomColor: colors.line }]}>
       <View style={styles.body}>
         <View style={styles.inline}>
-          <Avatar name={name} src={author?.avatar_url} size={22} />
+          <ProfileAvatar author={author} size={36} />
           <Text variant="caption" numberOfLines={1} style={styles.flex}>
             <Text variant="caption" style={styles.strong} onPress={author ? () => router.push(`/u/${author.username}`) : undefined}>
               {name}
@@ -105,11 +103,16 @@ function HomeCardRow({ item }: { item: HomeItem }) {
 
 const EDIT_ROUTES: Partial<Record<CardType, string>> = { question: '/compose/question', snippet: '/compose/snippet' };
 const EDIT_LABELS: Partial<Record<CardType, Key>> = { question: 'modify.question', snippet: 'modify.snippet' };
+// Modification sur le site (formulaires riches), ouvert dans le navigateur interne.
+const WEB_EDIT: Partial<Record<CardType, (id: string) => string>> = {
+  project: (id) => `/projects/${id}/edit`,
+  job: (id) => `/jobs/${id}?edit=1`,
+};
 
 /** Voter, commenter, partager, enregistrer, signaler, modifier, supprimer : sans ouvrir la carte. */
 function CardActions({ item, type }: { item: HomeItem; type: CardType }) {
   const share = { title: item.card!.title, path: item.card!.url };
-  if (type === 'job' || !item.stats) return <ActionBar share={share} />;
+  if (!item.stats) return <ActionBar share={share} />;
   return <ReactableActions item={item} stats={item.stats} type={type} share={share} />;
 }
 
@@ -130,12 +133,15 @@ function ReactableActions({
   const vote = useCardVote(type, item.id, stats);
   const route = EDIT_ROUTES[type];
   const label = EDIT_LABELS[type];
+  const webEdit = WEB_EDIT[type];
   const edit = () =>
-    route ? router.push({ pathname: route as never, params: { editId: item.id } }) : void openLink(`${PUBLIC_WEB_URL}${share.path}`);
+    route
+      ? router.push({ pathname: route as never, params: { editId: item.id } })
+      : void openLink(`${PUBLIC_WEB_URL}${webEdit ? webEdit(item.id) : share.path}`);
   return (
     <ActionBar
       vote={{ score: stats.score, value: stats.viewer_vote, onVote: (value) => vote.mutate(value) }}
-      thread={type === 'project' ? undefined : { kind: type, id: item.id, count: stats.comment_count }}
+      thread={{ kind: type, id: item.id, count: stats.comment_count }}
       share={share}
       save={{ type, id: item.id }}
       more={{
@@ -239,7 +245,7 @@ function Action({ type, meta, id, url }: { type: CardType; meta: Meta; id: strin
     onPress = () => void openLink(/^https?:\/\//.test(href) ? href : `mailto:${href}`);
   } else if (type === 'question' && !meta.is_resolved) {
     label = 'home.help';
-    onPress = () => open(type, id, url);
+    onPress = () => open(type, id);
   } else if (type === 'project' && meta.repo_url) {
     label = 'home.repo';
     onPress = () => void openLink(String(meta.repo_url));
