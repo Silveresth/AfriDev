@@ -30,7 +30,15 @@ import {
   useResolveReport,
 } from '../api';
 
-const TARGETS = { post: 'Post', comment: 'Commentaire', question: 'Question', answer: 'Réponse' } as const;
+const TARGETS = {
+  post: 'Post',
+  comment: 'Commentaire',
+  question: 'Question',
+  answer: 'Réponse',
+  snippet: 'Snippet',
+  project: 'Projet',
+  hub: 'Hub',
+} as const;
 const REASONS: Record<string, string> = {
   spam: 'Spam ou publicité',
   abuse: 'Harcèlement ou propos haineux',
