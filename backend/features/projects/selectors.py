@@ -2,6 +2,7 @@
 
 from django.db.models import Count, Q, QuerySet, Sum
 
+from core.admin_lists import admin_filter
 from core.utils import keyset_before
 
 from .models import Issue, Project
@@ -135,3 +136,9 @@ def export_for_user(*, user_id) -> dict:
             )
         )
     }
+
+
+def admin_queryset(*, removed: bool = False, query: str = "") -> QuerySet[Project]:
+    return admin_filter(
+        Project.objects.all(), removed=removed, query=query, fields=("name", "description")
+    )

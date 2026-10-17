@@ -4,6 +4,8 @@ import uuid
 
 from django.db.models import Q, QuerySet
 
+from core.admin_lists import admin_filter
+
 from .models import Hub, HubBan, HubMembership
 
 
@@ -183,3 +185,7 @@ def export_for_user(*, user_id) -> dict:
             HubMembership.objects.filter(user_id=user_id).values("hub__slug", "role", "created_at")
         ),
     }
+
+
+def admin_queryset(*, removed: bool = False, query: str = "") -> QuerySet[Hub]:
+    return admin_filter(Hub.objects.all(), removed=removed, query=query, fields=("name", "slug"))

@@ -9,8 +9,15 @@ from core.exceptions import NotFoundError
 from core.pagination import CursorPagination
 from core.schema import CURSOR_PARAMETERS, paginated
 
-from .. import selectors, services
-from .serializers import DashboardSerializer, MemberSerializer, MemberUpdateSerializer
+from .. import content, selectors, services
+from .serializers import (
+    CONTENT_TYPES,
+    ContentActionSerializer,
+    ContentRowSerializer,
+    DashboardSerializer,
+    MemberSerializer,
+    MemberUpdateSerializer,
+)
 
 
 class DashboardView(APIView):
@@ -88,3 +95,55 @@ class MemberDetailView(APIView):
                 raise NotFoundError("Membre introuvable.")
         context = {"cards": selectors.member_cards(users=[user])}
         return Response(MemberSerializer(user, context=context).data)
+
+
+class ContentListView(APIView):
+    """Tous les contenus d'un type, en ligne ou retirés, avec recherche."""
+
+    permission_classes = [IsAdminUser]
+
+    @extend_schema(
+        operation_id="backoffice_content_list",
+        parameters=[
+            *CURSOR_PARAMETERS,
+            OpenApiParameter("type", str, required=True, enum=CONTENT_TYPES),
+            OpenApiParameter("state", str, required=False, enum=["live", "removed"]),
+            OpenApiParameter("q", str, required=False, description="Titre ou texte."),
+        ],
+        responses=paginated(ContentRowSerializer),
+    )
+    def get(self, request):
+        content_type = request.query_params.get("type", "post")
+        paginator = CursorPagination()
+        page = paginator.paginate_queryset(
+            content.list_content(
+                content_type=content_type,
+                removed=request.query_params.get("state") == "removed",
+                query=request.query_params.get("q", "").strip(),
+            ),
+            request,
+        )
+        rows = content.present(content_type=content_type, items=list(page))
+        return paginator.get_paginated_response(ContentRowSerializer(rows, many=True).data)
+
+
+class ContentActionView(APIView):
+    permission_classes = [IsAdminUser]
+
+    @extend_schema(
+        operation_id="backoffice_content_action",
+        request=ContentActionSerializer,
+        responses=ContentRowSerializer,
+        description="hide : masquer (l'auteur est prévenu) · restore : rétablir · "
+        "verify / unverify : certification d'un hub.",
+    )
+    def post(self, request, content_type, content_id):
+        data = ContentActionSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        row = content.act(
+            content_type=content_type,
+            content_id=content_id,
+            action=data.validated_data["action"],
+            actor=request.user,
+        )
+        return Response(ContentRowSerializer(row).data)

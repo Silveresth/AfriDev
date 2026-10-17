@@ -166,3 +166,35 @@ def test_team_management_rules(client_for, moderator, admin, user):
 def test_me_exposes_staff_flags(client_for, moderator):
     me = client_for(moderator).get("/api/accounts/me/").data
     assert me["is_staff"] is True and me["is_superuser"] is False
+
+
+def test_content_management(client_for, auth_client, moderator, user):
+    from features.hubs import services as hub_services
+
+    post = feed_services.create_post(author=user, title="Promo crypto", body="Achetez !")
+    hub = hub_services.create_hub(creator=user, name="Python Dakar", slug="python-dakar")
+    staff = client_for(moderator)
+    assert auth_client.get("/api/backoffice/content/", {"type": "post"}).status_code == 403
+
+    listing = staff.get("/api/backoffice/content/", {"type": "post", "q": "crypto"}).data
+    assert [row["title"] for row in listing["results"]] == ["Promo crypto"]
+    assert listing["results"][0]["author"]["username"] == "amina"
+
+    hidden = staff.post(
+        f"/api/backoffice/content/post/{post.id}/", {"action": "hide"}, format="json"
+    )
+    assert hidden.status_code == 200 and hidden.data["removed"] is True
+    assert feed_selectors.get_post(post_id=post.id) is None
+    removed = staff.get("/api/backoffice/content/", {"type": "post", "state": "removed"}).data
+    assert [row["id"] for row in removed["results"]] == [str(post.id)]
+
+    restored = staff.post(
+        f"/api/backoffice/content/post/{post.id}/", {"action": "restore"}, format="json"
+    )
+    assert restored.data["removed"] is False
+
+    verified = staff.post(
+        f"/api/backoffice/content/hub/{hub.id}/", {"action": "verify"}, format="json"
+    )
+    assert verified.data["meta"]["verified"] is True
+    assert staff.get("/api/backoffice/content/", {"type": "job"}).status_code == 200

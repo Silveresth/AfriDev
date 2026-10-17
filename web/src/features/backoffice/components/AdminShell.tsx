@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Gauge, ShieldAlert, ShieldCheck, Users } from 'lucide-react';
+import { ArrowLeft, Gauge, Layers, ShieldAlert, ShieldCheck, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -13,6 +13,7 @@ import { useOpenReportCount } from '../api';
 const NAV = [
   { href: '/admin', label: 'Tableau de bord', icon: Gauge },
   { href: '/admin/moderation', label: 'Modération', icon: ShieldAlert },
+  { href: '/admin/content', label: 'Contenus', icon: Layers },
   { href: '/admin/members', label: 'Membres', icon: Users },
 ] as const;
 

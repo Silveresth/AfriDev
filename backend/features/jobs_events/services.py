@@ -151,3 +151,21 @@ def update_event(*, event: TechEvent, user, **values) -> TechEvent:
 def delete_event(*, event: TechEvent, user) -> None:
     _check_owner(event, user)
     event.soft_delete()
+
+
+def hide_item(*, kind: str, item_id) -> bool:
+    """Retrait par l'équipe (back-office) d'une offre ("job") ou d'un événement ("event")."""
+    model = JobOffer if kind == "job" else TechEvent
+    item = model.objects.alive().filter(id=item_id).first()
+    if item:
+        item.soft_delete()
+    return item is not None
+
+
+def restore_item(*, kind: str, item_id) -> bool:
+    model = JobOffer if kind == "job" else TechEvent
+    item = model.objects.filter(id=item_id, deleted_at__isnull=False).first()
+    if item:
+        item.deleted_at = None
+        item.save(update_fields=["deleted_at", "updated_at"])
+    return item is not None

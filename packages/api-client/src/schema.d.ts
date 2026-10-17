@@ -371,6 +371,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/backoffice/content/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Tous les contenus d'un type, en ligne ou retirés, avec recherche. */
+        get: operations["backoffice_content_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/backoffice/content/{content_type}/{content_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description hide : masquer (l'auteur est prévenu) · restore : rétablir · verify / unverify : certification d'un hub. */
+        post: operations["backoffice_content_action"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/backoffice/dashboard/": {
         parameters: {
             query?: never;
@@ -2305,13 +2339,6 @@ export interface components {
             ids: string[];
         };
         /**
-         * @description * `hide` - hide
-         *     * `dismiss` - dismiss
-         *     * `restore` - restore
-         * @enum {string}
-         */
-        ActionEnum: "hide" | "dismiss" | "restore";
-        /**
          * @description * `pending` - En cours
          *     * `ready` - Prête
          *     * `failed` - Échec
@@ -2526,6 +2553,47 @@ export interface components {
             posts: number;
             questions: number;
         };
+        /**
+         * @description * `hide` - hide
+         *     * `restore` - restore
+         *     * `verify` - verify
+         *     * `unverify` - unverify
+         * @enum {string}
+         */
+        ContentActionActionEnum: "hide" | "restore" | "verify" | "unverify";
+        ContentActionRequest: {
+            action: components["schemas"]["ContentActionActionEnum"];
+        };
+        /** @description Ligne de la gestion des contenus, commune à tous les types. */
+        ContentRow: {
+            /** Format: uuid */
+            id: string;
+            type: components["schemas"]["ContentRowTypeEnum"];
+            title: string;
+            excerpt: string;
+            /** @description Page du contenu sur le site. */
+            url: string;
+            author: components["schemas"]["Author"] | null;
+            /** Format: date-time */
+            created_at: string;
+            /** @description Masqué par la modération ou supprimé. */
+            removed: boolean;
+            /** @description Indicateurs propres au type (score, membres…). */
+            meta: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * @description * `post` - post
+         *     * `question` - question
+         *     * `snippet` - snippet
+         *     * `project` - project
+         *     * `hub` - hub
+         *     * `job` - job
+         *     * `event` - event
+         * @enum {string}
+         */
+        ContentRowTypeEnum: "post" | "question" | "snippet" | "project" | "hub" | "job" | "event";
         ContentStats: {
             posts: components["schemas"]["PostStats"];
             comments: components["schemas"]["TotalNew"];
@@ -2805,7 +2873,7 @@ export interface components {
             };
         };
         HomeItem: {
-            type: components["schemas"]["TypeEnum"];
+            type: components["schemas"]["HomeItemTypeEnum"];
             /** Format: uuid */
             id: string;
             /** Format: date-time */
@@ -2817,6 +2885,15 @@ export interface components {
             /** @description null pour un post ou une offre. */
             stats: components["schemas"]["HomeStats"] | null;
         };
+        /**
+         * @description * `post` - post
+         *     * `question` - question
+         *     * `snippet` - snippet
+         *     * `project` - project
+         *     * `job` - job
+         * @enum {string}
+         */
+        HomeItemTypeEnum: "post" | "question" | "snippet" | "project" | "job";
         HomePage: {
             next: string | null;
             results: components["schemas"]["HomeItem"][];
@@ -3286,6 +3363,13 @@ export interface components {
             /** Format: uri */
             previous: string | null;
             results: components["schemas"]["CommentOutput"][];
+        };
+        PaginatedContentRowList: {
+            /** Format: uri */
+            next: string | null;
+            /** Format: uri */
+            previous: string | null;
+            results: components["schemas"]["ContentRow"][];
         };
         PaginatedEventOutputList: {
             /** Format: uri */
@@ -3925,8 +4009,15 @@ export interface components {
             hidden: boolean;
             author: components["schemas"]["Author"] | null;
         };
+        /**
+         * @description * `hide` - hide
+         *     * `dismiss` - dismiss
+         *     * `restore` - restore
+         * @enum {string}
+         */
+        ResolveInputActionEnum: "hide" | "dismiss" | "restore";
         ResolveInputRequest: {
-            action: components["schemas"]["ActionEnum"];
+            action: components["schemas"]["ResolveInputActionEnum"];
         };
         RevokedCount: {
             revoked: number;
@@ -4275,15 +4366,6 @@ export interface components {
          * @enum {string}
          */
         TranslationStatusEnum: "pending" | "ready" | "failed";
-        /**
-         * @description * `post` - post
-         *     * `question` - question
-         *     * `snippet` - snippet
-         *     * `project` - project
-         *     * `job` - job
-         * @enum {string}
-         */
-        TypeEnum: "post" | "question" | "snippet" | "project" | "job";
         UnansweredQuestion: {
             /** Format: uuid */
             id: string;
@@ -4989,6 +5071,62 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UsernameStatus"];
+                };
+            };
+        };
+    };
+    backoffice_content_list: {
+        parameters: {
+            query: {
+                /** @description Curseur de la page suivante */
+                cursor?: string;
+                /** @description 20 par défaut, 50 maximum */
+                page_size?: number;
+                /** @description Titre ou texte. */
+                q?: string;
+                state?: "live" | "removed";
+                type: "event" | "hub" | "job" | "post" | "project" | "question" | "snippet";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedContentRowList"];
+                };
+            };
+        };
+    };
+    backoffice_content_action: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                content_id: string;
+                content_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContentActionRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ContentActionRequest"];
+                "multipart/form-data": components["schemas"]["ContentActionRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContentRow"];
                 };
             };
         };

@@ -158,3 +158,24 @@ class MemberSerializer(serializers.Serializer):
 class MemberUpdateSerializer(serializers.Serializer):
     is_active = serializers.BooleanField(required=False)
     is_staff = serializers.BooleanField(required=False)
+
+
+CONTENT_TYPES = ["post", "question", "snippet", "project", "hub", "job", "event"]
+
+
+class ContentRowSerializer(serializers.Serializer):
+    """Ligne de la gestion des contenus, commune à tous les types."""
+
+    id = serializers.UUIDField()
+    type = serializers.ChoiceField(choices=CONTENT_TYPES)
+    title = serializers.CharField()
+    excerpt = serializers.CharField(allow_blank=True)
+    url = serializers.CharField(help_text="Page du contenu sur le site.")
+    author = AuthorSerializer(allow_null=True)
+    created_at = serializers.DateTimeField()
+    removed = serializers.BooleanField(help_text="Masqué par la modération ou supprimé.")
+    meta = serializers.DictField(help_text="Indicateurs propres au type (score, membres…).")
+
+
+class ContentActionSerializer(serializers.Serializer):
+    action = serializers.ChoiceField(choices=["hide", "restore", "verify", "unverify"])

@@ -2,6 +2,7 @@
 
 from django.db.models import Count, QuerySet
 
+from core.admin_lists import admin_filter
 from core.stats import count_per_day
 from core.utils import keyset_before
 
@@ -187,3 +188,8 @@ def export_for_user(*, user_id) -> dict:
             PollVote.objects.filter(voter_id=user_id).values("post_id", "option", "created_at")
         ),
     }
+
+
+def admin_queryset(*, removed: bool = False, query: str = "") -> QuerySet[Post]:
+    """Back-office : tous les posts, en ligne ou retirés (masqués / supprimés)."""
+    return admin_filter(Post.objects.all(), removed=removed, query=query, fields=("title", "body"))

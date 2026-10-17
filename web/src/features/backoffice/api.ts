@@ -75,6 +75,41 @@ export function useResolveReport() {
   });
 }
 
+export type ContentRow = Schemas['ContentRow'];
+export type ContentType = ContentRow['type'];
+export type ContentAction = Schemas['ContentActionRequest']['action'];
+
+export interface ContentFilters {
+  type: ContentType;
+  state: 'live' | 'removed';
+  q?: string;
+}
+
+export function useContent(filters: ContentFilters) {
+  return useInfiniteList(
+    ['backoffice', 'content', filters],
+    (cursor) => unwrap(api.GET('/api/backoffice/content/', { params: { query: { cursor, ...filters } } })),
+    PRIVATE,
+  );
+}
+
+export function useContentAction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ type, id, action }: { type: ContentType; id: string; action: ContentAction }) =>
+      unwrap(
+        api.POST('/api/backoffice/content/{content_type}/{content_id}/', {
+          params: { path: { content_type: type, content_id: id } },
+          body: { action },
+        }),
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: backofficeKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ['feed'] });
+    },
+  });
+}
+
 export interface MemberFilters {
   q?: string;
   role?: 'staff' | 'suspended';

@@ -2,6 +2,7 @@
 
 from django.db.models import Q, QuerySet
 
+from core.admin_lists import admin_filter
 from core.utils import keyset_before
 
 from .models import Snippet, SnippetComment
@@ -152,3 +153,9 @@ def get_comment(*, comment_id, author=None) -> SnippetComment | None:
     if author is not None:
         qs = qs.filter(author=author)
     return qs.first()
+
+
+def admin_queryset(*, removed: bool = False, query: str = "") -> QuerySet[Snippet]:
+    """Snippets publics seulement : un snippet privé reste l'affaire de son auteur."""
+    snippets = Snippet.objects.filter(is_public=True)
+    return admin_filter(snippets, removed=removed, query=query, fields=("title", "language"))

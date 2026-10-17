@@ -3,6 +3,7 @@
 from django.db.models import Count, Q, QuerySet
 from django.utils import timezone
 
+from core.admin_lists import admin_filter
 from core.utils import keyset_before
 
 from .models import JobOffer, TechEvent
@@ -184,3 +185,15 @@ def export_for_user(*, user_id) -> dict:
             )
         ),
     }
+
+
+def admin_jobs(*, removed: bool = False, query: str = "") -> QuerySet[JobOffer]:
+    return admin_filter(
+        JobOffer.objects.all(), removed=removed, query=query, fields=("title", "company")
+    )
+
+
+def admin_events(*, removed: bool = False, query: str = "") -> QuerySet[TechEvent]:
+    return admin_filter(
+        TechEvent.objects.all(), removed=removed, query=query, fields=("title", "organizer")
+    )

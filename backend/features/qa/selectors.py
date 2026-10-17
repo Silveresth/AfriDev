@@ -2,6 +2,7 @@
 
 from django.db.models import Count, Q, QuerySet
 
+from core.admin_lists import admin_filter
 from core.stats import count_per_day, merge_daily
 from core.utils import keyset_before
 
@@ -209,3 +210,9 @@ def export_for_user(*, user_id) -> dict:
             )
         ),
     }
+
+
+def admin_queryset(*, removed: bool = False, query: str = "") -> QuerySet[Question]:
+    return admin_filter(
+        Question.objects.all(), removed=removed, query=query, fields=("title", "body")
+    )
