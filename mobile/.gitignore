@@ -18,3 +18,6 @@ ios/
 # Identifiants Firebase (push Android) : secret EAS GOOGLE_SERVICES_JSON
 google-services.json
 GoogleService-Info.plist
+
+# Clé privée Firebase (compte de service FCM) : jamais dans le dépôt.
+*firebase-adminsdk*.json
