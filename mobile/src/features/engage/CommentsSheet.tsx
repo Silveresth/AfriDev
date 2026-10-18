@@ -11,7 +11,7 @@ import { useT } from '@/shared/i18n';
 import { timeAgo } from '@/shared/lib';
 import { useSession } from '@/shared/session';
 import { radius, typography, useTheme } from '@/shared/theme';
-import { Button, ListFooter, ProfileAvatar, Sheet, Text } from '@/shared/ui';
+import { Button, ListFooter, MentionText, ProfileAvatar, Sheet, Text, useMentions } from '@/shared/ui';
 
 import { useTargetCommentActions, useTargetComments } from './api';
 
@@ -148,6 +148,7 @@ function Thread({ title, lines, loading, empty, placeholder, sending, error, onS
   const { height } = useWindowDimensions();
   const { isAuthenticated } = useSession();
   const [body, setBody] = useState('');
+  const mentions = useMentions(body, setBody);
   const text = body.trim();
 
   return (
@@ -188,10 +189,12 @@ function Thread({ title, lines, loading, empty, placeholder, sending, error, onS
                 {errorMessage(error)}
               </Text>
             ) : null}
+            {mentions.suggestions}
             <View style={styles.inputRow}>
               <TextInput
                 value={body}
-                onChangeText={setBody}
+                onChangeText={mentions.onChangeText}
+                onSelectionChange={mentions.onSelectionChange}
                 placeholder={placeholder}
                 placeholderTextColor={colors.inkFaint}
                 selectionColor={colors.primary}
@@ -230,9 +233,7 @@ function LineRow({ line }: { line: Line }) {
             {` · ${timeAgo(line.created_at)}`}
           </Text>
         </Text>
-        <Text variant="small" numberOfLines={6}>
-          {line.body}
-        </Text>
+        <MentionText text={line.body} numberOfLines={6} />
       </View>
     </View>
   );

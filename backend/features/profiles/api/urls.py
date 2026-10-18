@@ -8,6 +8,7 @@ from .views import (
     MyPreferencesView,
     MyProfileView,
     MySuggestionsView,
+    PeopleSearchView,
     ProfileEndorsementsView,
     ProfileFollowersView,
     ProfileFollowingView,
@@ -28,6 +29,8 @@ urlpatterns = [
     path("me/onboarding/skip/", MyOnboardingSkipView.as_view(), name="onboarding-skip"),
     path("me/preferences/", MyPreferencesView.as_view(), name="preferences"),
     path("me/suggestions/", MySuggestionsView.as_view(), name="suggestions"),
+    # Avant <username>/ : « search » est un pseudo réservé (accounts.services).
+    path("search/", PeopleSearchView.as_view(), name="search"),
     path("<str:username>/", PublicProfileView.as_view(), name="public"),
     path("<str:username>/follow/", ProfileFollowView.as_view(), name="follow"),
     path("<str:username>/unfollow/", ProfileUnfollowView.as_view(), name="unfollow"),

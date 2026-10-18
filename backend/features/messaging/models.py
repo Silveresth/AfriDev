@@ -69,6 +69,8 @@ class Message(BaseModel):
     # « Supprimer pour moi » : masqué chez l'un des deux seulement.
     hidden_for_sender = models.BooleanField(default=False)
     hidden_for_recipient = models.BooleanField(default=False)
+    # Arnaque probable (IA) : avertissement montré au destinataire seulement.
+    risk_note = models.CharField(max_length=200, blank=True)
 
     class Meta:
         indexes = [models.Index(fields=["conversation", "-created_at"])]

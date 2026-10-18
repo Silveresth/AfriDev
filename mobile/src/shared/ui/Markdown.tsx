@@ -68,10 +68,17 @@ function parse(source: string): Block[] {
 /** Gras, code en ligne et liens à l'intérieur d'un texte. */
 function Inline({ text }: { text: string }) {
   const { colors } = useTheme();
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+]\([^)\s]+\))/g);
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+]\([^)\s]+\)|(?<![\w@/.])@[A-Za-z0-9_]{3,30}\b)/g);
   return (
     <>
       {parts.map((part, i) => {
+        if (/^@[A-Za-z0-9_]{3,30}$/.test(part)) {
+          return (
+            <RNText key={i} accessibilityRole="link" onPress={() => void openLink(`/u/${part.slice(1)}`)} style={[styles.bold, { color: colors.primary }]}>
+              {part}
+            </RNText>
+          );
+        }
         if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
           return (
             <RNText key={i} style={styles.bold}>

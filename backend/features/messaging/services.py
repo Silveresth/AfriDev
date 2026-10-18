@@ -117,13 +117,20 @@ def send_message(
     transaction.on_commit(
         lambda: message_sent.send(
             sender=Message,
+            message_id=message.id,
             conversation_id=conversation.id,
             sender_id=sender.id,
             recipient_id=recipient_id,
             text=preview,
+            body=body,
         )
     )
     return message
+
+
+def set_risk_note(*, message_id, note: str) -> None:
+    """Avertissement affiché au destinataire (arnaque probable détectée par l'IA)."""
+    Message.objects.filter(id=message_id).update(risk_note=note[:200])
 
 
 def mark_read(*, conversation: Conversation, user) -> Conversation:

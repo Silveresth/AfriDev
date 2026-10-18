@@ -145,6 +145,27 @@ services:
       redis:
         condition: service_started
 
+  # Tâches planifiées (CELERY_BEAT_SCHEDULE) : résumé du matin de l'assistant IA. Un seul
+  # processus léger qui met des tâches en file ; les workers ci-dessus les exécutent.
+  celery-beat:
+    image: ${IMAGE_BACKEND:-ghcr.io/silveresth/afridev-backend:latest}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      additional_contexts:
+        security-guard: ./packages/validation/src/security-guard
+    restart: unless-stopped
+    mem_limit: 160m
+    command: ["sh", "-c", "until python -c 'import psycopg, os; psycopg.connect(os.environ.get(\"DATABASE_URL\"))' 2>/dev/null; do echo 'Attente de la base de données pour Celery beat...'; sleep 2; done; exec celery -A config beat -l info --schedule /tmp/celerybeat-schedule"]
+    env_file:
+      - .env
+    environment: *celery-env
+    depends_on:
+      backend:
+        condition: service_started
+      redis:
+        condition: service_started
+
   web:
     image: ${IMAGE_WEB:-ghcr.io/silveresth/afridev-web:latest}
     build:

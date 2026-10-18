@@ -1,3 +1,8 @@
+'use client';
+
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Children, Fragment, isValidElement, useState } from 'react';
+
 import { cn } from '@/shared/lib';
 
 /**
@@ -70,7 +75,7 @@ export function ContextTabs<T extends string>({
   return (
     <div
       className={cn(
-        'sticky top-16 z-10 -mx-6 mb-5 flex items-center justify-between border-b border-line bg-surface/95 px-6 backdrop-blur-md transition-colors sm:-mx-8 sm:px-8 lg:-mx-10 lg:px-10',
+        'context-tabs sticky top-16 z-10 -mx-6 mb-5 flex items-center justify-between border-b border-line bg-surface/95 px-6 backdrop-blur-md transition-colors sm:-mx-8 sm:px-8 lg:-mx-10 lg:px-10',
         className,
       )}
     >
@@ -147,13 +152,72 @@ export function TwoColumns({
   if (!aside) return <div className={cn('mx-auto max-w-3xl space-y-4', className)}>{children}</div>;
   return (
     <div className={cn('mx-auto grid max-w-[1040px] gap-6 xl:grid-cols-[minmax(0,1fr)_19rem]', className)}>
-      <div className="min-w-0 space-y-4">{children}</div>
-      <aside
-        aria-label="Widgets"
-        className="scrollbar-none hidden space-y-4 lg:block xl:sticky xl:top-[5.5rem] xl:max-h-[calc(100dvh-6rem)] xl:self-start xl:overflow-y-auto xl:pb-4"
-      >
-        {aside}
+      {/* Les barres collantes pleine largeur (ContextTabs) s'arrêtent au bord de la colonne : sans
+          ça, leur fond recouvrait le début des widgets de droite. */}
+      <div className="min-w-0 space-y-4 xl:[&_.context-tabs]:mr-0 xl:[&_.context-tabs]:pr-0">{children}</div>
+      <aside aria-label="Widgets" className="hidden min-w-0 lg:block xl:sticky xl:top-[5.5rem] xl:self-start xl:pb-4">
+        <WidgetPager>{aside}</WidgetPager>
       </aside>
     </div>
+  );
+}
+
+const WIDGETS_PER_PAGE = 2;
+
+/** Widgets de droite par pages de deux (flèches ‹ ›) : jamais coupés en bas de l'écran. */
+function WidgetPager({ children }: { children: React.ReactNode }) {
+  const [page, setPage] = useState(0);
+  const items = flattenFragments(children);
+  const pages = Math.max(1, Math.ceil(items.length / WIDGETS_PER_PAGE));
+  const current = Math.min(page, pages - 1);
+  if (pages === 1) return <div className="space-y-4">{items}</div>;
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2 px-1">
+        <span className="text-label-md text-ink-faint tabular-nums">
+          {current + 1} / {pages}
+        </span>
+        <span className="flex items-center gap-1">
+          {Array.from({ length: pages }, (_, index) => (
+            <button
+              key={index}
+              type="button"
+              aria-label={`Widgets, page ${index + 1}`}
+              aria-current={index === current ? 'page' : undefined}
+              onClick={() => setPage(index)}
+              className={cn('h-1.5 rounded-full transition-all', index === current ? 'w-4 bg-primary' : 'w-1.5 bg-line-strong hover:bg-ink-faint')}
+            />
+          ))}
+          <button
+            type="button"
+            aria-label="Widgets précédents"
+            disabled={current === 0}
+            onClick={() => setPage(current - 1)}
+            className="ml-1 flex size-7 items-center justify-center rounded-full text-ink-muted hover:bg-container hover:text-ink disabled:opacity-30"
+          >
+            <ChevronLeft className="size-4" aria-hidden />
+          </button>
+          <button
+            type="button"
+            aria-label="Widgets suivants"
+            disabled={current === pages - 1}
+            onClick={() => setPage(current + 1)}
+            className="flex size-7 items-center justify-center rounded-full text-ink-muted hover:bg-container hover:text-ink disabled:opacity-30"
+          >
+            <ChevronRight className="size-4" aria-hidden />
+          </button>
+        </span>
+      </div>
+      <div key={current} className="animate-pop space-y-4">
+        {items.slice(current * WIDGETS_PER_PAGE, (current + 1) * WIDGETS_PER_PAGE)}
+      </div>
+    </div>
+  );
+}
+
+/** <>{A}{B}</> → [A, B] : chaque widget compte pour un. */
+function flattenFragments(node: React.ReactNode): React.ReactNode[] {
+  return Children.toArray(node).flatMap((child) =>
+    isValidElement<{ children?: React.ReactNode }>(child) && child.type === Fragment ? flattenFragments(child.props.children) : [child],
   );
 }

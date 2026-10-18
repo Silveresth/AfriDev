@@ -8,7 +8,12 @@ from core.exceptions import DomainError, NotFoundError, PermissionDeniedError
 from core.utils import normalize_tags
 from features.hubs import services as hub_services
 
-from .events import snippet_flagged, snippet_published, snippet_unpublished
+from .events import (
+    snippet_comment_created,
+    snippet_flagged,
+    snippet_published,
+    snippet_unpublished,
+)
 from .models import Snippet, SnippetComment, SnippetVersion
 from .security_guard import scan_for_secrets
 
@@ -251,6 +256,17 @@ def add_comment(*, snippet: Snippet, author, body: str, parent_id=None) -> Snipp
         parent=parent,
     )
     Snippet.objects.filter(pk=snippet.pk).update(comment_count=F("comment_count") + 1)
+    transaction.on_commit(
+        lambda: snippet_comment_created.send(
+            sender=SnippetComment,
+            comment_id=comment.id,
+            snippet_id=snippet.id,
+            owner_id=snippet.owner_id,
+            author_id=author.id,
+            parent_author_id=parent.author_id if parent else None,
+            text=comment.body,
+        )
+    )
     return comment
 
 

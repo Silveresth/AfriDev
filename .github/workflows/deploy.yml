@@ -70,7 +70,7 @@ jobs:
             docker compose up -d postgres redis meilisearch powersync
             chmod +x scripts/check-postgres-roles.sh && bash scripts/check-postgres-roles.sh
             # --no-build : l'image vient de GHCR (construite plus haut), jamais d'un build local.
-            docker compose up -d --no-build backend celery celery-ai
+            docker compose up -d --no-build backend celery celery-ai celery-beat
             IMAGE_WEB=ghcr.io/${{ env.REPO_OWNER }}/afridev-web:latest docker compose up -d --force-recreate --no-build web
             # Recréé (et non redémarré) : applique aussi les nouveaux montages de volumes.
             docker compose up -d --force-recreate --no-build nginx

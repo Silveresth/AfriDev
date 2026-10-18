@@ -19,6 +19,10 @@ class Notification(BaseModel):
         APPLICATION_ANSWERED = "application_answered", "Réponse à une candidature"
         NEW_FOLLOWER = "new_follower", "Nouvel abonné"
         NEW_MEMBER = "new_member", "Nouvel inscrit (équipe)"
+        MENTION = "mention", "Mention (@pseudo)"
+        NEW_MESSAGE = "new_message", "Nouveau message privé"
+        DAILY_DIGEST = "daily_digest", "Résumé du jour (IA)"
+        TEAM_INVITE = "team_invite", "Invitation à rejoindre un projet"
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications"

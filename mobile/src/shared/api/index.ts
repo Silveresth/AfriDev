@@ -6,7 +6,7 @@ import { tokenStore } from './token';
 /** Client commun web / mobile (packages/api-client) : jeton renouvelé, 15 s maximum par requête. */
 const client = createAfriDevClient({ baseUrl: API_URL || 'http://api-non-configuree.invalid', tokens: tokenStore, timeoutMs: 15_000 });
 
-export const { api, unwrap, apiFetch, uploadDirect } = client;
+export const { api, unwrap, apiFetch, uploadDirect, waitForJob } = client;
 
 /** Envoie un fichier local (URI de l'appareil photo / galerie) directement vers le stockage objet. */
 export async function uploadFromUri(

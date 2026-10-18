@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
+import { JobMatchCard } from '@/features/assistant';
 import { DetailActions, TargetComments } from '@/features/engage';
 import { TwoColumns } from '@/shared/layout';
 import { useSession } from '@/shared/session';
@@ -148,6 +149,7 @@ function JobView({ job }: { job: Job }) {
         </div>
       </Card>
 
+      {!mine && job.is_active ? <JobMatchCard jobId={job.id} /> : null}
       <TargetComments type="job" id={job.id} ownerId={job.author?.id} />
       {editing ? <JobFormDialog open job={job} onClose={() => setEditing(false)} /> : null}
     </>

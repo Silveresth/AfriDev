@@ -50,6 +50,12 @@ def get_message(*, conversation: Conversation, message_id) -> Message | None:
     )
 
 
+def sent_count(*, conversation_id, sender_id) -> int:
+    return (
+        Message.objects.alive().filter(conversation_id=conversation_id, sender_id=sender_id).count()
+    )
+
+
 def unread_counts(*, conversations, user_id) -> dict:
     """{conversation_id: messages reçus non lus} en une requête."""
     conversations = list(conversations)

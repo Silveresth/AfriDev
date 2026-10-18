@@ -14,6 +14,7 @@ export { HubRoleBadge } from './HubRoleBadge';
 export { Markdown } from './Markdown';
 export { MarkdownEditor } from './MarkdownEditor';
 export { Menu, MenuItem, MenuLabel, MenuSeparator, useCloseMenu } from './Menu';
+export { MentionText, MentionTextarea, useMentionAutocomplete } from './Mentions';
 export { Badge, CommunityIcon, CommunityLink, communityColor, CountBadge, StatusBadge, Tag } from './Tag';
 export { KarmaPill, Reputation, TechBadge } from './Reputation';
 export { TagInput } from './TagInput';

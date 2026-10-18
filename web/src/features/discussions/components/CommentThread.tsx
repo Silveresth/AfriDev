@@ -12,7 +12,7 @@ import { useOutbox } from '@/shared/offline';
 import { useLiveSocket } from '@/shared/realtime/useLiveSocket';
 import { SecretAlert, useSecretScan } from '@/shared/security-guard';
 import { useSession } from '@/shared/session';
-import { Avatar, Button, Markdown, pillAction, Skeleton, Textarea, TimeAgo, useToast } from '@/shared/ui';
+import { Avatar, Button, Markdown, MentionTextarea, pillAction, Skeleton, TimeAgo, useToast } from '@/shared/ui';
 
 import { type Comment, deleteComment, discussionKeys, sendComment, useComments, useThreadSummary } from '../api';
 
@@ -243,17 +243,17 @@ function CommentForm({
     <form onSubmit={onSubmit} className="space-y-2">
       <div
         className={cn(
-          'overflow-hidden rounded-2xl border bg-card transition-colors',
+          'rounded-2xl border bg-card transition-colors',
           open ? 'border-primary ring-3 ring-primary/10' : 'border-line-strong hover:border-ink-faint',
         )}
       >
-        <Textarea
+        <MentionTextarea
           aria-label={placeholder}
           placeholder={placeholder}
           value={body}
           autoFocus={autoFocus}
           onFocus={() => setFocused(true)}
-          onChange={(event) => setBody(event.target.value)}
+          onValueChange={setBody}
           className={cn('resize-none border-0 bg-transparent px-4 focus:ring-0', open ? 'min-h-24' : 'min-h-11 py-2.5')}
           rows={open ? 3 : 1}
           maxLength={2000}

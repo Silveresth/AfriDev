@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, Code2, Compass, FolderGit2, Layers, Lightbulb, MessagesSquare, Search, Sparkles, Type } from 'lucide-react';
+import { ChevronRight, Code2, Compass, FolderGit2, Layers, Lightbulb, MessagesSquare, Search, Sparkles, Type, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -11,7 +11,11 @@ import { useDebounced } from '@/shared/hooks';
 import { PageHeader, Toolbar, TwoColumns } from '@/shared/layout';
 import { CardSkeleton, EmptyState, ErrorNotice, SearchField, Segmented, SideCard } from '@/shared/ui';
 
-type SourceType = 'all' | 'snippet' | 'question' | 'project';
+import { VoiceSearchButton } from '@/features/assistant';
+
+import { PeopleResults } from './PeopleResults';
+
+type SourceType = 'all' | 'people' | 'snippet' | 'question' | 'project';
 type Mode = 'text' | 'semantic';
 
 const SOURCES = {
@@ -22,7 +26,7 @@ const SOURCES = {
 
 const SUGGESTIONS = ['pagination Django', 'paiement mobile money', 'React Native hors ligne', 'déploiement Docker'];
 
-/** Explorer : recherche dans la base de connaissances, tolérante aux fautes ou par le sens. */
+/** Explorer : comptes des membres, et base de connaissances (tolérante aux fautes ou par le sens). */
 export function SearchScreen({ aside }: { aside?: React.ReactNode }) {
   const params = useSearchParams();
   const router = useRouter();
@@ -56,10 +60,10 @@ export function SearchScreen({ aside }: { aside?: React.ReactNode }) {
     queryFn: () =>
       unwrap(
         api.GET('/api/knowledge/search/', {
-          params: { query: { q, type: type === 'all' ? undefined : type, mode } },
+          params: { query: { q, type: type === 'all' || type === 'people' ? undefined : type, mode } },
         }),
       ),
-    enabled: q.trim().length > 1,
+    enabled: q.trim().length > 1 && type !== 'people',
     meta: { persist: false },
   });
 
@@ -69,21 +73,37 @@ export function SearchScreen({ aside }: { aside?: React.ReactNode }) {
         className="mb-2"
         icon={<Compass aria-hidden />}
         title="Explorer"
-        description="Snippets publics, questions résolues et projets de toute la communauté."
+        description="Membres, snippets publics, questions résolues et projets de toute la communauté."
       />
       <form
         role="search"
+        className="flex items-center gap-2"
         onSubmit={(event) => {
           event.preventDefault();
           update('q', draft.trim() || null);
         }}
       >
         <SearchField
+          className="min-w-0 flex-1 [&_input]:h-12 [&_input]:text-body-lg"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="Un bug, un code d'erreur, une techno…"
-          aria-label="Rechercher dans la base de connaissances"
-          className="[&_input]:h-12 [&_input]:text-body-lg"
+          placeholder={type === 'people' ? 'Un pseudo ou un nom (@kofi, Awa Diallo…)' : "Un membre, un bug, un code d'erreur, une techno…"}
+          aria-label="Rechercher des membres ou dans la base de connaissances"
+        />
+        <VoiceSearchButton
+          onResult={(result) => {
+            if (result.scope === 'jobs') {
+              router.push(`/jobs?${new URLSearchParams({ ...(result.query ? { q: result.query } : {}), ...result.filters })}`);
+              return;
+            }
+            const next = new URLSearchParams(params);
+            next.set('q', result.query);
+            const scope = { people: 'people', questions: 'question', snippets: 'snippet', projects: 'project' }[result.scope];
+            if (scope) next.set('type', scope);
+            else next.delete('type');
+            setDraft(result.query);
+            router.replace(`/search?${next}`, { scroll: false });
+          }}
         />
       </form>
       <Toolbar>
@@ -92,13 +112,14 @@ export function SearchScreen({ aside }: { aside?: React.ReactNode }) {
           onChange={(value) => update('type', value === 'all' ? null : value)}
           options={[
             { value: 'all', label: 'Tout', icon: <Layers aria-hidden /> },
+            { value: 'people', label: 'Comptes', icon: <UserRound aria-hidden /> },
             { value: 'snippet', label: 'Snippets', icon: <Code2 aria-hidden /> },
             { value: 'question', label: 'Questions', icon: <MessagesSquare aria-hidden /> },
             { value: 'project', label: 'Projets', icon: <FolderGit2 aria-hidden /> },
           ]}
         />
         <Segmented<Mode>
-          className="ml-auto"
+          className={type === 'people' ? 'hidden' : 'ml-auto'}
           value={mode}
           onChange={(value) => update('mode', value === 'text' ? null : value)}
           options={[
@@ -108,7 +129,9 @@ export function SearchScreen({ aside }: { aside?: React.ReactNode }) {
         />
       </Toolbar>
 
-      {q.trim().length < 2 ? (
+      {type === 'people' && q.trim() ? (
+        <PeopleResults q={q} />
+      ) : q.trim().length < 2 ? (
         <EmptyState
           icon={<Search aria-hidden />}
           title="Que cherchez-vous ?"
@@ -131,17 +154,22 @@ export function SearchScreen({ aside }: { aside?: React.ReactNode }) {
         </EmptyState>
       ) : results.isPending ? (
         <>
+          {type === 'all' ? <PeopleResults q={q} compact onSeeAll={() => update('type', 'people')} /> : null}
           <CardSkeleton lines={2} />
           <CardSkeleton lines={2} />
         </>
       ) : results.isError ? (
         <ErrorNotice message="La recherche nécessite une connexion." />
       ) : !results.data?.length ? (
-        <EmptyState title="Aucun résultat">
-          {mode === 'text' ? 'Essayez la recherche « Par le sens », ou d’autres mots-clés.' : 'Essayez d’autres mots, ou élargissez à « Tout ».'}
-        </EmptyState>
+        <>
+          {type === 'all' ? <PeopleResults q={q} compact onSeeAll={() => update('type', 'people')} /> : null}
+          <EmptyState title="Aucun résultat">
+            {mode === 'text' ? 'Essayez la recherche « Par le sens », ou d’autres mots-clés.' : 'Essayez d’autres mots, ou élargissez à « Tout ».'}
+          </EmptyState>
+        </>
       ) : (
         <section aria-label="Résultats" className="space-y-2">
+          {type === 'all' ? <PeopleResults q={q} compact onSeeAll={() => update('type', 'people')} /> : null}
           <p className="px-1 text-body-sm text-ink-faint">
             {results.data.length} résultat{results.data.length > 1 ? 's' : ''} pour « {q} »
           </p>

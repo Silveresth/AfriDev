@@ -180,6 +180,8 @@ export function notificationRoute(data: unknown): string | null {
   if (type === 'profile') return `/u/${id}`;
   if (type === 'project') return `/project/${id}`;
   if (type === 'job') return `/job/${id}`;
+  if (type === 'conversation') return `/messages/${id}`;
+  if (type === 'digest') return '/(tabs)/feed';
   return null;
 }
 

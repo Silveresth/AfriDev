@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
-import { Bell, MessageCircle, Rows3, UsersRound } from 'lucide-react-native';
+import { Bell, MessageCircle, Rows3, Search, UsersRound } from 'lucide-react-native';
 import { useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
+import { DigestCard } from '@/features/assistant';
 import { useUnreadMessages } from '@/features/messaging';
 import { useUnreadCount } from '@/features/notifications';
 import { CreateButton } from '@/shared/layout/CreateButton';
@@ -33,6 +34,7 @@ export function FeedScreen() {
         large
         right={
           <>
+            <IconButton icon={Search} label={t('search.title')} onPress={() => router.push('/search')} />
             <IconButton icon={MessageCircle} label={t('dm.title')} badge={unreadMessages.data} onPress={() => router.push('/messages')} />
             <IconButton icon={Bell} label={t('nav.notifications')} badge={unread.data} onPress={() => router.push('/notifications')} />
           </>
@@ -74,6 +76,7 @@ export function FeedScreen() {
               <HomeRow item={item} />
             </AppearItem>
           )}
+          ListHeaderComponent={scope === 'for_you' && filter === 'all' ? <DigestCard /> : null}
           onEndReached={feed.loadMore}
           onEndReachedThreshold={0.6}
           refreshControl={

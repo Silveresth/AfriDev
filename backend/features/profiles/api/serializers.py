@@ -383,6 +383,34 @@ class FollowListItemSerializer(AuthorSerializer):
     is_following = serializers.BooleanField(help_text="Le visiteur connecté suit-il ce membre ?")
 
 
+class PeopleSearchItemSerializer(AuthorSerializer):
+    bio = serializers.CharField(allow_blank=True)
+    followers_count = serializers.IntegerField()
+    open_to_work = serializers.BooleanField()
+    is_following = serializers.BooleanField(help_text="Le visiteur connecté suit-il ce membre ?")
+    is_me = serializers.BooleanField()
+
+
+def present_people(profiles, *, viewer) -> list[dict]:
+    profiles = list(profiles)
+    user_ids = [p.user_id for p in profiles]
+    cards = selectors.author_cards(user_ids=user_ids)
+    viewer_id = viewer.id if viewer else None
+    mine = selectors.followed_ids(follower_id=viewer_id, user_ids=user_ids) if viewer_id else set()
+    return [
+        {
+            **cards[p.user_id],
+            "bio": p.bio[:160],
+            "followers_count": p.followers_count,
+            "open_to_work": p.open_to_work,
+            "is_following": p.user_id in mine,
+            "is_me": p.user_id == viewer_id,
+        }
+        for p in profiles
+        if p.user_id in cards
+    ]
+
+
 def present_follow_page(rows, *, user_field: str, viewer) -> list[dict]:
     """Cartes d'une page d'abonnés / abonnements : 2 requêtes, quelle que soit la taille."""
     user_ids = [getattr(row, user_field) for row in rows]

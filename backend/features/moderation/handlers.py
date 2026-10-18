@@ -3,8 +3,9 @@
 from django.conf import settings
 from django.dispatch import receiver
 
-from features.discussions.events import comment_created
+from features.discussions.events import comment_created, target_comment_created
 from features.feed.events import post_published
+from features.jobs_events.events import job_published
 from features.qa.events import answer_created, question_created
 from integrations import llm
 
@@ -35,3 +36,14 @@ def on_question_created(sender, question_id, text, **kwargs):
 @receiver(answer_created)
 def on_answer_created(sender, answer_id, text, **kwargs):
     _screen("answer", answer_id, text)
+
+
+@receiver(job_published)
+def on_job_published(sender, job_id, text, **kwargs):
+    """Faux recrutements (frais demandés, mobile money, faux recruteur) : signalés à l'équipe."""
+    _screen("job", job_id, text)
+
+
+@receiver(target_comment_created)
+def on_target_comment_created(sender, comment_id, text, **kwargs):
+    _screen("target_comment", comment_id, text)

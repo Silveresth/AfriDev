@@ -1,1 +1,1 @@
-export { TranslateBar } from './TranslateBar';
+export { TranslateBar, translateText } from './TranslateBar';

@@ -78,7 +78,8 @@ function parseBlocks(source: string, breaks = false): Block[] {
   return blocks;
 }
 
-const INLINE = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*\s][^*]*\*)|(\[[^\]]+\]\([^)\s]+\))|(\[\d+\])/g;
+const INLINE =
+  /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*\s][^*]*\*)|(\[[^\]]+\]\([^)\s]+\))|(\[\d+\])|((?<![\w@/.])@[A-Za-z0-9_]{3,30}\b)/g;
 
 function safeHref(href: string): string | null {
   if (href.startsWith('/') && !href.startsWith('//')) return href;
@@ -112,6 +113,12 @@ function renderInline(text: string, citeHref?: (n: number) => string | undefined
         ) : (
           label
         ),
+      );
+    } else if (match[6]) {
+      nodes.push(
+        <a key={key} href={`/u/${token.slice(1)}`} className="font-semibold text-primary-ink no-underline hover:underline">
+          {token}
+        </a>,
       );
     } else if (match[5]) {
       const n = Number(token.slice(1, -1));

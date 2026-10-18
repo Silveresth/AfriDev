@@ -1,1 +1,1 @@
-export { TranslateButton } from './components/TranslateButton';
+export { TranslateButton, translateText } from './components/TranslateButton';

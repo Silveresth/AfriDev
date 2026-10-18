@@ -26,6 +26,7 @@ from .serializers import (
     MyProfileSerializer,
     OnboardingSerializer,
     OnboardingSuggestionsSerializer,
+    PeopleSearchItemSerializer,
     PinnedInputSerializer,
     PreferencesInputSerializer,
     ProfileUpdateSerializer,
@@ -33,6 +34,7 @@ from .serializers import (
     present_endorsements,
     present_follow_page,
     present_onboarding,
+    present_people,
 )
 
 
@@ -101,6 +103,33 @@ class MyOnboardingSkipView(APIView):
     def post(self, request):
         profile = services.skip_onboarding(profile=_my_profile(request))
         return Response(MyProfileSerializer(profile, context={"request": request}).data)
+
+
+class PeopleSearchView(APIView):
+    """Recherche de comptes (Explorer, @mentions) : ?q=ami&limit=8."""
+
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        operation_id="profiles_search",
+        parameters=[
+            OpenApiParameter("q", str, required=True),
+            OpenApiParameter("limit", int, required=False),
+        ],
+        responses=PeopleSearchItemSerializer(many=True),
+    )
+    def get(self, request):
+        viewer = request.user if request.user.is_authenticated else None
+        try:
+            limit = int(request.query_params.get("limit", 20))
+        except ValueError:
+            limit = 20
+        profiles = selectors.search_people(
+            query=request.query_params.get("q", ""),
+            viewer_id=viewer.id if viewer else None,
+            limit=limit,
+        )
+        return Response(present_people(profiles, viewer=viewer))
 
 
 class MySuggestionsView(APIView):

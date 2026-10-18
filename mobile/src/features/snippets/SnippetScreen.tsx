@@ -4,6 +4,7 @@ import { Copy, SendHorizontal } from 'lucide-react-native';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { CodeReviewSection } from '@/features/assistant';
 import { MoreButton } from '@/features/engage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -23,8 +24,10 @@ import {
   HubRoleBadge,
   ListFooter,
   Loading,
+  MentionText,
   TagRow,
   Text,
+  useMentions,
   useToast,
 } from '@/shared/ui';
 
@@ -58,7 +61,7 @@ function Comments({ snippetId }: { snippetId: string }) {
                   </Text>
                   {` · ${timeAgo(comment.created_at)}`}
                 </Text>
-                <Text variant="small">{comment.body}</Text>
+                <MentionText text={comment.body} />
               </View>
             </View>
           );
@@ -79,13 +82,17 @@ function CommentComposer({ snippetId }: { snippetId: string }) {
   const add = useAddSnippetComment(snippetId);
   const toast = useToast();
   const [body, setBody] = useState('');
+  const mentions = useMentions(body, setBody);
   if (!isAuthenticated) return null;
   const ready = body.trim().length >= 2 && !add.isPending;
   return (
+    <View style={{ backgroundColor: colors.background }}>
+      {mentions.suggestions ? <View style={styles.mentionBar}>{mentions.suggestions}</View> : null}
     <View style={[styles.bar, { borderTopColor: colors.line, backgroundColor: colors.background, paddingBottom: insets.bottom + 8 }]}>
       <TextInput
         value={body}
-        onChangeText={setBody}
+        onChangeText={mentions.onChangeText}
+        onSelectionChange={mentions.onSelectionChange}
         placeholder={t('snippet.comment_ph')}
         placeholderTextColor={colors.inkFaint}
         selectionColor={colors.primary}
@@ -106,6 +113,7 @@ function CommentComposer({ snippetId }: { snippetId: string }) {
       >
         <SendHorizontal size={18} color={ready ? colors.onPrimary : colors.inkFaint} />
       </Pressable>
+    </View>
     </View>
   );
 }
@@ -209,6 +217,7 @@ export function SnippetScreen() {
         <>
           <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={styles.scroll}>
             <SnippetBody snippet={data} />
+            <CodeReviewSection snippetId={id} />
             <Comments snippetId={id} />
           </ScrollView>
           <CommentComposer snippetId={id} />
@@ -219,6 +228,7 @@ export function SnippetScreen() {
 }
 
 const styles = StyleSheet.create({
+  mentionBar: { paddingHorizontal: 12, paddingTop: 6 },
   flex: { flex: 1, gap: 2 },
   scroll: { paddingBottom: 24 },
   body: { padding: 16, gap: 12, borderBottomWidth: StyleSheet.hairlineWidth },

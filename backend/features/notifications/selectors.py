@@ -11,6 +11,10 @@ def list_notifications(
     notifications = Notification.objects.alive().filter(recipient=user)
     if kind:
         notifications = notifications.filter(kind=kind)
+    else:
+        # Les messages privés ont leur boîte (et leur pastille) : la cloche ne les compte pas,
+        # ils servent seulement au temps réel et au push.
+        notifications = notifications.exclude(kind=Notification.Kind.NEW_MESSAGE)
     if unread_only:
         notifications = notifications.filter(read_at__isnull=True)
     return notifications

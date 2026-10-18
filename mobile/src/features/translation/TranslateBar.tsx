@@ -35,6 +35,12 @@ async function waitForTranslation(first: Translation): Promise<Translation> {
   return current;
 }
 
+/** Traduit un texte vers la langue de l'interface (cache serveur : la 2e demande est immédiate). */
+export async function translateText(text: string, locale: LocaleCode, mode: Mode = 'translate'): Promise<string> {
+  const first = await unwrap(api.POST('/api/translation/', { body: { text, target_language: targetFor(locale), mode } }));
+  return (await waitForTranslation(first)).result ?? '';
+}
+
 function Pill({ icon: Icon, label, active, onPress }: { icon: typeof Languages; label: string; active: boolean; onPress: () => void }) {
   const { colors } = useTheme();
   return (

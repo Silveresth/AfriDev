@@ -5,6 +5,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import environ
+from celery.schedules import crontab
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 REPO_DIR = BASE_DIR.parent
@@ -55,6 +56,7 @@ INSTALLED_APPS = [
     "features.jobs_events",
     "features.reactions",
     "features.messaging",
+    "features.assistant",
 ]
 
 MIDDLEWARE = [
@@ -137,6 +139,15 @@ CELERY_TASK_DEFAULT_QUEUE = "default"
 # Limites de durée des tâches ai_* (un appel Groq bloqué ne monopolise pas un processus).
 CELERY_TASK_ANNOTATIONS = ["core.celery_annotations.AITaskLimits"]
 AI_TASK_SOFT_TIME_LIMIT = env.int("AI_TASK_SOFT_TIME_LIMIT", default=150)
+# Tâches planifiées (service celery-beat du docker-compose).
+DIGEST_HOUR_UTC = env.int("DIGEST_HOUR_UTC", default=6)
+CELERY_BEAT_SCHEDULE = {
+    # Résumé « 5 min de lecture » de chaque membre actif, vers 7 h (Afrique de l'Ouest / Centrale).
+    "assistant-daily-digest": {
+        "task": "features.assistant.tasks.send_daily_digests",
+        "schedule": crontab(hour=DIGEST_HOUR_UTC, minute=0),
+    },
+}
 
 CHANNEL_LAYERS = {
     "default": {
@@ -296,7 +307,9 @@ EXPO_ACCESS_TOKEN = env("EXPO_ACCESS_TOKEN", default="")
 # Vide : le web n'en propose pas (la clé publique est déduite de la clé privée).
 WEBPUSH_VAPID_PRIVATE_KEY = env("WEBPUSH_VAPID_PRIVATE_KEY", default="")
 # Contact exigé par les services de push en cas d'abus (mailto: ou https:).
-WEBPUSH_VAPID_SUBJECT = env("WEBPUSH_VAPID_SUBJECT", default="mailto:contact@afridev.dev")
+# « or » : une ligne présente mais vide dans le .env ferait refuser chaque envoi (JWT sans
+# « sub »), et l'abonnement serait alors supprimé comme expiré.
+WEBPUSH_VAPID_SUBJECT = env("WEBPUSH_VAPID_SUBJECT", default="") or "mailto:contact@afridev.dev"
 # Services de push des navigateurs (Chrome/Edge, Firefox, Safari, Windows) ; sous-domaines inclus.
 WEBPUSH_ALLOWED_HOSTS = env.list(
     "WEBPUSH_ALLOWED_HOSTS",

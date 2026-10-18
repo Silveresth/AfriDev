@@ -40,6 +40,7 @@ urlpatterns = [
     path("api/notifications/", include("features.notifications.api.urls")),
     path("api/moderation/", include("features.moderation.api.urls")),
     path("api/backoffice/", include("features.backoffice.api.urls")),
+    path("api/assistant/", include("features.assistant.api.urls")),
 ]
 
 if settings.DEBUG:

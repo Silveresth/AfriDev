@@ -10,7 +10,7 @@ import { useT } from '@/shared/i18n';
 import { timeAgo } from '@/shared/lib';
 import { useSession } from '@/shared/session';
 import { radius, typography, useTheme } from '@/shared/theme';
-import { Button, ProfileAvatar, Text } from '@/shared/ui';
+import { Button, MentionText, ProfileAvatar, Text, useMentions } from '@/shared/ui';
 
 import { type Comment, useSendComment } from './api';
 
@@ -56,7 +56,7 @@ export function CommentRow({ row, onReply }: { row: ThreadRow; onReply: (comment
           {timeAgo(comment.created_at)}
         </Text>
       </View>
-      <Text selectable>{comment.body}</Text>
+      <MentionText text={comment.body} variant="body" />
       <TranslateBar text={comment.body} compact />
       <Pressable hitSlop={8} onPress={() => onReply(comment)} style={styles.reply}>
         <Text variant="caption" tone="muted">
@@ -83,6 +83,7 @@ export function CommentComposer({
   const send = useSendComment(postId);
   const { t } = useT();
   const [body, setBody] = useState('');
+  const mentions = useMentions(body, setBody);
 
   const bar = [styles.bar, { borderTopColor: colors.line, backgroundColor: colors.background, paddingBottom: insets.bottom + 8 }];
 
@@ -125,10 +126,12 @@ export function CommentComposer({
           {errorMessage(send.error)}
         </Text>
       ) : null}
+      {mentions.suggestions}
       <View style={styles.inputRow}>
         <TextInput
           value={body}
-          onChangeText={setBody}
+          onChangeText={mentions.onChangeText}
+          onSelectionChange={mentions.onSelectionChange}
           placeholder={t(replyTo ? 'comment.reply_placeholder' : 'comment.placeholder')}
           placeholderTextColor={colors.inkFaint}
           selectionColor={colors.primary}

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 
 import { JobsScreen } from '@/features/jobs-events';
+import { CardSkeleton } from '@/shared/ui';
 
 export const metadata: Metadata = {
   title: 'Job Board',
@@ -8,5 +10,10 @@ export const metadata: Metadata = {
 };
 
 export default function JobsPage() {
-  return <JobsScreen />;
+  // Filtres lus dans l'adresse (recherche vocale : /jobs?q=django&remote=true).
+  return (
+    <Suspense fallback={<CardSkeleton />}>
+      <JobsScreen />
+    </Suspense>
+  );
 }

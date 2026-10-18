@@ -78,6 +78,7 @@ function Navigator() {
           <Stack.Screen name="project/[id]" />
           <Stack.Screen name="job/[id]" />
           <Stack.Screen name="bookmarks" />
+          <Stack.Screen name="search" options={{ animation: 'fade' }} />
         </Stack.Protected>
         {/* Navigateur interne : aussi avant connexion (mot de passe oublié, CGU…). */}
         <Stack.Screen name="browser" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />

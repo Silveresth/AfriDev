@@ -18,7 +18,19 @@ from .models import SocialAccount, User
 
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_]{3,30}$")
 # Segments d'URL déjà pris par le front (/u/<username>, /api/profiles/me/…).
-RESERVED_USERNAMES = {"me", "admin", "api", "settings", "login", "logout", "new", "u"}
+RESERVED_USERNAMES = {
+    "me",
+    "admin",
+    "api",
+    "settings",
+    "login",
+    "logout",
+    "new",
+    "u",
+    "search",
+    "everyone",
+    "here",
+}
 
 
 class InvalidCredentialsError(DomainError):

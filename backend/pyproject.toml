@@ -80,6 +80,8 @@ modules = [
     "features.moderation",
     "features.backoffice",
     "features.hubs",
+    "features.assistant",
+    "features.messaging",
     "features.bookmarks",
     "features.jobs_events",
 ]

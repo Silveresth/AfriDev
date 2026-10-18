@@ -11,7 +11,7 @@ import { useAnswers, useCreateAnswer } from '@/features/qa';
 import { useAddComment, useSnippetComments } from '@/features/snippets';
 import { errorMessage } from '@/shared/api';
 import { useSession } from '@/shared/session';
-import { Avatar, buttonClasses, Button, Skeleton, Textarea, TimeAgo } from '@/shared/ui';
+import { Avatar, buttonClasses, Button, MentionText, MentionTextarea, Skeleton, TimeAgo } from '@/shared/ui';
 
 import { useTargetCommentActions, useTargetComments } from '../api';
 
@@ -156,7 +156,9 @@ function Thread({
                     <span className="font-semibold text-ink">{name}</span>
                     <TimeAgo date={line.created_at} className="text-ink-faint" />
                   </p>
-                  <p className="line-clamp-4 text-body-sm whitespace-pre-line text-ink">{line.body}</p>
+                  <p className="line-clamp-4 text-body-sm whitespace-pre-line text-ink">
+                    <MentionText text={line.body} />
+                  </p>
                 </div>
               </li>
             );
@@ -173,13 +175,14 @@ function Thread({
 
       {isAuthenticated ? (
         <form onSubmit={submit} className="flex items-end gap-2">
-          <Textarea
+          <MentionTextarea
             value={body}
-            onChange={(event) => setBody(event.target.value)}
+            onValueChange={setBody}
             placeholder={placeholder}
             maxLength={3000}
             rows={1}
-            className="min-h-11 flex-1 resize-none py-2.5"
+            wrapperClassName="flex-1"
+            className="min-h-11 resize-none py-2.5"
             onKeyDown={(event) => {
               if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) void submit(event);
             }}

@@ -9,6 +9,7 @@ import {
   Copy,
   ImageIcon,
   ImagePlus,
+  Languages,
   type LucideIcon,
   MessageCircle,
   Mic,
@@ -16,6 +17,8 @@ import {
   Pencil,
   Reply,
   SendHorizontal,
+  ShieldAlert,
+  Sparkles,
   Trash2,
   UserRound,
   Video,
@@ -38,6 +41,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useChatReplies } from '@/features/assistant';
+import { translateText } from '@/features/translation';
 import { absoluteUrl, errorMessage, type Schemas } from '@/shared/api';
 import { useT } from '@/shared/i18n';
 import { timeAgo } from '@/shared/lib';
@@ -148,7 +153,7 @@ function ConversationRow({ conversation }: { conversation: Conversation }) {
 export function ThreadScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
-  const { t } = useT();
+  const { t, locale } = useT();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const { user } = useSession();
@@ -224,6 +229,16 @@ export function ThreadScreen() {
     setReplyTo(null);
     setEditing(message);
     exitSelection();
+  }
+
+  async function translate(message: Message) {
+    exitSelection();
+    toast(t('dm.translating'));
+    try {
+      Alert.alert(t('feed.translate'), await translateText(message.body, locale));
+    } catch (error) {
+      toast(errorMessage(error), 'error');
+    }
   }
 
   async function copy(messages: Message[]) {
@@ -304,6 +319,7 @@ export function ThreadScreen() {
             </Text>
             {single && !single.revoked ? <IconButton icon={Reply} label={t('dm.reply')} onPress={() => startReply(single)} /> : null}
             {single && canEdit(single, user?.id) ? <IconButton icon={Pencil} label={t('dm.edit')} onPress={() => startEdit(single)} /> : null}
+            {single?.body && !single.revoked ? <IconButton icon={Languages} label={t('feed.translate')} onPress={() => void translate(single)} /> : null}
             {chosen.some((message) => message.body) ? <IconButton icon={Copy} label={t('dm.copy')} onPress={() => void copy(chosen)} /> : null}
             <IconButton icon={Trash2} label={t('dm.delete')} color={colors.danger} onPress={() => askDelete(chosen)} />
           </View>
@@ -601,6 +617,14 @@ function Bubble({
           </View>
         </Animated.View>
       </Pressable>
+      {message.risk_note ? (
+        <View style={[styles.risk, { backgroundColor: colors.dangerSoft }]} accessibilityRole="alert">
+          <ShieldAlert size={16} color={colors.danger} />
+          <Text variant="small" style={[styles.flexShrink, { color: colors.danger }]}>
+            {t('dm.scam_warning', { note: message.risk_note })}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -660,6 +684,7 @@ function Composer({
   const send = useSendMessage(conversationId);
   const edit = useEditMessage(conversationId);
   const voice = useVoiceRecorder();
+  const suggestions = useChatReplies();
   const input = useRef<TextInput>(null);
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
@@ -752,6 +777,31 @@ function Composer({
         </View>
       ) : null}
 
+      {suggestions.data?.replies.length && !editing && !text ? (
+        <View style={styles.chips}>
+          {suggestions.data.replies.map((reply) => (
+            <Pressable
+              key={reply}
+              onPress={() => {
+                haptic.select();
+                setBody(reply);
+                suggestions.reset();
+                input.current?.focus();
+              }}
+              style={[styles.chip, { borderColor: colors.primary, backgroundColor: colors.primarySoft }]}
+            >
+              <Text variant="small" numberOfLines={1}>
+                {reply}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : suggestions.isError ? (
+        <Text variant="caption" tone="danger">
+          {errorMessage(suggestions.error)}
+        </Text>
+      ) : null}
+
       {replyTo || editing ? (
         <View style={[styles.context, { backgroundColor: colors.surface }]}>
           <View style={styles.flex}>
@@ -805,6 +855,16 @@ function Composer({
               <ImagePlus size={22} color={colors.inkMuted} />
             </Pressable>
           ) : null}
+          {!editing ? (
+            <Pressable
+              accessibilityLabel={t('dm.suggest')}
+              disabled={suggestions.isPending}
+              onPress={() => suggestions.mutate(conversationId)}
+              style={styles.iconButton}
+            >
+              {suggestions.isPending ? <ActivityIndicator size="small" color={colors.primary} /> : <Sparkles size={21} color={colors.inkMuted} />}
+            </Pressable>
+          ) : null}
           <TextInput
             ref={input}
             value={body}
@@ -855,6 +915,9 @@ function Composer({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   flexShrink: { flexShrink: 1 },
+  risk: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginHorizontal: 8, marginBottom: 8, padding: 10, borderRadius: radius.md, maxWidth: '85%' },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chip: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6, maxWidth: '100%' },
   grow: { flexGrow: 1 },
   strong: { fontWeight: '700' },
   inline: { flexDirection: 'row', alignItems: 'center', gap: 6 },

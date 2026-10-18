@@ -6,18 +6,20 @@
 from django.db import transaction
 from django.dispatch import receiver
 
+from core.mentions import extract_usernames
 from features.accounts import selectors as account_selectors
 from features.accounts.events import user_registered
 from features.discussions.events import comment_created, target_comment_created
 from features.feed import selectors as feed_selectors
-from features.feed.events import post_liked
+from features.feed.events import post_liked, post_published
 from features.matchmaking.events import application_answered, application_submitted
+from features.messaging.events import message_sent
 from features.moderation.events import content_hidden
 from features.onboarding_agent.events import guide_finished
 from features.profiles import selectors as profile_selectors
 from features.profiles.events import user_followed
 from features.qa.events import ai_answer_ready, answer_accepted, answer_created
-from features.snippets.events import snippet_flagged
+from features.snippets.events import snippet_comment_created, snippet_flagged
 
 from .models import Notification
 from .services import notify
@@ -33,6 +35,115 @@ def _name(user_id) -> str:
 def _excerpt(text: str, size: int = 120) -> str:
     text = " ".join(text.split())
     return text if len(text) <= size else text[: size - 1] + "…"
+
+
+@receiver(message_sent)
+def on_message_sent(sender, conversation_id, sender_id, recipient_id, text, **kw):
+    """Message privé : alerte (et push) chez le destinataire, comme WhatsApp."""
+    notify(
+        recipient_id=recipient_id,
+        kind=Kind.NEW_MESSAGE,
+        title=_name(sender_id),
+        body=_excerpt(text),
+        data={"type": "conversation", "id": str(conversation_id)},
+    )
+
+
+# ── @mentions (commentaires, réponses, posts) ──
+
+
+def _notify_mentions(*, text: str, author_id, data: dict, where: str, already=()) -> None:
+    """Prévient chaque @pseudo cité, sauf l'auteur et ceux déjà prévenus par ailleurs."""
+    usernames = extract_usernames(text)
+    if not usernames:
+        return
+    skip = {author_id, *[uid for uid in already if uid]}
+    for user_id in profile_selectors.user_ids_for_usernames(usernames=usernames).values():
+        if user_id in skip:
+            continue
+        skip.add(user_id)
+        notify(
+            recipient_id=user_id,
+            kind=Kind.MENTION,
+            title=f"{_name(author_id)} vous a mentionné {where}",
+            body=_excerpt(text),
+            data=data,
+        )
+
+
+@receiver(comment_created)
+def mentions_in_post_comment(sender, comment_id, post_id, author_id, parent_author_id, text, **kw):
+    _notify_mentions(
+        text=text,
+        author_id=author_id,
+        data={"type": "post", "id": str(post_id), "comment_id": str(comment_id)},
+        where="dans un commentaire",
+        already=(feed_selectors.get_post_author_id(post_id=post_id), parent_author_id),
+    )
+
+
+@receiver(target_comment_created)
+def mentions_in_target_comment(
+    sender, comment_id, target_type, target_id, owner_id, author_id, parent_author_id, text, **kw
+):
+    _notify_mentions(
+        text=text,
+        author_id=author_id,
+        data={"type": target_type, "id": str(target_id), "comment_id": str(comment_id)},
+        where="dans un commentaire",
+        already=(owner_id, parent_author_id),
+    )
+
+
+@receiver(snippet_comment_created)
+def on_snippet_comment_created(
+    sender, comment_id, snippet_id, owner_id, author_id, parent_author_id, text, **kw
+):
+    data = {"type": "snippet", "id": str(snippet_id), "comment_id": str(comment_id)}
+    if owner_id and owner_id != author_id:
+        notify(
+            recipient_id=owner_id,
+            kind=Kind.NEW_COMMENT,
+            title=f"{_name(author_id)} a commenté votre snippet",
+            body=_excerpt(text),
+            data=data,
+        )
+    if parent_author_id and parent_author_id not in (author_id, owner_id):
+        notify(
+            recipient_id=parent_author_id,
+            kind=Kind.COMMENT_REPLY,
+            title=f"{_name(author_id)} vous a répondu",
+            body=_excerpt(text),
+            data=data,
+        )
+    _notify_mentions(
+        text=text,
+        author_id=author_id,
+        data=data,
+        where="dans un commentaire",
+        already=(owner_id, parent_author_id),
+    )
+
+
+@receiver(answer_created)
+def mentions_in_answer(sender, answer_id, question_id, author_id, question_author_id, text, **kw):
+    _notify_mentions(
+        text=text,
+        author_id=author_id,
+        data={"type": "question", "id": str(question_id), "answer_id": str(answer_id)},
+        where="dans une réponse",
+        already=(question_author_id,),
+    )
+
+
+@receiver(post_published)
+def mentions_in_post(sender, post_id, author_id, text, **kw):
+    _notify_mentions(
+        text=text,
+        author_id=author_id,
+        data={"type": "post", "id": str(post_id)},
+        where="dans un post",
+    )
 
 
 @receiver(comment_created)

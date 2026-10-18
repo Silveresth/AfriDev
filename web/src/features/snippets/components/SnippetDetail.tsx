@@ -31,6 +31,8 @@ import {
   useSnippetsByAuthor,
   useVersions,
 } from '../api';
+import { CodeReviewPanel } from '@/features/assistant';
+
 import { SnippetComments } from './SnippetComments';
 
 interface ViewModel {
@@ -180,6 +182,7 @@ export function SnippetDetail({ id, initial }: { id: string; initial?: PublicSni
         </aside>
       </div>
 
+      <CodeReviewPanel snippetId={view.id} />
       <SnippetComments snippetId={view.id} isPublic={view.isPublic} />
     </div>
   );

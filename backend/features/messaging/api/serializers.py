@@ -51,10 +51,13 @@ class MessageSerializer(serializers.Serializer):
     reply_to = QuotedMessageSerializer(allow_null=True, help_text="Message cité (réponse).")
     edited_at = serializers.DateTimeField(allow_null=True)
     revoked = serializers.BooleanField(help_text="Supprimé pour tout le monde.")
+    risk_note = serializers.CharField(
+        allow_blank=True, help_text="Avertissement d'arnaque (IA), seulement pour le destinataire."
+    )
     created_at = serializers.DateTimeField()
 
 
-def present_messages(messages) -> list[dict]:
+def present_messages(messages, *, viewer_id=None) -> list[dict]:
     messages = list(messages)
     quoted = [m.reply_to for m in messages if m.reply_to_id and m.reply_to]
     media = media_selectors.describe_many(
@@ -81,6 +84,7 @@ def present_messages(messages) -> list[dict]:
             "reply_to": _quote(m.reply_to) if m.reply_to_id else None,
             "edited_at": m.edited_at,
             "revoked": m.revoked_at is not None,
+            "risk_note": m.risk_note if m.sender_id != viewer_id and not m.revoked_at else "",
             "created_at": m.created_at,
         }
         for m in messages

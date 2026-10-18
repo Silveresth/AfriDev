@@ -25,6 +25,7 @@ import { useIsClient } from '@/shared/hooks';
 import { useLang } from '@/shared/i18n';
 import { cn } from '@/shared/lib';
 import { ConnectivityStrip } from '@/shared/offline';
+import { EnablePushBanner } from '@/shared/push';
 import { useSession } from '@/shared/session';
 import { useTheme } from '@/shared/theme';
 import {
@@ -116,6 +117,7 @@ export function AppShell({
             id="contenu"
             className="min-h-[calc(100dvh-4rem)] rounded-t-3xl bg-surface px-6 py-8 pb-28 sm:px-8 lg:px-10 lg:pb-12"
           >
+            <EnablePushBanner />
             {children}
           </main>
         </div>

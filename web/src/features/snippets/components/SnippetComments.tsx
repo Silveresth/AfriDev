@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 import { useSession } from '@/shared/session';
-import { Avatar, Button, Card, Spinner, TimeAgo } from '@/shared/ui';
+import { Avatar, Button, Card, MentionText, MentionTextarea, Spinner, TimeAgo } from '@/shared/ui';
 import { cn } from '@/shared/lib';
 
 import {
@@ -48,12 +48,12 @@ function CommentForm({
 
   return (
     <form onSubmit={submit} className="space-y-2">
-      <textarea
+      <MentionTextarea
         value={body}
-        onChange={(e) => setBody(e.target.value)}
+        onValueChange={setBody}
         placeholder={placeholder}
         rows={3}
-        className="w-full resize-none rounded-lg border border-line bg-container-low px-3 py-2 text-body-sm text-ink placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 transition"
+        className="min-h-20 resize-none text-body-sm"
       />
       <div className="flex justify-end gap-2">
         {onSuccess ? (
@@ -109,7 +109,9 @@ function SingleComment({
           <span className="text-label-md text-ink-faint">·</span>
           <TimeAgo date={comment.created_at} className="text-label-md text-ink-faint" />
         </div>
-        <p className="whitespace-pre-wrap text-body-sm text-ink">{comment.body}</p>
+        <p className="whitespace-pre-wrap text-body-sm text-ink">
+          <MentionText text={comment.body} />
+        </p>
         <div className="flex items-center gap-3 pt-0.5">
           {canReply ? (
             <button

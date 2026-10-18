@@ -11,7 +11,7 @@ import { useT } from '@/shared/i18n';
 import { openLink, timeAgo } from '@/shared/lib';
 import { useRequireAuth, useSession } from '@/shared/session';
 import { radius, typography, useTheme } from '@/shared/theme';
-import { Avatar, Button, ErrorState, Header, HubRoleBadge, Loading, Markdown, TagRow, Text, useToast } from '@/shared/ui';
+import { Avatar, Button, ErrorState, Header, HubRoleBadge, Loading, Markdown, TagRow, Text, useMentions, useToast } from '@/shared/ui';
 
 import { type Answer, type Question, useAnswerActions, useAnswers, useDeleteQuestion, useQuestion } from './api';
 
@@ -123,6 +123,7 @@ function AnswerComposer({ questionId }: { questionId: string }) {
   const { isAuthenticated } = useSession();
   const { create } = useAnswerActions(questionId);
   const [body, setBody] = useState('');
+  const mentions = useMentions(body, setBody);
   const bar = [styles.bar, { borderTopColor: colors.line, backgroundColor: colors.background, paddingBottom: insets.bottom + 8 }];
 
   if (!isAuthenticated) {
@@ -140,10 +141,12 @@ function AnswerComposer({ questionId }: { questionId: string }) {
           {errorMessage(create.error)}
         </Text>
       ) : null}
+      {mentions.suggestions}
       <View style={styles.inputRow}>
         <TextInput
           value={body}
-          onChangeText={setBody}
+          onChangeText={mentions.onChangeText}
+          onSelectionChange={mentions.onSelectionChange}
           placeholder={t('qa.answer_ph')}
           placeholderTextColor={colors.inkFaint}
           selectionColor={colors.primary}

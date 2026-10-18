@@ -9,7 +9,7 @@ import { timeAgo } from '@/shared/lib';
 import { haptic } from '@/shared/motion';
 import { useSession } from '@/shared/session';
 import { radius, typography, useTheme } from '@/shared/theme';
-import { Button, ListFooter, ProfileAvatar, Text, useToast } from '@/shared/ui';
+import { Button, ListFooter, MentionText, ProfileAvatar, Text, useMentions, useToast } from '@/shared/ui';
 
 import { REPORT_REASONS, type TargetComment, type TargetType, useReport, useTargetCommentActions, useTargetComments } from './api';
 
@@ -24,6 +24,7 @@ export function TargetComments({ type, id, ownerId }: { type: TargetType; id: st
   const report = useReport();
   const [body, setBody] = useState('');
   const [replyTo, setReplyTo] = useState<TargetComment | null>(null);
+  const mentions = useMentions(body, setBody);
   const text = body.trim();
   const roots = comments.items.filter((comment) => !comment.parent_id);
   const repliesOf = (parentId: string) => comments.items.filter((comment) => comment.parent_id === parentId);
@@ -64,9 +65,7 @@ export function TargetComments({ type, id, ownerId }: { type: TargetType; id: st
               </Text>
               <Text variant="caption" tone="faint">{` · ${timeAgo(comment.created_at)}`}</Text>
             </Text>
-            <Text variant="small" selectable>
-              {comment.body}
-            </Text>
+            <MentionText text={comment.body} />
           </View>
           <View style={styles.tools}>
             {isAuthenticated && !nested ? (
@@ -129,10 +128,12 @@ export function TargetComments({ type, id, ownerId }: { type: TargetType; id: st
               {errorMessage(send.error)}
             </Text>
           ) : null}
+          {mentions.suggestions}
           <View style={styles.inputRow}>
             <TextInput
               value={body}
-              onChangeText={setBody}
+              onChangeText={mentions.onChangeText}
+              onSelectionChange={mentions.onSelectionChange}
               placeholder={t('comment.placeholder')}
               placeholderTextColor={colors.inkFaint}
               selectionColor={colors.primary}

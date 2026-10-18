@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { ReportButton } from '@/features/moderation';
 import { errorMessage } from '@/shared/api';
 import { useSession } from '@/shared/session';
-import { Avatar, Button, buttonClasses, Card, Skeleton, Textarea, TimeAgo, useToast } from '@/shared/ui';
+import { Avatar, Button, buttonClasses, Card, MentionText, MentionTextarea, Skeleton, TimeAgo, useToast } from '@/shared/ui';
 
 import { type TargetComment, type TargetType, useTargetCommentActions, useTargetComments } from '../api';
 
@@ -43,7 +43,9 @@ export function TargetComments({ type, id, ownerId }: { type: TargetType; id: st
                 <span className="font-semibold text-ink">{name}</span>
                 <TimeAgo date={comment.created_at} className="text-ink-faint" />
               </p>
-              <p className="text-body-sm whitespace-pre-line break-words text-ink">{comment.body}</p>
+              <p className="text-body-sm whitespace-pre-line break-words text-ink">
+                <MentionText text={comment.body} />
+              </p>
             </div>
             <div className="mt-0.5 flex items-center gap-1 text-label-md text-ink-faint">
               {isAuthenticated && !nested ? (
@@ -148,13 +150,13 @@ function Composer({
         </p>
       ) : null}
       <div className="flex items-end gap-2">
-        <Textarea
+        <MentionTextarea
           value={body}
-          onChange={(event) => setBody(event.target.value)}
-          placeholder={replyTo ? 'Votre réponse…' : 'Écrire un commentaire…'}
+          onValueChange={setBody}
+          placeholder={replyTo ? 'Votre réponse…' : 'Écrire un commentaire… (@ pour mentionner)'}
           maxLength={2000}
           rows={2}
-          className="flex-1"
+          wrapperClassName="flex-1"
           onKeyDown={(event) => {
             if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) submit(event);
           }}

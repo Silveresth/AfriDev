@@ -8,3 +8,5 @@ snippet_published = Signal()
 snippet_unpublished = Signal()
 # Envoyé avec snippet_id, owner_id, reasons quand l'analyse IA le retire de la publication.
 snippet_flagged = Signal()
+# Envoyé après commit avec comment_id, snippet_id, owner_id, author_id, parent_author_id, text.
+snippet_comment_created = Signal()

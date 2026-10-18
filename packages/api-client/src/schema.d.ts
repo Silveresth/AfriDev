@@ -388,6 +388,124 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/assistant/chat-replies/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Trois réponses rapides suggérées (result : replies). */
+        post: operations["assistant_chat_replies"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistant/code-review/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Relecture d'un snippet ou d'un code collé (result : summary, score, issues). */
+        post: operations["assistant_code_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistant/digest/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Résumé du jour : 200 s'il est prêt (digest null = rien à signaler), 202 avec un job_id s'il est en préparation. */
+        get: operations["assistant_digest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistant/job-match/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Score de correspondance offre ↔ profil, points forts, écarts et plan d'apprentissage (result : score, verdict, strengths, gaps, plan). */
+        post: operations["assistant_job_match"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistant/team/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Membres complémentaires proposés pour un projet (porteur seulement ; result : candidates, invitation). */
+        post: operations["assistant_team"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistant/team/invite/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["assistant_team_invite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistant/voice-search/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Recherche dictée : transcription puis requête structurée (result : text, query, scope, filters). */
+        post: operations["assistant_voice_search"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/backoffice/content/": {
         parameters: {
             query?: never;
@@ -1932,6 +2050,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/profiles/search/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Recherche de comptes (Explorer, @mentions) : ?q=ami&limit=8. */
+        get: operations["profiles_search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/": {
         parameters: {
             query?: never;
@@ -2716,6 +2851,18 @@ export interface components {
             score: number;
             matched: string[];
         };
+        ChatRepliesInputRequest: {
+            /** Format: uuid */
+            conversation_id: string;
+        };
+        CodeReviewInputRequest: {
+            /** Format: uuid */
+            snippet_id?: string | null;
+            /** @default  */
+            code: string;
+            /** @default  */
+            language: string;
+        };
         CollectionInputRequest: {
             name: string;
             description?: string;
@@ -2919,6 +3066,21 @@ export interface components {
         };
         DeviceTokenRequest: {
             token: string;
+        };
+        Digest: {
+            headline: string;
+            items: components["schemas"]["DigestItem"][];
+        };
+        DigestItem: {
+            emoji: string;
+            text: string;
+            url: string | null;
+        };
+        DigestResponse: {
+            /** @description null : en préparation, ou rien à signaler. */
+            digest: components["schemas"]["Digest"] | null;
+            /** @description En préparation : suivre ce job. */
+            job_id: string | null;
         };
         Endorsement: {
             skill: string;
@@ -3268,6 +3430,10 @@ export interface components {
             result: unknown;
             error: string | null;
         };
+        JobAccepted: {
+            /** @description Suivre le résultat via GET /api/jobs/<job_id>/. */
+            job_id: string;
+        };
         JobInputRequest: {
             title: string;
             company: string;
@@ -3280,6 +3446,13 @@ export interface components {
             apply_url: string;
             stack?: string[];
             salary_range?: string;
+        };
+        JobMatchInputRequest: {
+            /**
+             * Format: uuid
+             * @description Offre d'emploi à évaluer.
+             */
+            job_id: string;
         };
         JobOutput: {
             /** Format: uuid */
@@ -3419,6 +3592,8 @@ export interface components {
             edited_at: string | null;
             /** @description Supprimé pour tout le monde. */
             revoked: boolean;
+            /** @description Avertissement d'arnaque (IA), seulement pour le destinataire. */
+            risk_note: string;
             /** Format: date-time */
             created_at: string;
         };
@@ -3601,9 +3776,13 @@ export interface components {
          *     * `application_answered` - Réponse à une candidature
          *     * `new_follower` - Nouvel abonné
          *     * `new_member` - Nouvel inscrit (équipe)
+         *     * `mention` - Mention (@pseudo)
+         *     * `new_message` - Nouveau message privé
+         *     * `daily_digest` - Résumé du jour (IA)
+         *     * `team_invite` - Invitation à rejoindre un projet
          * @enum {string}
          */
-        NotificationKindEnum: "new_comment" | "comment_reply" | "post_liked" | "new_answer" | "answer_accepted" | "ai_answer_ready" | "snippet_flagged" | "content_hidden" | "guide_ready" | "application_received" | "application_answered" | "new_follower" | "new_member";
+        NotificationKindEnum: "new_comment" | "comment_reply" | "post_liked" | "new_answer" | "answer_accepted" | "ai_answer_ready" | "snippet_flagged" | "content_hidden" | "guide_ready" | "application_received" | "application_answered" | "new_follower" | "new_member" | "mention" | "new_message" | "daily_digest" | "team_invite";
         /** @enum {unknown} */
         NullEnum: null;
         OAuthInputRequest: {
@@ -3921,6 +4100,23 @@ export interface components {
             tags?: string[];
             /** Format: uuid */
             hub_id?: string | null;
+        };
+        PeopleSearchItem: {
+            /** Format: uuid */
+            id: string;
+            username: string;
+            display_name: string;
+            avatar_url: string;
+            location: string;
+            stack: string[];
+            karma: number;
+            badges: components["schemas"]["Badge"][];
+            bio: string;
+            followers_count: number;
+            open_to_work: boolean;
+            /** @description Le visiteur connecté suit-il ce membre ? */
+            is_following: boolean;
+            is_me: boolean;
         };
         PinInputRequest: {
             target_type: components["schemas"]["PinTargetTypeEnum"];
@@ -4648,6 +4844,17 @@ export interface components {
          * @enum {string}
          */
         TargetTypeEnum: "post" | "comment" | "question" | "answer" | "snippet" | "project" | "hub" | "job" | "target_comment";
+        TeamInputRequest: {
+            /** Format: uuid */
+            project_id: string;
+        };
+        TeamInviteInputRequest: {
+            /** Format: uuid */
+            project_id: string;
+            username: string;
+            /** @default  */
+            message: string;
+        };
         TimelinePoint: {
             /** Format: date */
             day: string;
@@ -4822,6 +5029,14 @@ export interface components {
              * @default false
              */
             can_moderate: boolean;
+        };
+        VoiceSearchInputRequest: {
+            /**
+             * Format: uuid
+             * @description Enregistrement audio déjà envoyé (/api/media/).
+             */
+            media_id: string;
+            language?: string | null;
         };
         VoteInputRequest: {
             /**
@@ -5454,6 +5669,182 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UsernameStatus"];
+                };
+            };
+        };
+    };
+    assistant_chat_replies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatRepliesInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ChatRepliesInputRequest"];
+                "multipart/form-data": components["schemas"]["ChatRepliesInputRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"];
+                };
+            };
+        };
+    };
+    assistant_code_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CodeReviewInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CodeReviewInputRequest"];
+                "multipart/form-data": components["schemas"]["CodeReviewInputRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"];
+                };
+            };
+        };
+    };
+    assistant_digest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestResponse"];
+                };
+            };
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestResponse"];
+                };
+            };
+        };
+    };
+    assistant_job_match: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobMatchInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["JobMatchInputRequest"];
+                "multipart/form-data": components["schemas"]["JobMatchInputRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"];
+                };
+            };
+        };
+    };
+    assistant_team: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TeamInputRequest"];
+                "multipart/form-data": components["schemas"]["TeamInputRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"];
+                };
+            };
+        };
+    };
+    assistant_team_invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamInviteInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TeamInviteInputRequest"];
+                "multipart/form-data": components["schemas"]["TeamInviteInputRequest"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    assistant_voice_search: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceSearchInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["VoiceSearchInputRequest"];
+                "multipart/form-data": components["schemas"]["VoiceSearchInputRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"];
                 };
             };
         };
@@ -8405,6 +8796,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OnboardingSuggestions"];
+                };
+            };
+        };
+    };
+    profiles_search: {
+        parameters: {
+            query: {
+                limit?: number;
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeopleSearchItem"][];
                 };
             };
         };

@@ -6,6 +6,7 @@ export { HUB_ICON_COMPONENTS, HubIcon } from './HubIcon';
 export { HubRoleBadge, PinnedBadge } from './HubRoleBadge';
 export { BackArrow, ForwardChevron } from './icons';
 export { CodeBlock, Markdown } from './Markdown';
+export { MentionText, useMentions } from './Mentions';
 export { Badge, Row, Section } from './Section';
 export { Sheet } from './Sheet';
 export { Switch } from './Switch';

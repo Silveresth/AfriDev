@@ -5,6 +5,7 @@ from django.db import transaction
 from core.exceptions import DomainError, PermissionDeniedError
 from core.utils import normalize_tags
 
+from .events import job_published
 from .models import JobOffer, TechEvent
 
 JOB_FIELDS = (
@@ -107,7 +108,16 @@ def create_job(*, author, **values) -> JobOffer:
             )
     if not cleaned.get("is_remote") and not (cleaned.get("location") or cleaned.get("country")):
         raise DomainError("Indiquez un lieu, ou cochez « télétravail ».", code="invalid_job")
-    return JobOffer.objects.create(author=author, **cleaned)
+    job = JobOffer.objects.create(author=author, **cleaned)
+    transaction.on_commit(
+        lambda: job_published.send(
+            sender=JobOffer,
+            job_id=job.id,
+            author_id=author.id,
+            text=f"{job.title} — {job.company}\n{job.description}\nPostuler : {job.apply_url}",
+        )
+    )
+    return job
 
 
 @transaction.atomic

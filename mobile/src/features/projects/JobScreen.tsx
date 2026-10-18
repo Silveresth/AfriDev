@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Banknote, Building2, Globe2, MapPin, Send } from 'lucide-react-native';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { JobMatchSection } from '@/features/assistant';
 import { ActionBar, TargetComments, useDeleteCard, useReaction } from '@/features/engage';
 import { api, errorMessage, PUBLIC_WEB_URL, unwrap } from '@/shared/api';
 import { useT } from '@/shared/i18n';
@@ -127,6 +128,7 @@ export function JobScreen() {
               }}
             />
           </View>
+          {!canManage && data.is_active ? <JobMatchSection jobId={data.id} /> : null}
           <TargetComments type="job" id={data.id} ownerId={data.author?.id} />
         </ScrollView>
       )}

@@ -13,6 +13,84 @@ def get_profile_for_user(*, user_id) -> Profile | None:
     return Profile.objects.alive().filter(user_id=user_id).first()
 
 
+def search_people(*, query: str, viewer_id=None, limit: int = 20) -> list[Profile]:
+    """Comptes par pseudo ou nom (comme TikTok / X) : pseudo exact, puis début de pseudo ou de
+    nom, puis contenu ; à égalité, les membres suivis par le visiteur et les plus suivis d'abord.
+    Sert aussi l'autocomplétion des @mentions."""
+    from django.db.models import Case, IntegerField, Q, Value, When
+
+    query = (query or "").strip().lstrip("@")[:40]
+    if not query:
+        return []
+    followed = following_user_ids(user_id=viewer_id) if viewer_id else []
+    rows = (
+        Profile.objects.alive()
+        .filter(user__is_active=True)
+        .filter(
+            Q(username__icontains=query)
+            | Q(display_name__icontains=query)
+            | Q(github_username__iexact=query)
+        )
+        .annotate(
+            rank=Case(
+                When(username__iexact=query, then=Value(0)),
+                When(username__istartswith=query, then=Value(1)),
+                When(display_name__istartswith=query, then=Value(2)),
+                default=Value(3),
+                output_field=IntegerField(),
+            ),
+            followed=Case(
+                When(user_id__in=followed, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField(),
+            ),
+        )
+        .order_by("rank", "followed", "-followers_count", "username")
+    )
+    return list(rows[: max(1, min(limit, 50))])
+
+
+def new_followers_count(*, user_id, since) -> int:
+    return UserFollow.objects.filter(followed_id=user_id, created_at__gte=since).count()
+
+
+def team_candidates(*, tags, exclude_user_ids, limit: int = 25) -> list[Profile]:
+    """Membres dont la stack recoupe les tags d'un projet : recoupement, disponibilité (« Open
+    to Work »), puis réputation. Pool borné, tri en mémoire (une requête)."""
+    wanted = {str(tag).lower() for tag in tags if tag}
+    pool = (
+        Profile.objects.alive()
+        .filter(user__is_active=True)
+        .exclude(user_id__in=list(exclude_user_ids))
+        .exclude(stack=[])
+        .order_by("-open_to_work", "-karma_score")[:400]
+    )
+    ranked = []
+    for profile in pool:
+        shared = [skill for skill in profile.stack if str(skill).lower() in wanted]
+        if shared:
+            ranked.append((len(shared), profile.open_to_work, profile.karma_score, profile))
+    ranked.sort(key=lambda row: (row[0], row[1], row[2]), reverse=True)
+    return [row[3] for row in ranked[:limit]]
+
+
+def user_ids_for_usernames(*, usernames) -> dict:
+    """{pseudo en minuscules: user_id} des comptes actifs (résolution des @mentions)."""
+    names = [name.lower() for name in usernames if name]
+    if not names:
+        return {}
+    from django.db.models.functions import Lower
+
+    rows = (
+        Profile.objects.alive()
+        .filter(user__is_active=True)
+        .annotate(lower=Lower("username"))
+        .filter(lower__in=names)
+        .values_list("lower", "user_id")
+    )
+    return dict(rows)
+
+
 def get_profiles(*, user_ids) -> dict:
     """{user_id: profile} pour afficher les auteurs d'une liste."""
     profiles = Profile.objects.alive().filter(user_id__in=list(user_ids))

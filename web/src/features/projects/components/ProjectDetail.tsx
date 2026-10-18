@@ -4,6 +4,7 @@ import { ArrowRight, CircleDot, ExternalLink, Github, Pencil, RefreshCw, Star, T
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { TeamBuilder } from '@/features/assistant';
 import { DetailActions, TargetComments } from '@/features/engage';
 import { ApplyButton, OwnerPanel } from '@/features/matchmaking';
 import { ProjectGuide } from '@/features/onboarding-agent';
@@ -169,6 +170,7 @@ function ProjectView({ project, mine }: { project: Project; mine: boolean }) {
         <ProjectGuide projectId={project.id} repoUrl={project.repo_url} />
       </Card>
       <GoodFirstIssues projectId={project.id} />
+      {mine ? <TeamBuilder projectId={project.id} /> : null}
       <TargetComments type="project" id={project.id} ownerId={owner?.id} />
     </>
   );

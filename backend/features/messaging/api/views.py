@@ -93,7 +93,7 @@ class MessageListView(APIView):
             selectors.list_messages(conversation=conversation, user_id=request.user.id), request
         )
         return paginator.get_paginated_response(
-            MessageSerializer(present_messages(page), many=True).data
+            MessageSerializer(present_messages(page, viewer_id=request.user.id), many=True).data
         )
 
     @extend_schema(
@@ -112,7 +112,8 @@ class MessageListView(APIView):
             reply_to_id=data.validated_data.get("reply_to_id"),
         )
         return Response(
-            MessageSerializer(present_messages([message])[0]).data, status=status.HTTP_201_CREATED
+            MessageSerializer(present_messages([message], viewer_id=request.user.id)[0]).data,
+            status=status.HTTP_201_CREATED,
         )
 
 
@@ -134,7 +135,9 @@ class MessageDetailView(APIView):
         message = services.edit_message(
             message=message, user=request.user, body=data.validated_data["body"]
         )
-        return Response(MessageSerializer(present_messages([message])[0]).data)
+        return Response(
+            MessageSerializer(present_messages([message], viewer_id=request.user.id)[0]).data
+        )
 
 
 class MessageDeleteView(APIView):

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 
+import { DigestCard } from '@/features/assistant';
 import { FeedScreen, TechNewsCard, TrendingCard } from '@/features/feed';
 import { RecommendedHubsCard } from '@/features/hubs';
 import { RecentJobsCard, UpcomingEventsCard } from '@/features/jobs-events';
@@ -18,6 +19,7 @@ export default function HomePage() {
       <FeedScreen
         aside={
           <>
+            <DigestCard />
             <TechNewsCard />
             <TrendingCard />
             <RecommendedHubsCard />

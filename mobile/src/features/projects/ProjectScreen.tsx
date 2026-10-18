@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { CircleDot, ExternalLink, FolderGit2, Star } from 'lucide-react-native';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { TeamSection } from '@/features/assistant';
 import { ActionBar, TargetComments, useDeleteCard, useReaction } from '@/features/engage';
 import { absoluteUrl, api, errorMessage, PUBLIC_WEB_URL, unwrap } from '@/shared/api';
 import { useT } from '@/shared/i18n';
@@ -126,6 +127,7 @@ export function ProjectScreen() {
             </View>
           ) : null}
 
+          {canManage ? <TeamSection projectId={data.id} /> : null}
           <TargetComments type="project" id={data.id} ownerId={data.owner?.id} />
           <Text variant="caption" tone="faint" style={styles.updated}>
             {data.last_synced_at ? t('proj.synced', { when: timeAgo(data.last_synced_at) }) : ''}

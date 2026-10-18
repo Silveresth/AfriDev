@@ -7,6 +7,7 @@ import { cn } from '@/shared/lib';
 
 import { Segmented } from './Form';
 import { Markdown } from './Markdown';
+import { useMentionAutocomplete } from './Mentions';
 
 type Action = { label: string; icon: typeof Bold; before: string; after?: string; block?: boolean };
 
@@ -42,6 +43,7 @@ export function MarkdownEditor({
 }) {
   const [tab, setTab] = useState<'write' | 'preview'>('write');
   const ref = useRef<HTMLTextAreaElement>(null);
+  const mentions = useMentionAutocomplete(ref, value, onChange);
 
   function apply(action: Action) {
     const element = ref.current;
@@ -59,8 +61,8 @@ export function MarkdownEditor({
   }
 
   return (
-    <div className={cn('overflow-hidden rounded-lg border bg-card shadow-card transition-colors focus-within:border-primary focus-within:ring-3 focus-within:ring-primary/15', invalid ? 'border-danger' : 'border-line-strong')}>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-container-low px-2 py-1">
+    <div className={cn('relative rounded-lg border bg-card shadow-card transition-colors focus-within:border-primary focus-within:ring-3 focus-within:ring-primary/15', invalid ? 'border-danger' : 'border-line-strong')}>
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-t-lg border-b border-line bg-container-low px-2 py-1">
         <Segmented
           value={tab}
           onChange={setTab}
@@ -95,8 +97,14 @@ export function MarkdownEditor({
           value={value}
           maxLength={maxLength}
           placeholder={placeholder}
-          onChange={(event) => onChange(event.target.value)}
-          className="block w-full resize-y bg-card px-3 py-2.5 text-body-md leading-6 text-ink outline-none placeholder:text-ink-faint"
+          onChange={(event) => {
+            onChange(event.target.value);
+            mentions.detect();
+          }}
+          onKeyDown={(event) => void mentions.onKeyDown(event)}
+          onClick={mentions.detect}
+          onBlur={() => window.setTimeout(mentions.close, 150)}
+          className="block w-full resize-y rounded-b-lg bg-card px-3 py-2.5 text-body-md leading-6 text-ink outline-none placeholder:text-ink-faint"
           style={{ minHeight }}
         />
       ) : (
@@ -104,6 +112,7 @@ export function MarkdownEditor({
           {value.trim() ? <Markdown source={value} /> : <p className="text-body-sm text-ink-faint">Rien à prévisualiser.</p>}
         </div>
       )}
+      {tab === 'write' ? mentions.popup : null}
     </div>
   );
 }

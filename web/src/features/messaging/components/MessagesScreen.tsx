@@ -10,6 +10,7 @@ import {
   Copy,
   ImageIcon,
   ImagePlus,
+  Languages,
   Loader2,
   MessageCircle,
   Mic,
@@ -17,6 +18,8 @@ import {
   Pencil,
   Reply,
   Send,
+  ShieldAlert,
+  Sparkles,
   Trash2,
   UserRound,
   Video,
@@ -26,7 +29,10 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
+import { useChatReplies } from '@/features/assistant';
+import { translateText } from '@/features/translation';
 import { errorMessage } from '@/shared/api';
+import { useLang } from '@/shared/i18n';
 import { cn } from '@/shared/lib';
 import { absoluteMediaUrl, type MediaAsset, type MediaKind, MediaView, uploadMedia } from '@/shared/media';
 import { RequireAuth, useSession } from '@/shared/session';
@@ -556,6 +562,21 @@ function Bubble({
   const grouped = Boolean(newer && newer.sender_id === message.sender_id && sameDay(at, new Date(newer.created_at)));
   const media = message.media as MediaAsset | null;
   const press = useRef<number | null>(null);
+  const { locale } = useLang();
+  const [translated, setTranslated] = useState<string | null>(null);
+  const [translating, setTranslating] = useState(false);
+
+  const translate = async () => {
+    if (translated) return setTranslated(null);
+    setTranslating(true);
+    try {
+      setTranslated(await translateText(message.body, locale));
+    } catch {
+      setTranslated('Traduction indisponible pour le moment.');
+    } finally {
+      setTranslating(false);
+    }
+  };
 
   const cancelPress = () => {
     if (press.current) window.clearTimeout(press.current);
@@ -634,6 +655,17 @@ function Bubble({
                     <span aria-hidden className={cn('inline-block', message.edited_at ? 'w-24' : 'w-14')} />
                   </p>
                 ) : null}
+                {translating || translated ? (
+                  <p
+                    className={cn(
+                      'mt-1 mb-4 border-l-2 pl-2 text-body-sm italic',
+                      mine ? 'border-on-primary/50 text-on-primary/85' : 'border-primary/50 text-ink-muted',
+                      media && 'mx-2',
+                    )}
+                  >
+                    {translating ? 'Traduction…' : translated}
+                  </p>
+                ) : null}
               </>
             )}
             <span
@@ -681,6 +713,11 @@ function Bubble({
                       <Copy aria-hidden /> Copier
                     </MenuItem>
                   ) : null}
+                  {message.body && !message.revoked ? (
+                    <MenuItem onSelect={() => void translate()}>
+                      <Languages aria-hidden /> {translated ? 'Voir l’original' : 'Traduire'}
+                    </MenuItem>
+                  ) : null}
                   {canEdit(message, userId) ? (
                     <MenuItem onSelect={onEdit}>
                       <Pencil aria-hidden /> Modifier
@@ -710,6 +747,14 @@ function Bubble({
           ) : null}
         </div>
       </div>
+      {message.risk_note ? (
+        <p role="alert" className="mx-2 mb-2 flex max-w-[82%] items-start gap-2 rounded-xl bg-danger-soft px-3 py-2 text-body-sm text-on-danger-soft sm:max-w-[65%]">
+          <ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <span>
+            <strong>Arnaque probable.</strong> {message.risk_note} Ne payez rien et ne partagez aucun code reçu par SMS.
+          </span>
+        </p>
+      ) : null}
       {newDay ? (
         <p className="sticky top-0 z-10 self-center py-2">
           <span className="rounded-lg bg-card px-3 py-1 text-label-sm font-medium text-ink-muted shadow-sm first-letter:uppercase">{dayLabel(at)}</span>
@@ -823,6 +868,7 @@ function Composer({
   const fileInput = useRef<HTMLInputElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
   const voice = useVoiceRecorder();
+  const suggestions = useChatReplies();
   const text = body.trim();
   const [draft, setDraft] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -923,6 +969,27 @@ function Composer({
         </p>
       ) : null}
 
+      {suggestions.data?.replies.length && !editing && !text ? (
+        <div className="scrollbar-none mb-2 flex gap-2 overflow-x-auto px-1">
+          {suggestions.data.replies.map((reply) => (
+            <button
+              key={reply}
+              type="button"
+              onClick={() => {
+                setBody(reply);
+                suggestions.reset();
+                textarea.current?.focus();
+              }}
+              className="h-8 shrink-0 rounded-full border border-primary/30 bg-primary-soft/50 px-3 text-body-sm text-ink hover:bg-primary-soft"
+            >
+              {reply}
+            </button>
+          ))}
+        </div>
+      ) : suggestions.isError ? (
+        <p className="mb-2 px-1 text-body-sm text-danger">{errorMessage(suggestions.error)}</p>
+      ) : null}
+
       {replyTo || editing ? (
         <div className="mb-2 flex items-center gap-2 rounded-xl bg-container-low p-1.5">
           {editing ? (
@@ -980,6 +1047,18 @@ function Composer({
               className="flex size-11 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-container hover:text-ink disabled:opacity-40"
             >
               <ImagePlus className="size-5" aria-hidden />
+            </button>
+          ) : null}
+          {!editing ? (
+            <button
+              type="button"
+              onClick={() => suggestions.mutate(conversationId)}
+              disabled={suggestions.isPending}
+              aria-label="Réponses suggérées par l’IA"
+              title="Réponses suggérées par l’IA"
+              className="flex size-11 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-container hover:text-primary disabled:opacity-60"
+            >
+              {suggestions.isPending ? <Loader2 className="size-5 animate-spin" aria-hidden /> : <Sparkles className="size-5" aria-hidden />}
             </button>
           ) : null}
           <div className="flex min-h-11 flex-1 items-end rounded-3xl bg-container px-4">

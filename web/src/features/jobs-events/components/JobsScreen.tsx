@@ -1,7 +1,7 @@
 'use client';
 
 import { BriefcaseBusiness, Globe2, Megaphone, Plus, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 import { useDebounced } from '@/shared/hooks';
@@ -25,8 +25,15 @@ const chip = (active: boolean) =>
 export function JobsScreen() {
   const { isAuthenticated } = useSession();
   const router = useRouter();
-  const [query, setQuery] = useState('');
-  const [filters, setFilters] = useState<JobFilters>({});
+  const params = useSearchParams();
+  // Filtres initiaux depuis l'adresse (recherche vocale : /jobs?q=django&remote=true&country=Sénégal).
+  const [query, setQuery] = useState(() => params.get('q') ?? '');
+  const [filters, setFilters] = useState<JobFilters>(() => ({
+    remote: params.get('remote') === 'true' ? true : undefined,
+    country: params.get('country') ?? undefined,
+    tech: params.get('tech') ?? undefined,
+    contract: (params.get('contract') as ContractType | null) ?? undefined,
+  }));
   const [publishing, setPublishing] = useState(false);
   const q = useDebounced(query.trim(), 300);
   const jobs = useJobs({ ...filters, q: q || undefined });
