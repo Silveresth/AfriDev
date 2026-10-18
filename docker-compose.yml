@@ -204,6 +204,12 @@ services:
       # Médias stockés sur le VPS, servis par nginx (location /media/).
       - ./backend/media:/var/www/media:ro
       - ./backend/staticfiles:/var/www/static:ro
+      # Journal d'accès persistant (lu par GoAccess) et supervision (/opt/monitoring, VPS).
+      - /var/log/afridev/nginx:/var/log/afridev
+      - /opt/monitoring/htpasswd:/etc/nginx/monitoring.htpasswd:ro
+      - /opt/monitoring/goaccess/html:/var/www/goaccess:ro
+      # Défi ACME : Certbot renouvelle en mode webroot sans arrêter nginx.
+      - /var/www/certbot:/var/www/certbot:ro
     depends_on:
       - backend
       - web
