@@ -61,12 +61,18 @@ export function MediaView({ media: raw, alt = '', className }: { media: MediaAss
 
   const small = media.urls.small ?? media.original_url;
   const large = media.urls.large ?? media.original_url;
+  const { shown, fits } = displayRatio(media.width, media.height);
   return (
     <div
-      className={cn('overflow-hidden rounded border border-line bg-container', className)}
-      style={{ aspectRatio: ratio, maxHeight: 520, backgroundImage: placeholder ? `url(${placeholder})` : undefined, backgroundSize: 'cover' }}
+      className={cn('relative w-full overflow-hidden rounded border border-line bg-container', className)}
+      style={{ aspectRatio: shown }}
     >
-      <picture>
+      {/* Image hors cadre (très haute ou très large) : affichée en entier sur son propre aperçu flou. */}
+      {placeholder ? (
+        // eslint-disable-next-line @next/next/no-img-element -- aperçu data: local, 0 octet réseau
+        <img src={placeholder} alt="" aria-hidden className={cn('absolute inset-0 size-full object-cover', fits ? '' : 'scale-110 blur-xl')} />
+      ) : null}
+      <picture className="absolute inset-0">
         {media.urls.avif ? <source srcSet={media.urls.avif} type="image/avif" media="(min-width: 768px)" /> : null}
         {/* Variantes WebP/AVIF déjà produites par le backend : pas besoin de next/image. */}
         <img
@@ -76,11 +82,21 @@ export function MediaView({ media: raw, alt = '', className }: { media: MediaAss
           alt={alt}
           loading="lazy"
           decoding="async"
-          className="size-full object-cover"
+          className={cn('size-full', fits ? 'object-cover' : 'object-contain')}
         />
       </picture>
     </div>
   );
+}
+
+/**
+ * Cadre d'une image de post : son propre format tant qu'il reste raisonnable (du carré au
+ * paysage 1,91:1) ; au-delà, cadre borné et image entière, jamais rognée.
+ */
+function displayRatio(width?: number | null, height?: number | null) {
+  const natural = width && height ? width / height : 16 / 9;
+  const shown = Math.min(1.91, Math.max(1, natural));
+  return { shown, fits: Math.abs(shown - natural) < 0.02 };
 }
 
 function VideoPlayer({ media, placeholder, className }: { media: MediaAsset; placeholder?: string; className?: string }) {

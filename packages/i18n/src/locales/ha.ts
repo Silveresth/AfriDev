@@ -104,7 +104,7 @@ const ha: LocaleMessages = {
   'settings.lang.subtitle': 'Fassara da harsunan Afirka',
   'settings.lang.default': 'Asalin harshe',
   'settings.lang.coming_soon': 'Yana nan tafe',
-  'settings.lang.translate_hint': '💡 Ana iya fassara dukkan rubuce-rubuce nan take ta danna maballin "Fassara".',
+  'settings.lang.translate_hint': 'Ana iya fassara dukkan rubuce-rubuce nan take ta danna maballin "Fassara".',
   'settings.lang.search': 'Bincika harshe, ƙasa ko lamba…',
   'settings.lang.african': 'Harsunan Afirka',
   'settings.lang.international': 'Harsunan duniya',

@@ -75,7 +75,7 @@ export function BadgesCard({ profile }: { profile: PublicProfile }) {
         <ul className="grid gap-2 sm:grid-cols-3">
           {[
             ['Mentor Communautaire', 'Top 5 % Entraide et 10 réponses acceptées'],
-            ['Lead Contributor', '20 favoris sur vos snippets ou 50 ★ sur vos projets'],
+            ['Lead Contributor', '20 favoris sur vos snippets ou 50 étoiles sur vos projets'],
             ['Expert Python', '3 réponses acceptées sur un même sujet'],
             ['Contributeur majeur', '250 points de Craft'],
             ['Top 5 % Entraide', 'Parmi les membres qui aident le plus'],

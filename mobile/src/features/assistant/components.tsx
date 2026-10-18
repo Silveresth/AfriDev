@@ -1,5 +1,19 @@
 import { router } from 'expo-router';
-import { Briefcase, CheckCircle2, CircleAlert, Copy, GraduationCap, Send, Sparkles, Sun, UsersRound } from 'lucide-react-native';
+import {
+  Briefcase,
+  CheckCircle2,
+  CircleAlert,
+  Copy,
+  GraduationCap,
+  MessageCircle,
+  MessagesSquare,
+  Send,
+  Sparkles,
+  Sun,
+  TrendingUp,
+  UserPlus,
+  UsersRound,
+} from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -180,7 +194,7 @@ export function DigestCard() {
       ) : (
         digest.data?.items.map((item, index) => (
           <Pressable key={index} disabled={!item.url} onPress={() => item.url && void openLink(item.url)} style={styles.digestItem}>
-            <Text variant="small">{item.emoji}</Text>
+            <DigestIcon url={item.url} color={colors.primaryInk} />
             <Text variant="small" style={styles.flex}>
               {item.text}
             </Text>
@@ -189,6 +203,23 @@ export function DigestCard() {
       )}
     </View>
   );
+}
+
+/** Icône d'une ligne du résumé, d'après la rubrique visée (plutôt qu'un emoji). */
+function DigestIcon({ url, color }: { url?: string | null; color: string }) {
+  const path = url ?? '';
+  const Icon = path.startsWith('/jobs')
+    ? Briefcase
+    : path.startsWith('/questions')
+      ? MessagesSquare
+      : path.startsWith('/profile')
+        ? UserPlus
+        : path.startsWith('/messages')
+          ? MessageCircle
+          : path
+            ? TrendingUp
+            : Sparkles;
+  return <Icon size={15} color={color} style={styles.digestIcon} />;
 }
 
 /** 7. Porteur de projet : coéquipiers proposés par l'IA, invitation en un geste. */
@@ -303,6 +334,7 @@ const styles = StyleSheet.create({
   code: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', padding: 8, borderRadius: radius.sm, marginTop: 4 },
   digest: { gap: 6, marginHorizontal: 16, marginTop: 10, marginBottom: 4, padding: 14, borderRadius: radius.lg },
   digestItem: { flexDirection: 'row', gap: 8, paddingVertical: 3 },
+  digestIcon: { marginTop: 2 },
   candidate: { gap: 8, padding: 10, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth * 2 },
   candidateMain: { flexDirection: 'row', gap: 10 },
   sheet: { gap: 12, paddingHorizontal: 20, paddingBottom: 8 },

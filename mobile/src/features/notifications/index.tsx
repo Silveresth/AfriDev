@@ -1,10 +1,9 @@
 import { type InfiniteData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
 import { AtSign, Bell, CheckCheck, CheckCircle2, Heart, MessageSquare, Sparkles, UserPlus } from 'lucide-react-native';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { api, type Schemas, unwrap } from '@/shared/api';
-import { notificationRoute, notificationWebUrl, openLink, timeAgo } from '@/shared/lib';
+import { goToRoute, notificationRoute, notificationWebUrl, openLink, timeAgo } from '@/shared/lib';
 import { useT } from '@/shared/i18n';
 import { AppearItem } from '@/shared/motion';
 import { type Page, useInfiniteList } from '@/shared/query';
@@ -120,7 +119,7 @@ export function NotificationsScreen() {
     if (!notification.read_at) markRead.mutate(notification);
     const href = hrefOf(notification);
     const web = notificationWebUrl(notification.data);
-    if (href) router.push(href);
+    if (href) goToRoute(href);
     else if (web) void openLink(web);
   };
 

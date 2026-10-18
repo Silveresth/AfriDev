@@ -69,7 +69,7 @@ def test_photo_message(auth_client, client_for, user, other_user):
     assert sent.data["media"]["kind"] == "image" and sent.data["body"] == ""
 
     inbox = client_for(other_user).get("/api/messages/conversations/").data["results"]
-    assert inbox[0]["last_message_preview"] == "📷 Photo"
+    assert inbox[0]["last_message_preview"] == "Photo"
 
     # Le média d'un autre membre ne peut pas être joint.
     kofi = client_for(other_user)

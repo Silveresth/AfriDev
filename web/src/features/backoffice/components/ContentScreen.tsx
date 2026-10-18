@@ -188,7 +188,7 @@ function Facts({ row }: { row: ContentRow }) {
   if (row.type === 'post') facts.push(`Score ${formatCount(Number(meta.score ?? 0))}`, `${formatCount(Number(meta.comments ?? 0))} comm.`);
   if (row.type === 'question') facts.push(`${formatCount(Number(meta.answers ?? 0))} réponse(s)`, meta.resolved ? 'Résolue' : 'Ouverte');
   if (row.type === 'snippet') facts.push(String(meta.language ?? ''), `${formatCount(Number(meta.comments ?? 0))} comm.`);
-  if (row.type === 'project') facts.push(`★ ${formatCount(Number(meta.stars ?? 0))}`, meta.recruiting ? 'Recrute' : 'Complet');
+  if (row.type === 'project') facts.push(`${formatCount(Number(meta.stars ?? 0))} étoile(s)`, meta.recruiting ? 'Recrute' : 'Complet');
   if (row.type === 'hub') facts.push(`${formatCount(Number(meta.members ?? 0))} membres`);
   if (row.type === 'job') facts.push(meta.active ? 'Active' : 'Clôturée', String(meta.location || (meta.remote ? 'Télétravail' : '')));
   if (row.type === 'event') facts.push(new Date(String(meta.starts_at)).toLocaleDateString('fr', { day: 'numeric', month: 'short', year: 'numeric' }), String(meta.organizer ?? ''));

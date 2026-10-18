@@ -8,7 +8,7 @@ const SNIPPET = [
   { tone: 'text-zinc-300', text: "  goals: ['learn', 'help']," },
   { tone: 'text-emerald-300', text: '  offline: true, // 2G ok' },
   { tone: 'text-sky-300', text: '});' },
-  { tone: 'text-amber-300', text: '// → fil « Pour vous » prêt ✦' },
+  { tone: 'text-amber-300', text: '// → fil « Pour vous » prêt' },
 ];
 
 const PERKS = [

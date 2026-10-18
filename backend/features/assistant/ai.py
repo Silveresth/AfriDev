@@ -4,6 +4,8 @@ Le modèle peut renvoyer un JSON incomplet ou hors bornes : tout est borné et t
 l'API ne renvoie jamais une forme inattendue aux clients.
 """
 
+import re
+
 from integrations import llm
 
 from . import context
@@ -24,6 +26,16 @@ def _int(value, low: int = 0, high: int = 100) -> int:
 
 def _str(value, size: int) -> str:
     return " ".join(str(value or "").split())[:size]
+
+
+_EMOJI = re.compile(
+    r"[\U0001f000-\U0001faff\U00002600-\U000027bf\U00002b00-\U00002bff\ufe0f\u200d]+"
+)
+
+
+def _plain(value, size: int) -> str:
+    """Texte affiché tel quel dans l'interface : sans emoji."""
+    return _str(_EMOJI.sub("", str(value or "")), size)
 
 
 def _list(value, size: int) -> list:
@@ -107,8 +119,9 @@ def digest(*, user_id) -> dict | None:
     )
     items = [
         {
-            "emoji": _str(item.get("emoji"), 4) or "•",
-            "text": _str(item.get("text"), 240),
+            # Gardé pour les anciennes versions de l'appli ; les clients affichent une icône.
+            "emoji": "•",
+            "text": _plain(item.get("text"), 240),
             "url": item.get("url") if str(item.get("url") or "").startswith("/") else None,
         }
         for item in _list(data.get("items"), 5)
@@ -116,7 +129,7 @@ def digest(*, user_id) -> dict | None:
     ]
     if not items:
         return None
-    return {"headline": _str(data.get("headline"), 80) or "Votre résumé du jour", "items": items}
+    return {"headline": _plain(data.get("headline"), 80) or "Votre résumé du jour", "items": items}
 
 
 def scam_check(text: str) -> dict:

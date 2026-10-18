@@ -34,10 +34,11 @@ export function MyProfileScreen() {
 }
 
 export function UserScreen() {
-  const { username } = useLocalSearchParams<{ username: string }>();
+  const params = useLocalSearchParams<{ username: string }>();
+  const username = String(params.username ?? '').replace(/^@/, '');
   const { colors } = useTheme();
   const { profile: me } = useSession();
-  const isMe = Boolean(me && me.username.toLowerCase() === username.toLowerCase());
+  const isMe = Boolean(me && username && me.username.toLowerCase() === username.toLowerCase());
   const profile = usePublicProfile(username);
   const data = isMe ? me : profile.data;
 

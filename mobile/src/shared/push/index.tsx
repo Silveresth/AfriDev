@@ -2,13 +2,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
-import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
 import { api, unwrap } from '@/shared/api';
-import { notificationRoute, notificationWebUrl, openLink } from '@/shared/lib';
+import { goToRoute, notificationRoute, notificationWebUrl, openLink } from '@/shared/lib';
 
 /**
  * Notifications push mobiles (Expo → FCM / APNs) :
@@ -132,7 +131,7 @@ export function PushRegistration() {
       const route = notificationRoute(data);
       const web = notificationWebUrl(data);
       if (!route && web) void openLink(web);
-      else router.push((route ?? '/notifications') as never);
+      else goToRoute(route ?? '/notifications');
     }, 0);
     return () => clearTimeout(timer);
   }, [lastResponse, queryClient]);

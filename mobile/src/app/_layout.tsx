@@ -80,13 +80,18 @@ function Navigator() {
           <Stack.Screen name="bookmarks" />
           <Stack.Screen name="search" options={{ animation: 'fade' }} />
         </Stack.Protected>
-        {/* Navigateur interne : aussi avant connexion (mot de passe oublié, CGU…). */}
-        <Stack.Screen name="browser" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        {/*
+          À la déconnexion, Stack.Protected renvoie vers le PREMIER écran encore accessible :
+          la connexion doit donc venir avant tout le reste (sinon le navigateur interne, sans
+          adresse, s'ouvrait sur un écran noir).
+        */}
         <Stack.Protected guard={!isAuthenticated}>
           <Stack.Screen name="login" options={{ animation: 'fade' }} />
         </Stack.Protected>
         <Stack.Screen name="index" />
         <Stack.Screen name="oauth" />
+        {/* Navigateur interne : aussi avant connexion (mot de passe oublié, CGU…). */}
+        <Stack.Screen name="browser" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
       </Stack>
     </>
   );

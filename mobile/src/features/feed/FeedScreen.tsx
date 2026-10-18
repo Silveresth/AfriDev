@@ -1,6 +1,6 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Bell, MessageCircle, Rows3, Search, UsersRound } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { DigestCard } from '@/features/assistant';
@@ -26,6 +26,13 @@ export function FeedScreen() {
   const [scope, setScope] = useState<HomeScope>('for_you');
   const [filter, setFilter] = useState<HomeFilter>('all');
   const feed = useHomeFeed(filter, scope);
+
+  // Lien « /jobs », « /projects »… (résumé du jour, notification) : le fil s'ouvre déjà filtré.
+  const params = useLocalSearchParams<{ filter?: string }>();
+  useEffect(() => {
+    const wanted = params.filter as HomeFilter | undefined;
+    if (wanted && FILTERS.includes(wanted)) setFilter(wanted);
+  }, [params.filter]);
 
   return (
     <View style={[styles.flex, { backgroundColor: colors.background }]}>

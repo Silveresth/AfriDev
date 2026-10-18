@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { Flag, Pencil, Trash2 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
 import { errorMessage } from '@/shared/api';
@@ -26,19 +26,27 @@ export function MoreSheet({ visible, onClose, report, onEdit, editLabel, onDelet
   const { isAuthenticated } = useSession();
   const send = useReport();
   const [step, setStep] = useState<'menu' | 'report'>('menu');
+  // Action qui ouvre un écran : lancée une fois la feuille refermée (sinon l'écran reste dessous).
+  const after = useRef<(() => void) | null>(null);
 
-  const close = () => {
+  const close = (then?: () => void) => {
+    after.current = then ?? null;
     onClose();
     setStep('menu');
   };
-
-  const confirmDelete = () => {
-    close();
-    Alert.alert(t('act.delete_title'), t('feed.delete_body'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('common.delete'), style: 'destructive', onPress: onDelete },
-    ]);
+  const runAfter = () => {
+    const action = after.current;
+    after.current = null;
+    action?.();
   };
+
+  const confirmDelete = () =>
+    close(() =>
+      Alert.alert(t('act.delete_title'), t('feed.delete_body'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.delete'), style: 'destructive', onPress: onDelete },
+      ]),
+    );
 
   const pickReason = (reason: (typeof REPORT_REASONS)[number]) => {
     if (!report) return;
@@ -56,7 +64,7 @@ export function MoreSheet({ visible, onClose, report, onEdit, editLabel, onDelet
   };
 
   return (
-    <Sheet visible={visible} onClose={close} title={step === 'report' ? t('act.report_title') : undefined}>
+    <Sheet visible={visible} onClose={() => close()} onHidden={runAfter} title={step === 'report' ? t('act.report_title') : undefined}>
       <View style={styles.list}>
         {step === 'report'
           ? REPORT_REASONS.map((reason, index) => (
@@ -68,10 +76,7 @@ export function MoreSheet({ visible, onClose, report, onEdit, editLabel, onDelet
                   key="edit"
                   icon={Pencil}
                   label={editLabel ?? t('common.edit')}
-                  onPress={() => {
-                    close();
-                    onEdit();
-                  }}
+                  onPress={() => close(onEdit)}
                 />
               ) : null,
               onDelete ? <Row key="delete" icon={Trash2} label={t('common.delete')} danger onPress={confirmDelete} /> : null,
@@ -82,8 +87,7 @@ export function MoreSheet({ visible, onClose, report, onEdit, editLabel, onDelet
                   label={t('feed.report')}
                   onPress={() => {
                     if (isAuthenticated) return setStep('report');
-                    close();
-                    router.push('/login');
+                    close(() => router.push('/login'));
                   }}
                   last
                 />

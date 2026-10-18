@@ -158,7 +158,7 @@ function Wizard({ catalogue, name, onDone, onSkip, skipping }: { catalogue: Onbo
 
       <div key={step} className="animate-step flex-1 overflow-y-auto px-6 py-6 sm:px-8">
         {step === 0 ? (
-          <StepShell title={`Bienvenue ${name} 👋 Vous êtes plutôt…`} subtitle="Pour doser le niveau des contenus proposés.">
+          <StepShell title={`Bienvenue ${name}. Vous êtes plutôt…`} subtitle="Pour doser le niveau des contenus proposés.">
             <ChoiceGrid
               items={catalogue.levels}
               icons={LEVEL_ICONS}
@@ -464,7 +464,7 @@ function PersonRow({ person }: { person: Suggestions['people'][number] }) {
       <span className="min-w-0 flex-1">
         <span className="block truncate text-body-sm font-semibold text-ink">{person.display_name}</span>
         <span className="block truncate text-label-md text-ink-muted">
-          {person.shared_stack.length ? `Comme vous : ${person.shared_stack.join(', ')}` : `✦ ${formatCount(person.craft_score)} Craft`}
+          {person.shared_stack.length ? `Comme vous : ${person.shared_stack.join(', ')}` : `${formatCount(person.craft_score)} points de Craft`}
         </span>
       </span>
       <Button

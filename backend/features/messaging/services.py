@@ -16,7 +16,7 @@ MAX_LENGTH = 2000
 EDIT_WINDOW = timedelta(minutes=15)
 REVOKE_WINDOW = timedelta(days=2)
 MAX_BULK_DELETE = 100
-REVOKED_PREVIEW = "🚫 Message supprimé"
+REVOKED_PREVIEW = "Message supprimé"
 
 
 def open_conversation(*, user, other_user_id) -> Conversation:
@@ -34,7 +34,7 @@ def open_conversation(*, user, other_user_id) -> Conversation:
         return Conversation.objects.get(user_low_id=low, user_high_id=high)
 
 
-MEDIA_PREVIEWS = {"image": "📷 Photo", "video": "🎬 Vidéo", "audio": "🎤 Message vocal"}
+MEDIA_PREVIEWS = {"image": "Photo", "video": "Vidéo", "audio": "Message vocal"}
 
 
 def _clean_body(body: str) -> str:

@@ -16,6 +16,9 @@ export type Period = 7 | 30 | 90;
 // locale du navigateur (meta.persist = false), contrairement au reste de l'application.
 const PRIVATE = { persist: false } as const;
 
+/** Lignes par page des tableaux du back-office. */
+const PAGE_SIZE = 15;
+
 export const backofficeKeys = {
   all: ['backoffice'] as const,
   dashboard: (days: Period) => ['backoffice', 'dashboard', days] as const,
@@ -42,7 +45,7 @@ export interface ReportFilters {
 export function useReports(filters: ReportFilters) {
   return usePagedList(
     backofficeKeys.reports(filters),
-    (cursor) => unwrap(api.GET('/api/moderation/reports/', { params: { query: { cursor, ...filters } } })),
+    (cursor) => unwrap(api.GET('/api/moderation/reports/', { params: { query: { cursor, page_size: PAGE_SIZE, ...filters } } })),
     PRIVATE,
   );
 }
@@ -88,7 +91,7 @@ export interface ContentFilters {
 export function useContent(filters: ContentFilters) {
   return usePagedList(
     ['backoffice', 'content', filters],
-    (cursor) => unwrap(api.GET('/api/backoffice/content/', { params: { query: { cursor, ...filters } } })),
+    (cursor) => unwrap(api.GET('/api/backoffice/content/', { params: { query: { cursor, page_size: PAGE_SIZE, ...filters } } })),
     PRIVATE,
   );
 }
@@ -118,7 +121,7 @@ export interface MemberFilters {
 export function useMembers(filters: MemberFilters) {
   return usePagedList(
     backofficeKeys.members(filters),
-    (cursor) => unwrap(api.GET('/api/backoffice/members/', { params: { query: { cursor, ...filters } } })),
+    (cursor) => unwrap(api.GET('/api/backoffice/members/', { params: { query: { cursor, page_size: PAGE_SIZE, ...filters } } })),
     PRIVATE,
   );
 }

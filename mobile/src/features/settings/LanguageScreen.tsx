@@ -13,6 +13,18 @@ type Filter = 'all' | 'african' | 'international';
 
 const FEATURED = LANGUAGES.filter((lang) => lang.complete);
 
+/** Code de la langue dans une pastille (« FR », « WO ») : à la place d'un drapeau emoji. */
+function LangCode({ code }: { code: string }) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.code, { backgroundColor: colors.container }]}>
+      <Text variant="caption" style={[styles.codeText, { color: colors.inkMuted }]}>
+        {code.toUpperCase()}
+      </Text>
+    </View>
+  );
+}
+
 /** Tuile d'une langue entièrement traduite (accès direct). */
 function FeaturedTile({ lang, active, onPress }: { lang: LangMeta; active: boolean; onPress: () => void }) {
   const { colors } = useTheme();
@@ -28,16 +40,12 @@ function FeaturedTile({ lang, active, onPress }: { lang: LangMeta; active: boole
       ]}
     >
       <View style={styles.tileTop}>
-        <Text style={styles.flag}>{lang.flag}</Text>
+        <LangCode code={lang.code} />
         {active ? (
           <Animated.View entering={ZoomIn.springify().damping(10)} style={[styles.check, { backgroundColor: colors.primary }]}>
             <Check size={12} color={colors.onPrimary} strokeWidth={3} />
           </Animated.View>
-        ) : (
-          <Text variant="caption" tone="faint">
-            {lang.code.toUpperCase()}
-          </Text>
-        )}
+        ) : null}
       </View>
       <Text variant="smallStrong" numberOfLines={1} style={active ? { color: colors.primaryInk } : null}>
         {lang.native}
@@ -61,7 +69,7 @@ function LanguageRow({ lang, active, onPress }: { lang: LangMeta; active: boolea
       accessibilityState={{ selected: active }}
       style={[styles.row, { borderBottomColor: colors.line }, active && { backgroundColor: colors.primarySoft }]}
     >
-      <Text style={styles.flag}>{lang.flag}</Text>
+      <LangCode code={lang.code} />
       <View style={styles.flex}>
         <View style={styles.inline}>
           <Text variant="bodyStrong" numberOfLines={1} style={styles.shrink}>
@@ -116,7 +124,7 @@ export function LanguageScreen() {
     setLocale(code);
     const lang = LANG_MAP.get(code);
     // Le toast est formulé dans la nouvelle langue.
-    if (lang) toast(`${translate('settings.lang.activated', undefined, code)} : ${lang.flag} ${lang.native}`);
+    if (lang) toast(`${translate('settings.lang.activated', undefined, code)} : ${lang.native}`);
   };
 
   const header = (
@@ -204,7 +212,8 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   tile: { width: '31%', flexGrow: 1, padding: 10, gap: 2, borderRadius: radius.md, borderWidth: 1.5 },
   tileTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  flag: { fontSize: 22, lineHeight: 28 },
+  code: { minWidth: 34, height: 26, paddingHorizontal: 6, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  codeText: { fontWeight: '700', letterSpacing: 0.5 },
   check: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   allTitle: { marginTop: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },

@@ -253,7 +253,7 @@ def on_answer_accepted(sender, question_id, answer_id, answer_author_id, **kwarg
     notify(
         recipient_id=answer_author_id,
         kind=Kind.ANSWER_ACCEPTED,
-        title="Votre réponse a été acceptée 🎉",
+        title="Votre réponse a été acceptée",
         body="Elle rejoint la base de connaissances de la communauté.",
         data={"type": "question", "id": str(question_id), "answer_id": str(answer_id)},
     )
@@ -323,7 +323,7 @@ def on_application_answered(
         notify(
             recipient_id=candidate_id,
             kind=Kind.APPLICATION_ANSWERED,
-            title=f"Bienvenue dans l'équipe {project_name} 🎉",
+            title=f"Bienvenue dans l'équipe {project_name}",
             body="Votre guide de démarrage et vos premières tâches vous attendent.",
             data={"type": "welcome", "id": str(application_id), "project_id": str(project_id)},
         )

@@ -257,7 +257,7 @@ export function PostCard({ post, detail = false, community: showCommunity = true
           {/* Le schéma décrit `media` comme JSON libre : c'est la forme de /api/media/<id>/. */}
           {post.media ? (
             <div className="mt-3 overflow-hidden rounded-lg border border-line">
-              <MediaView media={post.media as MediaAsset} />
+              <MediaView media={post.media as MediaAsset} className="rounded-none border-0" />
             </div>
           ) : null}
 

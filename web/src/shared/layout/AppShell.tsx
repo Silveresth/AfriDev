@@ -43,7 +43,7 @@ import {
 } from '@/shared/ui';
 
 import { modifierKeyLabel, openCommandPalette } from './command';
-import { isActive, MOBILE_TABS, NAV_ITEMS, type NavItem, navPath } from './nav';
+import { isActive, mobileTabs, type NavItem, navPath, visibleNavItems } from './nav';
 import { PublishMenu } from './PublishMenu';
 import { AuthModal, type AuthModalMode } from '@/features/auth';
 import { useShellShortcuts, useSidebarCollapsed } from './shortcuts';
@@ -470,6 +470,7 @@ function AccountMenu({ onHelp }: { onHelp: () => void }) {
 function ShortcutsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const isClient = useIsClient();
   const { t } = useLang();
+  const { isAuthenticated } = useSession();
   const general: Array<[string[], string]> = [
     [[isClient ? modifierKeyLabel() : 'Ctrl', 'K'], t('nav.search')],
     [['N'], t('feed.new_post')],
@@ -483,7 +484,7 @@ function ShortcutsDialog({ open, onClose }: { open: boolean; onClose: () => void
         <section>
           <h3 className="mb-2 text-label-md font-semibold text-ink-faint">{t('shortcuts.go_to')}</h3>
           <ul className="space-y-1.5">
-            {NAV_ITEMS.filter((item) => item.key).map((item) => (
+            {visibleNavItems(isAuthenticated).filter((item) => item.key).map((item) => (
               <ShortcutRow key={item.href} keys={['G', item.key!.toUpperCase()]} label={item.msgKey ? t(item.msgKey) : item.label} />
             ))}
           </ul>
@@ -524,21 +525,10 @@ function BottomNav({ openAuthModal }: { openAuthModal: (mode: AuthModalMode) => 
       className="fixed inset-x-0 bottom-0 z-30 border-t border-line/70 bg-surface/90 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_-4px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_24px_rgba(0,0,0,0.3)] lg:hidden"
     >
       <ul className="mx-auto flex h-15 max-w-lg items-center justify-around px-2">
-        {MOBILE_TABS.map((item, index) =>
+        {mobileTabs(isAuthenticated).map((item, index) =>
           item ? (
             <li key={item.href} className="flex flex-1 items-center justify-center">
-              <BottomTab
-                item={item}
-                active={isActive(pathname, item.href)}
-                onClick={
-                  !isAuthenticated && item.href === '/profile'
-                    ? (e) => {
-                        e.preventDefault();
-                        openAuthModal('login');
-                      }
-                    : undefined
-                }
-              />
+              <BottomTab item={item} active={isActive(pathname, item.href)} />
             </li>
           ) : (
             <li key={`create-${index}`} className="flex shrink-0 items-center justify-center px-1">
@@ -563,21 +553,12 @@ function BottomNav({ openAuthModal }: { openAuthModal: (mode: AuthModalMode) => 
 }
 
 /** Onglet du bas : pastille tactile avec micro-animations haptiques et badge actif. */
-function BottomTab({
-  item,
-  active,
-  onClick,
-}: {
-  item: NavItem;
-  active: boolean;
-  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
-}) {
+function BottomTab({ item, active }: { item: NavItem; active: boolean }) {
   const { t } = useLang();
   const label = item.shortKey ? t(item.shortKey) : item.short;
   return (
     <Link
       href={item.href}
-      onClick={onClick}
       aria-current={active ? 'page' : undefined}
       className={cn(
         'group relative flex w-full flex-col items-center justify-center py-1 text-center transition-all duration-150 active:scale-85 select-none',

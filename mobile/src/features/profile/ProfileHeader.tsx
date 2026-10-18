@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { CalendarDays, GitBranch, Info, Link2, MapPin, Pencil, Share2, Sparkles, UserCheck } from 'lucide-react-native';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
 
@@ -267,8 +267,20 @@ function CraftSheet({ profile, visible, onClose }: { profile: PublicProfile; vis
 function FollowSheet({ username, kind, onClose }: { username: string; kind: 'followers' | 'following' | null; onClose: () => void }) {
   const { colors } = useTheme();
   const list = useFollowList(username, kind ?? 'followers', kind !== null);
+  // Profil choisi : ouvert une fois la feuille refermée, sinon il s'affiche sous elle.
+  const pending = useRef<string | null>(null);
+  const openPending = () => {
+    const target = pending.current;
+    pending.current = null;
+    if (target) router.push(`/u/${encodeURIComponent(target)}`);
+  };
   return (
-    <Sheet visible={kind !== null} onClose={onClose} title={t(kind === 'following' ? 'profile.following_count' : 'profile.followers_count')}>
+    <Sheet
+      visible={kind !== null}
+      onClose={onClose}
+      onHidden={openPending}
+      title={t(kind === 'following' ? 'profile.following_count' : 'profile.followers_count')}
+    >
       <ScrollView style={styles.sheetList} contentContainerStyle={styles.sheetBody}>
         {list.isPending ? (
           <ListFooter loading />
@@ -278,8 +290,8 @@ function FollowSheet({ username, kind, onClose }: { username: string; kind: 'fol
               key={member.id}
               scaleTo={0.98}
               onPress={() => {
+                pending.current = member.username;
                 onClose();
-                router.push(`/u/${member.username}`);
               }}
               style={styles.member}
             >

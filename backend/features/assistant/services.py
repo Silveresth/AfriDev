@@ -111,7 +111,7 @@ def notify_digest(*, user_id, digest: dict) -> None:
     notification_services.notify(
         recipient_id=user_id,
         kind="daily_digest",
-        title=f"☀️ {digest['headline']}",
+        title=digest["headline"],
         body=first,
         data={"type": "digest", "id": date.today().isoformat()},
     )

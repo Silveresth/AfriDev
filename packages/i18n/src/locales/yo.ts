@@ -104,7 +104,7 @@ const yo: LocaleMessages = {
   'settings.lang.subtitle': 'Ìtumọ̀ àti àwọn èdè Afirika',
   'settings.lang.default': 'Èdè àkọ́kọ́ ti ìfilọ́lẹ̀',
   'settings.lang.coming_soon': 'Yóò dé láìpẹ́',
-  'settings.lang.translate_hint': '💡 Gbogbo àwọn àkọsílẹ̀ àti koodu ni a lè túmọ̀ lẹ́sẹ̀kẹsẹ̀ pẹ̀lú bọ́tìnnì "Túmọ̀".',
+  'settings.lang.translate_hint': 'Gbogbo àwọn àkọsílẹ̀ àti koodu ni a lè túmọ̀ lẹ́sẹ̀kẹsẹ̀ pẹ̀lú bọ́tìnnì "Túmọ̀".',
   'settings.lang.search': 'Wá èdè, orílẹ̀-èdè tàbí koodu…',
   'settings.lang.african': 'Àwọn èdè Afirika',
   'settings.lang.international': 'Àwọn èdè àgbáyé',

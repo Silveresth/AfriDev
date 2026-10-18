@@ -83,7 +83,7 @@ function LanguageCard() {
   const select = (code: LocaleCode) => {
     setLocale(code);
     const target = LANGUAGES.find((lang) => lang.code === code);
-    if (target) toast(`${t('settings.lang.activated')} : ${target.flag} ${target.native}`);
+    if (target) toast(`${t('settings.lang.activated')} : ${target.native}`);
   };
 
   return (
@@ -94,7 +94,7 @@ function LanguageCard() {
         subtitle={t('settings.lang.subtitle')}
         action={
           <span className="flex items-center gap-2 rounded-lg border border-line bg-container-low px-2.5 py-1 text-body-sm font-medium text-ink">
-            <span aria-hidden>{currentLang.flag}</span>
+            <LangCode code={currentLang.code} />
             {currentLang.native}
           </span>
         }
@@ -116,9 +116,7 @@ function LanguageCard() {
                   active ? 'border-primary bg-primary-soft/50 ring-2 ring-primary/15' : 'border-line hover:border-line-strong hover:bg-container-low',
                 )}
               >
-                <span className="text-lg" aria-hidden>
-                  {lang.flag}
-                </span>
+                <LangCode code={lang.code} />
                 <span className="min-w-0 flex-1">
                   <span className={cn('block truncate text-body-sm font-semibold', active ? 'text-primary-ink' : 'text-ink')}>{lang.native}</span>
                   <span className="block truncate text-label-md text-ink-faint">{lang.label}</span>
@@ -185,9 +183,7 @@ function LanguageCard() {
                         active ? 'bg-primary-soft/60' : 'hover:bg-container-low',
                       )}
                     >
-                      <span className="text-base" aria-hidden>
-                        {lang.flag}
-                      </span>
+                      <LangCode code={lang.code} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-body-sm font-medium text-ink">
                           {lang.native} <span className="text-ink-faint">· {lang.label}</span>
@@ -207,5 +203,14 @@ function LanguageCard() {
 
       <p className="text-body-sm text-ink-muted">{t('settings.lang.translate_hint')}</p>
     </Card>
+  );
+}
+
+/** Code de la langue dans une pastille (« FR », « WO ») : à la place d'un drapeau emoji. */
+function LangCode({ code }: { code: string }) {
+  return (
+    <span className="inline-flex h-6 min-w-8 shrink-0 items-center justify-center rounded-md bg-container px-1.5 font-mono text-label-sm font-bold text-ink-muted uppercase" aria-hidden>
+      {code}
+    </span>
   );
 }

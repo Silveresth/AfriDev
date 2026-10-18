@@ -1,5 +1,5 @@
 import * as Clipboard from 'expo-clipboard';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { AlertTriangle, Copy, Download, FileJson, KeyRound, Plus, Trash2, UserX } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
@@ -198,8 +198,8 @@ function DeleteAccountSection() {
             onSuccess: () => {
               haptic.success();
               toast(t('priv.deleted'));
+              // La session tombe : la navigation bascule seule vers l'écran de connexion.
               signOut();
-              router.replace('/feed');
             },
             onError: (error) => toast(errorMessage(error), 'error'),
           }),

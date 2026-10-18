@@ -104,7 +104,7 @@ const sw: LocaleMessages = {
   'settings.lang.subtitle': 'Tafsiri na ujanibishaji wa kiufundi',
   'settings.lang.default': 'Lugha ya msingi ya mfumo',
   'settings.lang.coming_soon': 'Inakuja hivi karibuni',
-  'settings.lang.translate_hint': '💡 Machapisho yote na vipande vinaweza kutafsiriwa papo hapo kupitia kitufe cha "Tafsiri".',
+  'settings.lang.translate_hint': 'Machapisho yote na vipande vinaweza kutafsiriwa papo hapo kupitia kitufe cha "Tafsiri".',
   'settings.lang.search': 'Tafuta lugha, nchi au msimbo…',
   'settings.lang.african': 'Lugha za Kiafrika',
   'settings.lang.international': 'Lugha za kimataifa',

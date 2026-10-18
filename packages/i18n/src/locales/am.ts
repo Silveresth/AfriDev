@@ -104,7 +104,7 @@ const am: LocaleMessages = {
   'settings.lang.subtitle': 'ትርጉሞች እና የአፍሪካ ቋንቋዎች',
   'settings.lang.default': 'ነባሪ ቋንቋ',
   'settings.lang.coming_soon': 'በቅርቡ ይመጣል',
-  'settings.lang.translate_hint': '💡 ልጥፎችና ኮዶች በ«ተርጉም» ቁልፍ ወዲያውኑ ሊተረጎሙ ይችላሉ።',
+  'settings.lang.translate_hint': 'ልጥፎችና ኮዶች በ«ተርጉም» ቁልፍ ወዲያውኑ ሊተረጎሙ ይችላሉ።',
   'settings.lang.search': 'ቋንቋ፣ ሀገር ወይም ኮድ ፈልግ…',
   'settings.lang.african': 'የአፍሪካ ቋንቋዎች',
   'settings.lang.international': 'ዓለም አቀፍ ቋንቋዎች',

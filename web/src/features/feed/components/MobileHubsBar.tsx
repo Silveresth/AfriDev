@@ -65,7 +65,7 @@ export function MobileHubsBar() {
               : 'border-line bg-card text-ink-muted hover:border-line-strong hover:text-ink',
           )}
         >
-          <span>🔥</span>
+          <Flame className="size-3.5" aria-hidden />
           <span>Tout le fil</span>
         </Link>
 

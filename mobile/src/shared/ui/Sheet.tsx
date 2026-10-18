@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,11 +15,17 @@ import { Text } from './Text';
 export function Sheet({
   visible,
   onClose,
+  onHidden,
   title,
   children,
 }: {
   visible: boolean;
   onClose: () => void;
+  /**
+   * Feuille entièrement refermée (Modal démonté). C'est là qu'il faut naviguer : un écran
+   * poussé pendant que le Modal est encore affiché s'ouvre derrière lui.
+   */
+  onHidden?: () => void;
   title?: string;
   children: React.ReactNode;
 }) {
@@ -28,14 +34,21 @@ export function Sheet({
   const { height } = useWindowDimensions();
   const [mounted, setMounted] = useState(visible);
   const progress = useSharedValue(0);
+  const hiddenRef = useRef(onHidden);
+  hiddenRef.current = onHidden;
 
   useEffect(() => {
     if (visible) {
       setMounted(true);
       progress.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) });
     } else if (mounted) {
+      const hide = () => {
+        setMounted(false);
+        // Laisse le Modal natif se retirer avant de rendre la main.
+        setTimeout(() => hiddenRef.current?.(), 0);
+      };
       progress.value = withTiming(0, { duration: 220, easing: Easing.in(Easing.quad) }, (done) => {
-        if (done) runOnJS(setMounted)(false);
+        if (done) runOnJS(hide)();
       });
     }
   }, [mounted, progress, visible]);

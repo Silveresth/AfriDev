@@ -241,7 +241,10 @@ function FeedPreview({ catalogue, draft }: { catalogue: Onboarding; draft: Draft
   const mix = Object.entries(computeFeedMix(catalogue, draft.goals, draft.experience_level));
   return (
     <Animated.View layout={LinearTransition} style={[styles.preview, { backgroundColor: colors.surface, borderColor: colors.line }]}>
-      <Text variant="smallStrong">✦ {t('onb.preview')}</Text>
+      <View style={styles.previewTitle}>
+        <Sparkles size={14} color={colors.primary} />
+        <Text variant="smallStrong">{t('onb.preview')}</Text>
+      </View>
       <View style={styles.mixBar}>
         {mix.map(([kind, share]) => (
           <Animated.View key={kind} layout={LinearTransition} style={{ flex: share, backgroundColor: MIX_COLORS[kind] ?? colors.inkFaint }} />
@@ -400,7 +403,7 @@ function PersonRow({ person }: { person: Suggestions['people'][number] }) {
           {person.display_name}
         </Text>
         <Text variant="caption" tone="muted" numberOfLines={1}>
-          {person.shared_stack.length ? t('onb.in_common', { tags: person.shared_stack.join(', ') }) : `✦ ${formatCount(person.craft_score)}`}
+          {person.shared_stack.length ? t('onb.in_common', { tags: person.shared_stack.join(', ') }) : `${formatCount(person.craft_score)} Craft`}
         </Text>
       </View>
       <Button
@@ -458,6 +461,7 @@ const styles = StyleSheet.create({
   choiceHalf: { width: '48%' },
   choiceIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   preview: { gap: 10, padding: 14, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth * 2 },
+  previewTitle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   mixBar: { flexDirection: 'row', height: 10, borderRadius: 5, overflow: 'hidden' },
   legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, rowGap: 6 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },

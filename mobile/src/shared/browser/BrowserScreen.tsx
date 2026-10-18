@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { ArrowLeft, ArrowRight, RotateCw, Share2, X } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView, type WebViewNavigation } from 'react-native-webview';
 
 import { useT } from '@/shared/i18n';
-import { domainOf, resolveInternalRoute } from '@/shared/lib';
+import { domainOf, goToRoute, resolveInternalRoute } from '@/shared/lib';
 import { useTheme } from '@/shared/theme';
 import { IconButton, Text } from '@/shared/ui';
 
@@ -45,7 +45,7 @@ export function BrowserScreen() {
     if (/^https?:/i.test(next) || next === 'about:blank') {
       const route = resolveInternalRoute(next);
       if (route && next !== url) {
-        router.replace(route as never);
+        goToRoute(route, { replace: true });
         return false;
       }
       return true;
@@ -54,7 +54,8 @@ export function BrowserScreen() {
     return false;
   };
 
-  if (!url) return null;
+  // Ouvert sans adresse (redirection de navigation, lien cassé) : jamais d'écran vide.
+  if (!url) return <Redirect href="/" />;
 
   return (
     <View style={[styles.flex, { backgroundColor: colors.background, paddingTop: insets.top }]}>

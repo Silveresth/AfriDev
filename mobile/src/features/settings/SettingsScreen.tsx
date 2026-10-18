@@ -172,7 +172,7 @@ export function SettingsScreen() {
 
         <Section index={2} title={t('settings.lang.title')} description={t('set.language_desc', { count: LANGUAGES.length, african: AFRICAN_COUNT })} icon={Languages}>
           <Row
-            label={`${currentLang.flag}  ${currentLang.native}`}
+            label={currentLang.native}
             detail={currentLang.label}
             onPress={() => router.push('/settings/language')}
             last

@@ -148,7 +148,7 @@ const en: Record<MessageKey, string> = {
   'settings.lang.subtitle': 'Translations and technical localization',
   'settings.lang.default': 'Default interface language',
   'settings.lang.coming_soon': 'Coming soon',
-  'settings.lang.translate_hint': '💡 All posts and snippets can be instantly translated using the "Translate" button.',
+  'settings.lang.translate_hint': 'All posts and snippets can be instantly translated using the "Translate" button.',
   'settings.lang.search': 'Search a language, country or code…',
   'settings.lang.african': 'African languages',
   'settings.lang.international': 'International languages',

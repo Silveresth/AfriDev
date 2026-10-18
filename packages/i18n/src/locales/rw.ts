@@ -104,7 +104,7 @@ const rw: LocaleMessages = {
   'settings.lang.subtitle': 'Ibisobanuro n\'indimi zo muri Afurika',
   'settings.lang.default': 'Ururimi rw\'ibanze',
   'settings.lang.coming_soon': 'Biri hafi kuza',
-  'settings.lang.translate_hint': '💡 Ibintu byose na kode bishobora gusemurwa ako kanya ukoresheje buto ya "Hindura".',
+  'settings.lang.translate_hint': 'Ibintu byose na kode bishobora gusemurwa ako kanya ukoresheje buto ya "Hindura".',
   'settings.lang.search': 'Shakisha ururimi, igihugu cyangwa kode…',
   'settings.lang.african': 'Indimi zo muri Afurika',
   'settings.lang.international': 'Indimi mpuzamahanga',

@@ -146,7 +146,7 @@ const fr = {
   'settings.lang.subtitle': 'Traductions et vulgarisation technique',
   'settings.lang.default': "Langue par défaut de l'interface",
   'settings.lang.coming_soon': 'Bientôt disponible',
-  'settings.lang.translate_hint': '💡 Tous les posts et snippets peuvent être traduits instantanément via le bouton « Traduire ».',
+  'settings.lang.translate_hint': 'Tous les posts et snippets peuvent être traduits instantanément via le bouton « Traduire ».',
   'settings.lang.search': 'Rechercher une langue, un pays ou un code…',
   'settings.lang.african': 'Langues africaines',
   'settings.lang.international': 'Langues internationales',

@@ -104,7 +104,7 @@ const dyu: LocaleMessages = {
   'settings.lang.subtitle': 'Kanw bayɛlɛmali ni Afriki kanko',
   'settings.lang.default': 'Kan fɔlɔ',
   'settings.lang.coming_soon': 'A bɛ na sisan',
-  'settings.lang.translate_hint': '💡 Sɛbɛnw bɛ se ka bayɛlɛma sisan ni « Bayɛlɛma » ye.',
+  'settings.lang.translate_hint': 'Sɛbɛnw bɛ se ka bayɛlɛma sisan ni « Bayɛlɛma » ye.',
   'settings.lang.search': 'Kan, jamana walima kɔdi ɲini…',
   'settings.lang.african': 'Afriki kanw',
   'settings.lang.international': 'Duniya kanw',

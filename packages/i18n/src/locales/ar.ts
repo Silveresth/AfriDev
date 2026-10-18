@@ -104,7 +104,7 @@ const ar: LocaleMessages = {
   'settings.lang.subtitle': 'الترجمة واللغات الإفريقية',
   'settings.lang.default': 'اللغة الافتراضية للواجهة',
   'settings.lang.coming_soon': 'قريبًا',
-  'settings.lang.translate_hint': '💡 يمكن ترجمة المنشورات والمقتطفات فورًا عبر زر «ترجمة».',
+  'settings.lang.translate_hint': 'يمكن ترجمة المنشورات والمقتطفات فورًا عبر زر «ترجمة».',
   'settings.lang.search': 'ابحث عن لغة أو دولة أو رمز…',
   'settings.lang.african': 'اللغات الإفريقية',
   'settings.lang.international': 'اللغات الدولية',

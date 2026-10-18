@@ -104,7 +104,7 @@ const ln: LocaleMessages = {
   'settings.lang.subtitle': 'Kobongola mpe minoko mya Afrika',
   'settings.lang.default': 'Lokota ya liboso',
   'settings.lang.coming_soon': 'Ekozala kala te',
-  'settings.lang.translate_hint': '💡 Bakomi mpe snippets nyonso ekoki kobongolama mbala moko na buto « Bongola ».',
+  'settings.lang.translate_hint': 'Bakomi mpe snippets nyonso ekoki kobongolama mbala moko na buto « Bongola ».',
   'settings.lang.search': 'Luka lokota, mboka to kode…',
   'settings.lang.african': 'Minoko mya Afrika',
   'settings.lang.international': 'Minoko mya mokili mobimba',

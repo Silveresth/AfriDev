@@ -34,14 +34,19 @@ export function SideNav({
   onToggle?: () => void;
   showShortcuts?: boolean;
 }) {
-  const { user, profile } = useSession();
+  const { user, profile, isAuthenticated } = useSession();
   const { t } = useLang();
   const pathname = navPath(usePathname(), profile?.username);
   const { data: unreadMessages } = useUnreadMessages();
+  // Sans session : seules les rubriques publiques, et les sections vidées disparaissent avec.
+  const sections = NAV_SECTIONS.map((section) => ({
+    ...section,
+    hrefs: section.hrefs.filter((href) => isAuthenticated || !byHref(href).auth),
+  })).filter((section) => section.hrefs.length);
 
   return (
     <nav aria-label="Navigation principale" className="flex min-h-full flex-col gap-4">
-      {NAV_SECTIONS.map((section) => (
+      {sections.map((section) => (
         <div key={section.title ?? 'main'}>
           {section.title ? (
             collapsed ? (

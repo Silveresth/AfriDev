@@ -104,7 +104,7 @@ const pt: LocaleMessages = {
   'settings.lang.subtitle': 'Traduções e línguas africanas',
   'settings.lang.default': 'Idioma padrão do sistema',
   'settings.lang.coming_soon': 'Em breve',
-  'settings.lang.translate_hint': '💡 Todas as publicações e snippets podem ser traduzidos pelo botão "Traduzir".',
+  'settings.lang.translate_hint': 'Todas as publicações e snippets podem ser traduzidos pelo botão "Traduzir".',
   'settings.lang.search': 'Pesquisar idioma, país ou código…',
   'settings.lang.african': 'Línguas africanas',
   'settings.lang.international': 'Línguas internacionais',

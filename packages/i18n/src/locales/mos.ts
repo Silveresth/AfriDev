@@ -104,7 +104,7 @@ const mos: LocaleMessages = {
   'settings.lang.subtitle': 'Lebgr & Afriki buud-gomd dãmba',
   'settings.lang.default': 'Pipig buud-gomde',
   'settings.lang.coming_soon': 'N wat masã',
-  'settings.lang.translate_hint': '💡 Tʋʋma la kood dãmb fãa tõe n lebgame zĩig pʋgẽ ne "Lebge".',
+  'settings.lang.translate_hint': 'Tʋʋma la kood dãmb fãa tõe n lebgame zĩig pʋgẽ ne "Lebge".',
   'settings.lang.search': 'Baos buud-gomde, tẽnga bɩ koode…',
   'settings.lang.african': 'Afriki buud-gomd dãmba',
   'settings.lang.international': 'Dũniyã buud-gomd dãmba',

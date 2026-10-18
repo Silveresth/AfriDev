@@ -8,7 +8,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { api, unwrap } from '@/shared/api';
 import { useDebounced } from '@/shared/hooks';
 import { useLang } from '@/shared/i18n';
-import { NAV_ITEMS, PUBLISH_ITEMS } from '@/shared/layout';
+import { PUBLISH_ITEMS, visibleNavItems } from '@/shared/layout';
 import { cn } from '@/shared/lib';
 import { useSession } from '@/shared/session';
 import { useTheme } from '@/shared/theme';
@@ -87,7 +87,7 @@ export default function Palette({ onClose }: { onClose: () => void }) {
         });
       }
     }
-    for (const item of NAV_ITEMS) {
+    for (const item of visibleNavItems(isAuthenticated)) {
       const label = item.msgKey ? t(item.msgKey) : item.label;
       if (!item.soon && (matches(item.label) || matches(label))) {
         items.push({ id: `nav-${item.href}`, group: t('search.group_goto'), label, icon: item.icon, run: go(item.href) });

@@ -84,6 +84,8 @@ export function domainOf(url: string): string {
 export function resolveInternalRoute(url: string): string | null {
   if (!url) return null;
   const trimmed = url.trim();
+  // Formulaires de modification (« ?edit=1 ») : seulement sur le site, jamais l'écran natif.
+  if (/[?&]edit=/.test(trimmed)) return null;
 
   // Schéma personnalisé natif : afridev://...
   if (/^afridev:\/\//i.test(trimmed)) {
@@ -121,8 +123,8 @@ export function resolveInternalRoute(url: string): string | null {
 }
 
 function normalizeInternalPath(pathname: string): string | null {
-  const clean = pathname.replace(/\/+$/, '');
-  
+  const clean = pathname.split(/[?#]/)[0]!.replace(/\/+$/, '') || '/';
+
   // Post : /post/[id] ou /feed/[id] (route web) -> /post/[id]
   const postMatch = clean.match(/^\/(?:post|feed)\/([^/?#]+)/i);
   if (postMatch) return `/post/${postMatch[1]}`;
@@ -143,9 +145,21 @@ function normalizeInternalPath(pathname: string): string | null {
   const jobMatch = clean.match(/^\/jobs?\/([0-9a-f-]{36})$/i);
   if (jobMatch) return `/job/${jobMatch[1]}`;
 
-  // Marque-pages
+  // Marque-pages, messagerie, réglages, recherche
   if (clean === '/bookmarks') return '/bookmarks';
   if (clean === '/messages') return '/messages';
+  const conversationMatch = clean.match(/^\/messages\/([0-9a-f-]{36})$/i);
+  if (conversationMatch) return `/messages/${conversationMatch[1]}`;
+  if (clean === '/settings') return '/settings';
+  if (clean === '/search') return '/search';
+
+  // Mon profil (abonnés, karma…) : l'onglet Profil
+  if (clean === '/profile' || clean.startsWith('/profile/')) return '/(tabs)/profile';
+
+  // Listes sans écran dédié dans l'appli : le fil d'accueil, filtré sur le bon type
+  if (clean === '/jobs') return '/(tabs)/feed?filter=jobs';
+  if (clean === '/projects') return '/(tabs)/feed?filter=projects';
+  if (clean === '/snippets') return '/(tabs)/feed?filter=snippets';
 
   // Hub : /h/[slug] -> /h/[slug]
   const hubMatch = clean.match(/^\/h\/([^/?#]+)/i);
@@ -197,12 +211,22 @@ export function notificationWebUrl(data: unknown): string | null {
  * Tout s'ouvre dans l'appli : écran natif pour une page AfriDev, navigateur interne (WebView)
  * pour un site externe ; mailto:, tel: et sms: vont à l'appli du téléphone prévue pour.
  */
+/**
+ * Va vers une route interne. Les onglets sont rejoints (navigate) plutôt qu'empilés : pousser
+ * « (tabs) » une seconde fois créerait une nouvelle barre d'onglets par-dessus la première.
+ */
+export function goToRoute(route: string, { replace = false }: { replace?: boolean } = {}) {
+  if (route.startsWith('/(tabs)')) router.navigate(route as never);
+  else if (replace) router.replace(route as never);
+  else router.push(route as never);
+}
+
 export function openLink(url: string) {
   const trimmed = (url ?? '').trim();
   const internalRoute = resolveInternalRoute(trimmed);
   if (internalRoute) {
     try {
-      router.push(internalRoute as never);
+      goToRoute(internalRoute);
       return Promise.resolve();
     } catch {
       // repli : navigateur interne

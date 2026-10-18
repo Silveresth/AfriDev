@@ -104,7 +104,7 @@ const ig: LocaleMessages = {
   'settings.lang.subtitle': 'Nsụgharị na asụsụ Afrịka',
   'settings.lang.default': 'Asụsụ izizi nke ngwa',
   'settings.lang.coming_soon': 'Na-abịa n\'oge na-adịghị anya',
-  'settings.lang.translate_hint': '💡 Enwere ike ịtụgharị ozi niile ngwa ngwa site na bọtịnụ "Tụgharịa".',
+  'settings.lang.translate_hint': 'Enwere ike ịtụgharị ozi niile ngwa ngwa site na bọtịnụ "Tụgharịa".',
   'settings.lang.search': 'Chọọ asụsụ, obodo ma ọ bụ koodu…',
   'settings.lang.african': 'Asụsụ ndị Afrịka',
   'settings.lang.international': 'Asụsụ ụwa niile',

@@ -412,7 +412,7 @@ function Thread({ id }: { id: string }) {
           <div className="m-auto flex flex-col items-center gap-2 text-center">
             <Avatar name={name} src={other.avatar_url} size={72} />
             <p className="font-semibold text-ink">{name}</p>
-            <p className="text-body-sm text-ink-muted">Dites bonjour 👋</p>
+            <p className="text-body-sm text-ink-muted">Dites bonjour</p>
           </div>
         ) : null}
       </div>

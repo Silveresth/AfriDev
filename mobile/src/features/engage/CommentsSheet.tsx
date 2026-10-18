@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { SendHorizontal } from 'lucide-react-native';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { useComments, useSendComment } from '@/features/feed/api';
@@ -46,13 +46,20 @@ const DETAIL: Record<ThreadKind, (id: string) => string> = {
 
 /** Commentaires (post, snippet) ou réponses (question) dans une feuille, sans quitter le fil. */
 export function CommentsSheet({ kind, id, visible, onClose }: { kind: ThreadKind; id: string; visible: boolean; onClose: () => void }) {
-  if (!visible) return null;
+  // Fermée, la feuille ne monte pas son contenu (aucune requête). « Tout voir » attend qu'elle
+  // soit refermée pour ouvrir l'écran, sinon il s'afficherait sous elle.
+  const pending = useRef(false);
   const seeAll = () => {
+    pending.current = true;
     onClose();
+  };
+  const openDetail = () => {
+    if (!pending.current) return;
+    pending.current = false;
     router.push(DETAIL[kind](id) as never);
   };
   return (
-    <Sheet visible={visible} onClose={onClose}>
+    <Sheet visible={visible} onClose={onClose} onHidden={openDetail}>
       {kind === 'project' || kind === 'job' ? (
         <TargetThread type={kind} id={id} onSeeAll={seeAll} />
       ) : kind === 'post' ? (

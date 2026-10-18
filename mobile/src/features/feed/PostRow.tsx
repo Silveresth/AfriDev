@@ -1,12 +1,10 @@
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { BarChart3 } from 'lucide-react-native';
 import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ActionBar } from '@/features/engage';
-import { absoluteUrl, errorMessage } from '@/shared/api';
-import { useDataSaver } from '@/shared/data-saver';
+import { errorMessage } from '@/shared/api';
 import { useT } from '@/shared/i18n';
 import { plainText, timeAgo } from '@/shared/lib';
 import { useSession } from '@/shared/session';
@@ -14,6 +12,7 @@ import { radius, useTheme } from '@/shared/theme';
 import { HubRoleBadge, PinnedBadge, ProfileAvatar, TagRow, Text, useToast } from '@/shared/ui';
 
 import { imageOf, type Post, useDeletePost, useScoreVote } from './api';
+import { PostImage } from './PostImage';
 
 /** Ligne de communauté : « h/lome-dev » si le post est dans un hub, sinon l'auteur. */
 export function PostByline({ post, showHub = true }: { post: Post; showHub?: boolean }) {
@@ -52,10 +51,8 @@ export function PostByline({ post, showHub = true }: { post: Post; showHub?: boo
 
 export const PostRow = memo(function PostRow({ post, showHub = true }: { post: Post; showHub?: boolean }) {
   const { colors } = useTheme();
-  const { textOnly } = useDataSaver();
   const { t } = useT();
   const image = imageOf(post);
-  const thumb = image && !textOnly ? absoluteUrl(image.urls.small ?? image.original_url) : undefined;
   const excerpt = plainText(post.body, 200);
   const open = () => router.push(`/post/${post.id}`);
 
@@ -65,8 +62,8 @@ export const PostRow = memo(function PostRow({ post, showHub = true }: { post: P
       style={({ pressed }) => [styles.row, { borderBottomColor: colors.line }, pressed && { backgroundColor: colors.pressed }]}
     >
       <PostByline post={post} showHub={showHub} />
-      <View style={styles.content}>
-        <View style={styles.flex}>
+      {post.title || excerpt ? (
+        <View style={styles.content}>
           {post.title ? (
             <Text variant="headline" numberOfLines={3}>
               {post.title}
@@ -78,16 +75,8 @@ export const PostRow = memo(function PostRow({ post, showHub = true }: { post: P
             </Text>
           ) : null}
         </View>
-        {thumb ? (
-          <Image
-            source={{ uri: thumb }}
-            style={[styles.thumb, { backgroundColor: colors.container }]}
-            contentFit="cover"
-            transition={150}
-            recyclingKey={post.id}
-          />
-        ) : null}
-      </View>
+      ) : null}
+      {image ? <PostImage media={image} variant="feed" recyclingKey={post.id} /> : null}
       {post.kind === 'poll' ? (
         <View style={[styles.poll, { backgroundColor: colors.container }]}>
           <BarChart3 size={14} color={colors.inkMuted} />
@@ -134,8 +123,7 @@ const styles = StyleSheet.create({
   row: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12, gap: 8, borderBottomWidth: StyleSheet.hairlineWidth },
   byline: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   strong: { fontWeight: '700' },
-  content: { flexDirection: 'row', gap: 12 },
-  flex: { flex: 1, gap: 4 },
-  thumb: { width: 84, height: 84, borderRadius: radius.md },
+  content: { gap: 4 },
+  flex: { flex: 1 },
   poll: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.sm },
 });

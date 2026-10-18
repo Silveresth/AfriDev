@@ -1,12 +1,29 @@
 'use client';
 
-import { Sun } from 'lucide-react';
+import { Briefcase, MessageCircle, MessagesSquare, Sparkles, Sun, TrendingUp, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 
 import { useSession } from '@/shared/session';
 import { Skeleton, SideCard } from '@/shared/ui';
 
 import { useDigest } from '../api';
+
+/** Icône d'une ligne du résumé, d'après la rubrique visée (plutôt qu'un emoji). */
+function DigestIcon({ url }: { url?: string | null }) {
+  const path = url ?? '';
+  const Icon = path.startsWith('/jobs')
+    ? Briefcase
+    : path.startsWith('/questions')
+      ? MessagesSquare
+      : path.startsWith('/profile')
+        ? UserPlus
+        : path.startsWith('/messages')
+          ? MessageCircle
+          : path
+            ? TrendingUp
+            : Sparkles;
+  return <Icon className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />;
+}
 
 /** « 5 min de lecture » : le résumé IA du jour (offres, questions, posts, messages, abonnés). */
 export function DigestCard() {
@@ -26,9 +43,7 @@ export function DigestCard() {
           {digest.data?.items.map((item, index) => {
             const content = (
               <>
-                <span className="shrink-0" aria-hidden>
-                  {item.emoji}
-                </span>
+                <DigestIcon url={item.url} />
                 <span>{item.text}</span>
               </>
             );

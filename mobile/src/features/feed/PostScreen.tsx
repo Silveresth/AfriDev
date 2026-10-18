@@ -1,13 +1,11 @@
-import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ImageIcon, MessageSquare, Pin, PinOff, Share2 } from 'lucide-react-native';
+import { MessageSquare, Pin, PinOff, Share2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Pressable, Share, StyleSheet, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Share, StyleSheet, View } from 'react-native';
 
 import { MoreButton } from '@/features/engage';
-import { absoluteUrl, errorMessage, PUBLIC_WEB_URL } from '@/shared/api';
+import { errorMessage, PUBLIC_WEB_URL } from '@/shared/api';
 import { TranslateBar } from '@/features/translation';
-import { useDataSaver } from '@/shared/data-saver';
 import { useT } from '@/shared/i18n';
 import { formatCount } from '@/shared/lib';
 import { AppearItem } from '@/shared/motion';
@@ -18,18 +16,14 @@ import { EmptyState, ErrorState, Header, IconButton, ListFooter, Loading, Markdo
 import { type Comment, imageOf, type Post, useComments, useDeletePost, usePinPost, usePost } from './api';
 import { CommentComposer, CommentRow, threadRows } from './Comments';
 import { Poll } from './Poll';
+import { PostImage } from './PostImage';
 import { PostByline } from './PostRow';
 import { VoteCapsule } from './VoteCapsule';
 
 function PostBody({ post }: { post: Post }) {
   const { colors } = useTheme();
-  const { textOnly } = useDataSaver();
-  const [revealed, setRevealed] = useState(false);
   const { t, tp } = useT();
   const image = imageOf(post);
-  const uri = image ? absoluteUrl(image.urls.large ?? image.original_url) : undefined;
-  const ratio = image?.width && image.height ? image.width / image.height : 16 / 9;
-  const hidden = textOnly && !revealed;
 
   return (
     <View style={[styles.post, { borderBottomColor: colors.line }]}>
@@ -37,24 +31,7 @@ function PostBody({ post }: { post: Post }) {
       {post.title ? <Text variant="title">{post.title}</Text> : null}
       {post.body ? <Markdown source={post.body} /> : null}
       <TranslateBar text={[post.title, post.body].filter(Boolean).join('\n\n')} />
-      {uri && hidden ? (
-        <Pressable
-          onPress={() => setRevealed(true)}
-          style={[styles.image, styles.hiddenImage, { aspectRatio: ratio, backgroundColor: colors.container }]}
-        >
-          <ImageIcon size={18} color={colors.inkMuted} />
-          <Text variant="small" tone="muted">
-            {t('feed.image_hidden')}
-          </Text>
-        </Pressable>
-      ) : uri ? (
-        <Image
-          source={{ uri }}
-          style={[styles.image, { aspectRatio: ratio, backgroundColor: colors.container }]}
-          contentFit="cover"
-          transition={200}
-        />
-      ) : null}
+      {image ? <PostImage media={image} variant="detail" /> : null}
       {post.kind === 'poll' ? <Poll post={post} /> : null}
       <TagRow tags={post.tags} max={5} />
       <View style={styles.actions}>
@@ -173,8 +150,6 @@ export function PostScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   post: { padding: 16, gap: 12, borderBottomWidth: StyleSheet.hairlineWidth },
-  image: { width: '100%', borderRadius: radius.md },
-  hiddenImage: { alignItems: 'center', justifyContent: 'center', gap: 8 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 34, paddingHorizontal: 12, borderRadius: radius.pill },
   section: { marginTop: 8 },

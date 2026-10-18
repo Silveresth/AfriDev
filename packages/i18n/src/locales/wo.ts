@@ -104,7 +104,7 @@ const wo: LocaleMessages = {
   'settings.lang.subtitle': 'Tektal ak làkk yu Afrik',
   'settings.lang.default': 'Làkk bu njëkk bi',
   'settings.lang.coming_soon': 'Dina ñëw léegi',
-  'settings.lang.translate_hint': '💡 Mën nga tekki post yi ak snippets yi saa yu nekk ci butoŋ « Tekki ».',
+  'settings.lang.translate_hint': 'Mën nga tekki post yi ak snippets yi saa yu nekk ci butoŋ « Tekki ».',
   'settings.lang.search': 'Seet làkk, réew walla code…',
   'settings.lang.african': 'Làkki Afrik',
   'settings.lang.international': 'Làkki àdduna',

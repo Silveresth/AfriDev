@@ -104,7 +104,7 @@ const zu: LocaleMessages = {
   'settings.lang.subtitle': 'Ukuhunyushwa nezilimi zase-Afrika',
   'settings.lang.default': 'Ulimi lwesistimu oluyisiqalo',
   'settings.lang.coming_soon': 'Kuyeza maduze',
-  'settings.lang.translate_hint': '💡 Konke okuthunyelwe namakhodi kungahunyushwa ngokushesha ngenkinobho ethi "Humusha".',
+  'settings.lang.translate_hint': 'Konke okuthunyelwe namakhodi kungahunyushwa ngokushesha ngenkinobho ethi "Humusha".',
   'settings.lang.search': 'Sesha ulimi, izwe noma ikhodi…',
   'settings.lang.african': 'Izilimi zase-Afrika',
   'settings.lang.international': 'Izilimi zomhlaba',
