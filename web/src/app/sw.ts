@@ -143,6 +143,16 @@ const runtimeCaching: RuntimeCaching[] = [
   },
 ];
 
+// Supervision (/monitoring/, Basic Auth nginx) : jamais interceptée. Un 401 relayé par le service
+// worker n'ouvre pas la fenêtre de mot de passe du navigateur ; on laisse donc le navigateur faire.
+// Enregistré avant Serwist : stopImmediatePropagation l'empêche de répondre à ces requêtes.
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  if (url.origin === self.location.origin && url.pathname.startsWith('/monitoring/')) {
+    event.stopImmediatePropagation();
+  }
+});
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
