@@ -1,6 +1,6 @@
 'use client';
 
-import { Ban, Search, ShieldCheck, ShieldMinus, ShieldPlus, UserCheck, Users } from 'lucide-react';
+import { Ban, Search, ShieldCheck, ShieldMinus, ShieldPlus, Trash2, UserCheck, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -24,7 +24,7 @@ import {
   Pagination,
 } from '@/shared/ui';
 
-import { type Member, type MemberFilters, useMembers, useUpdateMember } from '../api';
+import { type Member, type MemberFilters, useDeleteMember, useMembers, useUpdateMember } from '../api';
 
 type Role = 'all' | 'staff' | 'suspended';
 
@@ -40,7 +40,7 @@ export function MembersScreen() {
       <PageHeader
         eyebrow="Back-office"
         title="Membres"
-        description="Rechercher un compte, le suspendre en cas d'abus, ou gérer l'équipe de modération."
+        description="Rechercher un compte, le suspendre ou le supprimer en cas d'abus, ou gérer l'équipe de modération."
       />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
@@ -183,10 +183,27 @@ function Actions({ member }: { member: Member }) {
   const { user } = useSession();
   const toast = useToast();
   const update = useUpdateMember();
+  const remove = useDeleteMember();
   if (!user || member.id === user.id) return <span className="text-label-md text-ink-faint">Vous</span>;
   const isTeam = member.is_staff || member.is_superuser;
   // Mêmes règles que le serveur : l'équipe n'est gérée que par un administrateur.
   if (isTeam && !user.is_superuser) return null;
+
+  // Irréversible : on fait retaper le pseudo, comme pour la suppression de son propre compte.
+  const destroy = () => {
+    const typed = window.prompt(
+      `Supprimer définitivement @${member.username} ?\nProfil, publications, messages et médias seront effacés. Cette action est irréversible.\n\nTapez « ${member.username} » pour confirmer :`,
+    );
+    if (typed === null) return;
+    if (typed.trim().toLowerCase() !== member.username.toLowerCase()) {
+      toast('Pseudo incorrect : suppression annulée.', 'error');
+      return;
+    }
+    remove.mutate(member.id, {
+      onSuccess: () => toast(`@${member.username} a été supprimé.`),
+      onError: (error) => toast(errorMessage(error), 'error'),
+    });
+  };
 
   const run = (changes: { is_active?: boolean; is_staff?: boolean }, confirm: string, done: string) => {
     if (!window.confirm(confirm)) return;
@@ -247,6 +264,11 @@ function Actions({ member }: { member: Member }) {
             <ShieldPlus className="size-4" aria-hidden /> Ajouter à l&apos;équipe
           </Button>
         )
+      ) : null}
+      {!member.is_superuser ? (
+        <Button variant="ghost" size="sm" className="text-danger hover:bg-danger-soft" loading={remove.isPending} onClick={destroy}>
+          <Trash2 className="size-4" aria-hidden /> Supprimer
+        </Button>
       ) : null}
     </div>
   );

@@ -9,6 +9,7 @@ import { ApiError, tokenStore } from '@/shared/api';
 import { AnimatedSplash } from '@/shared/brand';
 import { DataSaverProvider } from '@/shared/data-saver';
 import { LangProvider } from '@/shared/i18n';
+import { OfflineBanner } from '@/shared/layout/OfflineBanner';
 import { PushRegistration } from '@/shared/push';
 import { SessionProvider, useSession } from '@/shared/session';
 import { ThemeProvider, useTheme } from '@/shared/theme';
@@ -93,6 +94,7 @@ function Navigator() {
         {/* Navigateur interne : aussi avant connexion (mot de passe oublié, CGU…). */}
         <Stack.Screen name="browser" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
       </Stack>
+      <OfflineBanner />
     </>
   );
 }

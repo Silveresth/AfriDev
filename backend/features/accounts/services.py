@@ -326,6 +326,21 @@ def set_account_active(*, actor: User, user_id, active: bool) -> User:
     return user
 
 
+@transaction.atomic
+def remove_account(*, actor: User, user_id) -> None:
+    """Back-office : supprime définitivement un compte et tout ce qui s'y rattache, comme la
+    suppression demandée par le membre lui-même. Jamais un administrateur."""
+    from features.hubs import services as hub_services
+    from features.profiles import services as profile_services
+
+    user = _managed_account(actor=actor, user_id=user_id)
+    if user.is_superuser:
+        raise PermissionDeniedError("Un compte administrateur ne peut pas être supprimé.")
+    profile_services.forget_follows(user_id=user.id)
+    hub_services.forget_member(user_id=user.id)
+    user.delete()
+
+
 def set_account_staff(*, actor: User, user_id, staff: bool) -> User:
     """Donne ou retire l'accès au back-office (modération). Réservé aux administrateurs."""
     if not actor.is_superuser:

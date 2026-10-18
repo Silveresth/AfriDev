@@ -292,7 +292,8 @@ function NotificationRow({ notification, onNavigate }: { notification: Notificat
           </span>
         </span>
       </button>
-      <div className="absolute right-3 bottom-2 flex items-center gap-0.5 rounded-lg sm:opacity-0 sm:transition-opacity sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
+      {/* Toujours visibles (atténuées au repos) : supprimer ne doit pas dépendre du survol. */}
+      <div className="absolute right-3 bottom-2 flex items-center gap-0.5 rounded-lg sm:opacity-60 sm:transition-opacity sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
         {unread ? (
           <RowAction label="Marquer comme lue" onClick={() => markRead.mutate(notification)}>
             <Check className="size-3.5" aria-hidden />

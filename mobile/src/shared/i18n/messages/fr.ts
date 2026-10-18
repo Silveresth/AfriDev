@@ -185,6 +185,14 @@ const fr = {
   'notif.mark_all': 'Tout marquer comme lu',
   'notif.empty': 'Rien de neuf',
   'notif.empty_body': 'Les réponses et commentaires sur vos publications arriveront ici.',
+  'offline.banner': 'Vous êtes en mode hors ligne',
+  'offline.back': 'De retour en ligne',
+  'offline.title': 'Mode hors ligne',
+  'notif.delete': 'Supprimer la notification',
+  'notif.clear_all': 'Tout effacer',
+  'notif.clear_confirm': 'Effacer toutes les notifications ?',
+  'notif.clear_body': 'Elles disparaîtront de cet appareil et de vos autres appareils.',
+  'notif.cleared': 'Notifications effacées',
 
   // ── Profil ──
   'profile.since': 'Membre depuis {date}',

@@ -3,7 +3,7 @@ import { CloudOff } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
 
-import { errorMessage } from '@/shared/api';
+import { ApiError, errorMessage } from '@/shared/api';
 import { BrandLoader } from '@/shared/brand';
 import { useT } from '@/shared/i18n';
 import { Dots, SkeletonList } from '@/shared/motion';
@@ -63,11 +63,13 @@ export function EmptyState({
 
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   const { t } = useT();
+  // Page jamais chargée et pas de réseau : simplement « Mode hors ligne », sans explication.
+  const offline = error instanceof ApiError && error.isNetwork;
   return (
     <EmptyState
       icon={CloudOff}
-      title={t('state.load_error')}
-      body={errorMessage(error)}
+      title={offline ? t('offline.title') : t('state.load_error')}
+      body={offline ? undefined : errorMessage(error)}
       action={onRetry ? { label: t('common.retry'), onPress: onRetry } : undefined}
     />
   );

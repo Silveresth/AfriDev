@@ -1,6 +1,7 @@
 """Vues minces : valident l'entrée, puis appellent services / selectors. Réservé au staff."""
 
 from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework import status
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -95,6 +96,17 @@ class MemberDetailView(APIView):
                 raise NotFoundError("Membre introuvable.")
         context = {"cards": selectors.member_cards(users=[user])}
         return Response(MemberSerializer(user, context=context).data)
+
+    @extend_schema(
+        operation_id="backoffice_members_destroy",
+        request=None,
+        responses={204: None},
+        description="Supprime définitivement un compte (profil, publications, messages…). "
+        "Comptes de l'équipe : administrateurs uniquement ; jamais un administrateur.",
+    )
+    def delete(self, request, user_id):
+        services.delete_member(actor=request.user, user_id=user_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ContentListView(APIView):

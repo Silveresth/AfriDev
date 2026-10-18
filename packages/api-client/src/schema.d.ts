@@ -582,7 +582,8 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /** @description Supprime définitivement un compte (profil, publications, messages…). Comptes de l'équipe : administrateurs uniquement ; jamais un administrateur. */
+        delete: operations["backoffice_members_destroy"];
         options?: never;
         head?: never;
         /** @description Suspendre / réactiver un compte (is_active) ; gérer l'équipe (is_staff, administrateurs uniquement). */
@@ -3398,7 +3399,6 @@ export interface components {
             readonly id: string;
             /** Format: uuid */
             readonly project_id: string;
-            /** Format: int64 */
             readonly number: number;
             readonly title: string;
             /** Format: uri */
@@ -3694,13 +3694,10 @@ export interface components {
             readonly pinned: components["schemas"]["PinnedItem"][];
             readonly craft_score: number;
             readonly craft: components["schemas"]["Craft"];
-            /** Format: int64 */
             readonly karma_score: number;
             readonly karma_details: components["schemas"]["KarmaDetails"];
             readonly badges: components["schemas"]["ProfileBadge"][];
-            /** Format: int64 */
             readonly followers_count: number;
-            /** Format: int64 */
             readonly following_count: number;
             /** @description Le visiteur connecté suit-il ce membre ? (faux pour soi-même et les anonymes) */
             readonly is_following: boolean;
@@ -4347,13 +4344,10 @@ export interface components {
             readonly pinned: components["schemas"]["PinnedItem"][];
             readonly craft_score: number;
             readonly craft: components["schemas"]["Craft"];
-            /** Format: int64 */
             readonly karma_score: number;
             readonly karma_details: components["schemas"]["KarmaDetails"];
             readonly badges: components["schemas"]["ProfileBadge"][];
-            /** Format: int64 */
             readonly followers_count: number;
-            /** Format: int64 */
             readonly following_count: number;
             /** @description Le visiteur connecté suit-il ce membre ? (faux pour soi-même et les anonymes) */
             readonly is_following: boolean;
@@ -4667,7 +4661,6 @@ export interface components {
             /** Format: date-time */
             readonly published_at: string | null;
             readonly ai_review: unknown;
-            /** Format: int64 */
             readonly comment_count: number;
             /** Format: date-time */
             readonly created_at: string;
@@ -4688,7 +4681,6 @@ export interface components {
          *     n'ont pas de champs faussement optionnels.
          */
         SnippetVersion: {
-            /** Format: int64 */
             readonly number: number;
             readonly content: string;
             /** Format: date-time */
@@ -5950,6 +5942,26 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PaginatedMemberList"];
                 };
+            };
+        };
+    };
+    backoffice_members_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

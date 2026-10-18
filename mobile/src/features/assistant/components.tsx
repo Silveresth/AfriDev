@@ -14,17 +14,22 @@ import {
   UserPlus,
   UsersRound,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import Animated, { FadeOut } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 
 import { errorMessage } from '@/shared/api';
 import { useT } from '@/shared/i18n';
 import { openLink } from '@/shared/lib';
+import { useSession } from '@/shared/session';
 import { radius, typography, useTheme } from '@/shared/theme';
 import { Avatar, Button, Sheet, TagRow, Text, useToast } from '@/shared/ui';
 
 import { type CodeIssue, type TeamCandidate, useCodeReview, useDigest, useInviteTeammate, useJobMatch, useTeamSuggestions } from './api';
+
+/** Durée d'affichage du résumé du jour pour les comptes de l'équipe. */
+const DIGEST_STAFF_MS = 5000;
 
 function scoreColor(score: number, colors: ReturnType<typeof useTheme>['colors']) {
   return score >= 70 ? colors.secondaryInk : score >= 45 ? colors.tertiary : colors.danger;
@@ -179,10 +184,21 @@ export function CodeReviewSection({ snippetId }: { snippetId: string }) {
 export function DigestCard() {
   const { colors } = useTheme();
   const { t } = useT();
+  const { user } = useSession();
   const digest = useDigest();
-  if (digest.isError || (digest.isSuccess && !digest.data)) return null;
+  const [hidden, setHidden] = useState(false);
+  const ready = Boolean(digest.data);
+
+  // Comptes de l'équipe (admin, modération) : simple aperçu, retiré au bout de 5 secondes.
+  useEffect(() => {
+    if (!user?.is_staff || !ready) return;
+    const timer = setTimeout(() => setHidden(true), DIGEST_STAFF_MS);
+    return () => clearTimeout(timer);
+  }, [user?.is_staff, ready]);
+
+  if (hidden || digest.isError || (digest.isSuccess && !digest.data)) return null;
   return (
-    <View style={[styles.digest, { backgroundColor: colors.primarySoft }]}>
+    <Animated.View exiting={FadeOut.duration(300)} style={[styles.digest, { backgroundColor: colors.primarySoft }]}>
       <View style={styles.inline}>
         <Sun size={16} color={colors.primaryInk} />
         <Text variant="bodyStrong" style={{ color: colors.primaryInk }}>
@@ -201,7 +217,7 @@ export function DigestCard() {
           </Pressable>
         ))
       )}
-    </View>
+    </Animated.View>
   );
 }
 

@@ -9,16 +9,18 @@ import {
   ChevronDown,
   Copy,
   ImageIcon,
-  ImagePlus,
   Languages,
   Loader2,
   MessageCircle,
   Mic,
   MoreVertical,
+  Paperclip,
   Pencil,
+  Plus,
   Reply,
   Send,
   ShieldAlert,
+  Smile,
   Sparkles,
   Trash2,
   UserRound,
@@ -27,7 +29,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useChatReplies } from '@/features/assistant';
 import { translateText } from '@/features/translation';
@@ -53,6 +55,8 @@ import {
   useThread,
 } from '../api';
 
+import { EmojiPicker } from './EmojiPicker';
+
 type Quoted = NonNullable<Message['reply_to']>;
 
 /** Messages directs, façon WhatsApp : conversations à gauche, discussion à droite (une seule colonne sur mobile). */
@@ -68,8 +72,8 @@ function Messages() {
   const params = useSearchParams();
   const selected = params.get('c');
   return (
-    <div className="flex h-[calc(100dvh-8.5rem)] min-h-[28rem] overflow-hidden rounded-2xl border border-line bg-card shadow-card lg:h-[calc(100dvh-6.5rem)]">
-      <aside className={cn('w-full shrink-0 flex-col border-line md:flex md:w-80 md:border-r', selected ? 'hidden' : 'flex')}>
+    <div className="flex h-[calc(100dvh-8.5rem)] min-h-[28rem] gap-0 overflow-hidden rounded-3xl border border-line/70 bg-card shadow-card md:gap-3 md:p-3 lg:h-[calc(100dvh-6.5rem)]">
+      <aside className={cn('w-full shrink-0 flex-col bg-container-low md:flex md:w-80 md:rounded-2xl lg:w-[22rem]', selected ? 'hidden' : 'flex')}>
         <Inbox selected={selected} />
       </aside>
       <section className={cn('min-w-0 flex-1 flex-col', selected ? 'flex' : 'hidden md:flex')}>
@@ -79,14 +83,51 @@ function Messages() {
   );
 }
 
+type InboxFilter = 'all' | 'unread';
+
 function Inbox({ selected }: { selected: string | null }) {
   const inbox = useInbox();
+  const [filter, setFilter] = useState<InboxFilter>('all');
+  const unreadCount = inbox.items.filter((conversation) => conversation.unread > 0).length;
+  const conversations = filter === 'unread' ? inbox.items.filter((conversation) => conversation.unread > 0) : inbox.items;
   return (
     <>
-      <header className="flex h-14 shrink-0 items-center border-b border-line px-4">
-        <h1 className="text-headline-md text-ink">Messages</h1>
+      <header className="flex shrink-0 items-center justify-between px-5 pt-5 pb-3">
+        <h1 className="text-headline-md font-bold text-ink">Messages</h1>
+        <Link
+          href="/search?type=people"
+          aria-label="Nouvelle conversation"
+          title="Nouvelle conversation : chercher un membre"
+          className="flex size-8 items-center justify-center rounded-lg bg-primary text-on-primary shadow-xs transition-transform hover:scale-105"
+        >
+          <Plus className="size-4.5" aria-hidden />
+        </Link>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="px-5 pb-3">
+        <div className="flex rounded-xl bg-card p-1 shadow-2xs ring-1 ring-line/60" role="tablist" aria-label="Filtrer les conversations">
+          {(
+            [
+              ['all', 'Toutes'],
+              ['unread', unreadCount ? `Non lues · ${unreadCount}` : 'Non lues'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={filter === value}
+              onClick={() => setFilter(value)}
+              className={cn(
+                'h-8 flex-1 rounded-lg text-label-md transition-colors',
+                filter === value ? 'bg-container-low font-semibold text-ink shadow-2xs' : 'font-medium text-ink-muted hover:text-ink',
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         {inbox.isPending ? (
           <div className="space-y-3 p-4">
             {[0, 1, 2, 3].map((index) => (
@@ -99,19 +140,21 @@ function Inbox({ selected }: { selected: string | null }) {
               </div>
             ))}
           </div>
-        ) : !inbox.items.length ? (
+        ) : !conversations.length ? (
           <div className="px-6 py-12 text-center">
-            <p className="font-semibold text-ink">Aucune conversation</p>
-            <p className="mt-1 text-body-sm text-ink-muted">Ouvrez le profil d’un membre et touchez « Message » pour lui écrire.</p>
+            <p className="font-semibold text-ink">{filter === 'unread' ? 'Tout est lu' : 'Aucune conversation'}</p>
+            <p className="mt-1 text-body-sm text-ink-muted">
+              {filter === 'unread' ? 'Aucun message en attente de lecture.' : 'Touchez « + » ou ouvrez le profil d’un membre pour lui écrire.'}
+            </p>
           </div>
         ) : (
-          <ul>
-            {inbox.items.map((conversation) => (
+          <ul className="space-y-0.5">
+            {conversations.map((conversation) => (
               <li key={conversation.id}>
                 <ConversationRow conversation={conversation} active={conversation.id === selected} />
               </li>
             ))}
-            {inbox.hasNextPage ? (
+            {inbox.hasNextPage && filter === 'all' ? (
               <li className="p-3">
                 <Button variant="ghost" size="sm" className="w-full" onClick={() => inbox.fetchNextPage()} loading={inbox.isFetchingNextPage}>
                   Charger plus
@@ -138,29 +181,35 @@ function ConversationRow({ conversation, active }: { conversation: Conversation;
   return (
     <Link
       href={`/messages?c=${conversation.id}`}
-      className={cn('flex items-center gap-3 px-4 py-3 transition-colors hover:bg-container-low', active && 'bg-container')}
+      aria-current={active ? 'page' : undefined}
+      className={cn(
+        'flex items-center gap-3 rounded-2xl px-3 py-3 transition-[background-color,box-shadow]',
+        active ? 'bg-card shadow-card ring-1 ring-line/50' : 'hover:bg-card/70',
+      )}
     >
-      <Avatar name={name} src={other?.avatar_url} size={48} />
+      <Avatar name={name} src={other?.avatar_url} size={42} />
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline gap-2">
-          <span className={cn('min-w-0 flex-1 truncate text-body-md', unread ? 'font-bold text-ink' : 'font-medium text-ink')}>{name}</span>
+          <span className={cn('min-w-0 flex-1 truncate text-body-sm', unread ? 'font-bold text-ink' : 'font-semibold text-ink')}>{name}</span>
           {conversation.last_message_at ? (
-            <TimeAgo date={conversation.last_message_at} className={cn('shrink-0 text-label-sm', unread ? 'font-semibold text-primary' : 'text-ink-faint')} />
+            <TimeAgo date={conversation.last_message_at} className={cn('shrink-0 text-label-sm', unread ? 'font-semibold text-primary-ink' : 'text-ink-faint')} />
           ) : null}
         </span>
-        <span className={cn('flex items-center gap-1 text-body-sm', unread ? 'font-semibold text-ink' : 'text-ink-muted')}>
-          {conversation.last_message_mine ? (
+        <span className={cn('mt-0.5 flex items-center gap-1.5 text-label-md', unread ? 'font-semibold text-ink' : 'text-ink-muted')}>
+          <span className="min-w-0 flex-1 truncate">
+            {conversation.last_message_mine ? <span className="text-ink-faint">Vous : </span> : null}
+            {conversation.last_message_preview}
+          </span>
+          {unread ? (
+            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-danger/85 px-1.5 text-label-sm font-bold text-white tabular-nums">
+              {conversation.unread}
+            </span>
+          ) : conversation.last_message_mine ? (
             seen ? (
               <CheckCheck className="size-4 shrink-0 text-primary" aria-label="Vu" />
             ) : (
               <Check className="size-4 shrink-0 text-ink-faint" aria-label="Envoyé" />
             )
-          ) : null}
-          <span className="min-w-0 flex-1 truncate">{conversation.last_message_preview}</span>
-          {unread ? (
-            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-label-sm font-bold text-on-primary tabular-nums">
-              {conversation.unread}
-            </span>
           ) : null}
         </span>
       </span>
@@ -170,7 +219,7 @@ function ConversationRow({ conversation, active }: { conversation: Conversation;
 
 function EmptyThread() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-container-low/40 p-8 text-center">
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
       <span className="flex size-16 items-center justify-center rounded-full border-2 border-ink">
         <MessageCircle className="size-8 text-ink" aria-hidden />
       </span>
@@ -183,7 +232,7 @@ function EmptyThread() {
 function Thread({ id }: { id: string }) {
   const router = useRouter();
   const toast = useToast();
-  const { user } = useSession();
+  const { user, profile } = useSession();
   const conversation = useConversation(id);
   const thread = useThread(id);
   const markRead = useMarkConversationRead();
@@ -309,7 +358,7 @@ function Thread({ id }: { id: string }) {
   return (
     <>
       {selecting ? (
-        <header className="flex h-14 shrink-0 items-center gap-1 border-b border-line bg-primary-soft/40 px-2 sm:px-3">
+        <header className="flex h-16 shrink-0 items-center gap-1 rounded-2xl bg-primary-soft/40 px-2 sm:px-3">
           <IconAction label="Annuler la sélection" onClick={exitSelection}>
             <X />
           </IconAction>
@@ -336,24 +385,38 @@ function Thread({ id }: { id: string }) {
           </IconAction>
         </header>
       ) : (
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line px-2 sm:px-3">
+        <header className="flex h-16 shrink-0 items-center gap-2 px-2 sm:px-4">
           <IconAction label="Retour aux conversations" onClick={close} className="md:hidden">
             <ArrowLeft />
           </IconAction>
           {other ? (
             <Link href={`/u/${other.username}`} className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-90">
-              <Avatar name={name} src={other.avatar_url} size={38} />
+              <Avatar name={name} src={other.avatar_url} size={40} />
               <span className="min-w-0">
-                <span className="block truncate font-semibold text-ink">{name}</span>
+                <span className="block truncate text-body-md font-bold text-ink">{name}</span>
                 <span className="block truncate text-label-md text-ink-faint">@{other.username}</span>
               </span>
             </Link>
           ) : (
             <Skeleton className="h-8 flex-1" />
           )}
+          <div className="flex items-center rounded-xl bg-container-low px-1 ring-1 ring-line/50 [&_button]:size-9">
+          {other ? (
+            <Link
+              href={`/u/${other.username}`}
+              aria-label="Voir le profil"
+              title="Voir le profil"
+              className="flex size-9 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-card hover:text-ink"
+            >
+              <UserRound className="size-[18px]" aria-hidden />
+            </Link>
+          ) : null}
+          <IconAction label="Sélectionner des messages" onClick={() => setSelecting(true)} className="rounded-lg hover:bg-card [&_svg]:size-[18px]">
+            <CheckSquare />
+          </IconAction>
           <Menu
             trigger={(props) => (
-              <IconAction label="Plus d’options" {...props}>
+              <IconAction label="Plus d’options" className="rounded-lg hover:bg-card [&_svg]:size-[18px]" {...props}>
                 <MoreVertical />
               </IconAction>
             )}
@@ -374,14 +437,12 @@ function Thread({ id }: { id: string }) {
               <Trash2 aria-hidden /> Supprimer la discussion
             </MenuItem>
           </Menu>
-          <IconAction label="Fermer la discussion" onClick={close} className="hidden md:flex">
-            <X />
-          </IconAction>
+          </div>
         </header>
       )}
 
       {/* Colonne inversée : le défilement démarre en bas, sur le message le plus récent. */}
-      <div className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto bg-container-low/50 px-2 py-3 sm:px-4">
+      <div className="mx-2 flex min-h-0 flex-1 flex-col-reverse overflow-y-auto px-2 py-3 sm:mx-4 sm:px-2">
         {thread.items.map((message, index) => (
           <Bubble
             key={message.id}
@@ -390,6 +451,9 @@ function Thread({ id }: { id: string }) {
             newer={thread.items[index - 1]}
             mine={message.sender_id === user?.id}
             otherName={name}
+            otherAvatar={other?.avatar_url}
+            myName={profile?.display_name || profile?.username || 'Moi'}
+            myAvatar={profile?.avatar_url}
             userId={user?.id}
             seen={otherReadAt >= new Date(message.created_at).getTime()}
             selecting={selecting}
@@ -527,6 +591,9 @@ function Bubble({
   newer,
   mine,
   otherName,
+  otherAvatar,
+  myName,
+  myAvatar,
   userId,
   seen,
   selecting,
@@ -544,6 +611,9 @@ function Bubble({
   newer?: Message;
   mine: boolean;
   otherName: string;
+  otherAvatar?: string | null;
+  myName: string;
+  myAvatar?: string | null;
   userId?: string;
   seen: boolean;
   selecting: boolean;
@@ -604,8 +674,8 @@ function Bubble({
           onToggle(true);
         }}
         className={cn(
-          'group -mx-2 flex items-center gap-2 px-2 transition-colors sm:-mx-4 sm:px-4',
-          grouped ? 'py-px' : 'pt-px pb-1.5',
+          'group -mx-2 flex items-center gap-2 rounded-xl px-2 transition-colors',
+          grouped ? 'py-0.5' : 'pt-0.5 pb-3',
           selecting && 'cursor-pointer',
           selected && 'bg-primary/10',
           flash && 'bg-primary/15',
@@ -622,17 +692,20 @@ function Bubble({
             {selected ? <Check className="size-3" strokeWidth={3} /> : null}
           </span>
         ) : null}
-        <div className={cn('flex min-w-0 flex-1 items-center gap-1', mine ? 'flex-row-reverse' : 'flex-row')}>
+        <div className={cn('flex min-w-0 flex-1 items-end gap-2.5', mine ? 'flex-row-reverse' : 'flex-row')}>
+          {/* Avatar sous le dernier message d'une série, comme sur la maquette ; place gardée sinon. */}
+          <span className="hidden w-9 shrink-0 sm:block" aria-hidden>
+            {!grouped ? <Avatar name={mine ? myName : otherName} src={mine ? myAvatar : otherAvatar} size={36} /> : null}
+          </span>
           <div
             className={cn(
-              'relative max-w-[82%] min-w-0 rounded-2xl shadow-sm sm:max-w-[65%]',
-              mine ? 'bg-primary text-on-primary' : 'bg-card text-ink',
-              !grouped && (mine ? 'rounded-br-sm' : 'rounded-bl-sm'),
-              media && !message.revoked ? 'p-1' : 'px-3 py-1.5',
+              'relative max-w-[82%] min-w-0 rounded-2xl text-ink sm:max-w-[62%]',
+              mine ? 'bg-primary-soft' : 'bg-container',
+              media && !message.revoked ? 'p-1.5' : 'px-3.5 py-2.5',
             )}
           >
             {message.revoked ? (
-              <p className={cn('flex items-center gap-1.5 pr-14 text-body-sm italic', mine ? 'text-on-primary/80' : 'text-ink-muted')}>
+              <p className="flex items-center gap-1.5 text-body-sm text-ink-muted italic">
                 <Ban className="size-3.5 shrink-0" aria-hidden />
                 {mine ? 'Vous avez supprimé ce message' : 'Ce message a été supprimé'}
               </p>
@@ -642,51 +715,23 @@ function Bubble({
                   <Quote
                     quote={message.reply_to}
                     author={message.reply_to.sender_id === userId ? 'Vous' : otherName}
-                    onPrimary={mine}
                     onClick={selecting ? undefined : () => onJump(message.reply_to!.id)}
-                    className={media ? 'mb-1' : '-mx-1.5 mt-0.5 mb-1'}
+                    className={cn('bg-card/70', media ? 'mb-1.5' : '-mx-1 mb-1.5')}
                   />
                 ) : null}
-                {media ? <ChatMedia media={media} mine={mine} /> : null}
                 {message.body ? (
-                  <p className={cn('text-body-md break-words whitespace-pre-wrap', media && 'px-2 pt-1', 'pr-1')}>
-                    {message.body}
-                    {/* Réserve la place de l'heure sur la dernière ligne, comme WhatsApp. */}
-                    <span aria-hidden className={cn('inline-block', message.edited_at ? 'w-24' : 'w-14')} />
-                  </p>
+                  <p className={cn('text-body-sm break-words whitespace-pre-wrap', media && 'px-1.5 pt-0.5 pb-1.5')}>{message.body}</p>
                 ) : null}
+                {media ? <ChatMedia media={media} mine={mine} /> : null}
                 {translating || translated ? (
-                  <p
-                    className={cn(
-                      'mt-1 mb-4 border-l-2 pl-2 text-body-sm italic',
-                      mine ? 'border-on-primary/50 text-on-primary/85' : 'border-primary/50 text-ink-muted',
-                      media && 'mx-2',
-                    )}
-                  >
+                  <p className={cn('mt-1.5 border-l-2 border-primary/50 pl-2 text-body-sm text-ink-muted italic', media && 'mx-1.5 mb-1')}>
                     {translating ? 'Traduction…' : translated}
                   </p>
                 ) : null}
               </>
             )}
-            <span
-              className={cn(
-                'pointer-events-none absolute right-2 bottom-1 flex items-center gap-1 text-[0.68rem] leading-none tabular-nums',
-                mine ? 'text-on-primary/75' : 'text-ink-faint',
-                media && !message.body && !message.revoked && 'rounded-full bg-black/45 px-1.5 py-1 text-white',
-              )}
-            >
-              {message.edited_at && !message.revoked ? <span>modifié</span> : null}
-              {at.toLocaleTimeString('fr', { hour: '2-digit', minute: '2-digit' })}
-              {mine && !message.revoked ? (
-                seen ? (
-                  <CheckCheck className="size-3.5" aria-label="Vu" />
-                ) : (
-                  <Check className="size-3.5" aria-label="Envoyé" />
-                )
-              ) : null}
-            </span>
             {!selecting ? (
-              <div className={cn('absolute top-1', mine ? 'right-1' : 'right-1')}>
+              <div className="absolute -top-2 right-1">
                 <Menu
                   align={mine ? 'end' : 'start'}
                   trigger={(props) => (
@@ -694,10 +739,7 @@ function Bubble({
                       type="button"
                       aria-label="Actions du message"
                       {...props}
-                      className={cn(
-                        'flex size-6 items-center justify-center rounded-full opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100',
-                        mine ? 'bg-primary text-on-primary' : 'bg-card text-ink-muted',
-                      )}
+                      className="flex size-6 items-center justify-center rounded-full bg-card text-ink-muted opacity-0 shadow-xs ring-1 ring-line transition-opacity group-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100"
                     >
                       <ChevronDown className="size-4" aria-hidden />
                     </button>
@@ -734,6 +776,18 @@ function Bubble({
               </div>
             ) : null}
           </div>
+          {/* Heure à l'extérieur de la bulle, côté intérieur de la conversation. */}
+          <span className="mb-1 flex shrink-0 items-center gap-1 text-label-sm text-ink-faint tabular-nums">
+            {message.edited_at && !message.revoked ? <span>modifié ·</span> : null}
+            {at.toLocaleTimeString('fr', { hour: '2-digit', minute: '2-digit' })}
+            {mine && !message.revoked ? (
+              seen ? (
+                <CheckCheck className="size-3.5 text-primary" aria-label="Vu" />
+              ) : (
+                <Check className="size-3.5" aria-label="Envoyé" />
+              )
+            ) : null}
+          </span>
           {!selecting && !message.revoked ? (
             <button
               type="button"
@@ -748,7 +802,7 @@ function Bubble({
         </div>
       </div>
       {message.risk_note ? (
-        <p role="alert" className="mx-2 mb-2 flex max-w-[82%] items-start gap-2 rounded-xl bg-danger-soft px-3 py-2 text-body-sm text-on-danger-soft sm:max-w-[65%]">
+        <p role="alert" className="mb-3 flex max-w-[82%] items-start gap-2 rounded-xl bg-danger-soft px-3 py-2 text-body-sm text-on-danger-soft sm:ml-12 sm:max-w-[62%]">
           <ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
           <span>
             <strong>Arnaque probable.</strong> {message.risk_note} Ne payez rien et ne partagez aucun code reçu par SMS.
@@ -756,8 +810,10 @@ function Bubble({
         </p>
       ) : null}
       {newDay ? (
-        <p className="sticky top-0 z-10 self-center py-2">
-          <span className="rounded-lg bg-card px-3 py-1 text-label-sm font-medium text-ink-muted shadow-sm first-letter:uppercase">{dayLabel(at)}</span>
+        <p className="flex items-center gap-4 py-3 text-label-sm text-ink-faint">
+          <span className="h-px flex-1 bg-line" aria-hidden />
+          <span className="first-letter:uppercase">{dayLabel(at)}</span>
+          <span className="h-px flex-1 bg-line" aria-hidden />
         </p>
       ) : null}
     </>
@@ -821,8 +877,8 @@ function ChatMedia({ media, mine }: { media: MediaAsset; mine: boolean }) {
   const original = absoluteMediaUrl(media.original_url);
   if (media.kind === 'audio') {
     return (
-      <div className="flex items-center gap-2 px-2 pt-1.5 pb-5">
-        <Mic className={cn('size-4 shrink-0', mine ? 'text-on-primary' : 'text-ink-muted')} aria-hidden />
+      <div className="flex items-center gap-2 px-1.5 py-1">
+        <Mic className={cn('size-4 shrink-0', mine ? 'text-primary-ink' : 'text-ink-muted')} aria-hidden />
         <audio controls preload="metadata" src={absoluteMediaUrl(media.urls.opus) ?? original} className="h-9 w-60 max-w-full" />
       </div>
     );
@@ -872,6 +928,22 @@ function Composer({
   const text = body.trim();
   const [draft, setDraft] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const closeEmoji = useCallback(() => setEmojiOpen(false), []);
+
+  /** Emoji inséré à l'endroit du curseur (ou à la place de la sélection), puis curseur juste après. */
+  function insertEmoji(emoji: string) {
+    const field = textarea.current;
+    const start = field?.selectionStart ?? body.length;
+    const end = field?.selectionEnd ?? body.length;
+    const next = `${body.slice(0, start)}${emoji}${body.slice(end)}`.slice(0, 2000);
+    setBody(next);
+    requestAnimationFrame(() => {
+      field?.focus();
+      const caret = Math.min(start + emoji.length, next.length);
+      field?.setSelectionRange(caret, caret);
+    });
+  }
 
   // Modifier : le texte du message remplace la saisie, qui est rendue à la fin.
   if ((editing?.id ?? null) !== editingId) {
@@ -960,7 +1032,7 @@ function Composer({
         event.preventDefault();
         submit();
       }}
-      className="shrink-0 border-t border-line bg-card px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-3"
+      className="shrink-0 px-2 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4"
     >
       {failure ? <p className="mb-2 px-1 text-body-sm text-danger">{failure}</p> : null}
       {uploading ? (
@@ -1036,32 +1108,8 @@ function Composer({
           </button>
         </div>
       ) : (
-        <div className="flex items-end gap-1.5">
-          {!editing ? (
-            <button
-              type="button"
-              onClick={() => fileInput.current?.click()}
-              disabled={Boolean(uploading)}
-              aria-label="Envoyer une photo ou une vidéo"
-              title={text ? 'Le texte sera envoyé comme légende' : 'Photo ou vidéo'}
-              className="flex size-11 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-container hover:text-ink disabled:opacity-40"
-            >
-              <ImagePlus className="size-5" aria-hidden />
-            </button>
-          ) : null}
-          {!editing ? (
-            <button
-              type="button"
-              onClick={() => suggestions.mutate(conversationId)}
-              disabled={suggestions.isPending}
-              aria-label="Réponses suggérées par l’IA"
-              title="Réponses suggérées par l’IA"
-              className="flex size-11 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-container hover:text-primary disabled:opacity-60"
-            >
-              {suggestions.isPending ? <Loader2 className="size-5 animate-spin" aria-hidden /> : <Sparkles className="size-5" aria-hidden />}
-            </button>
-          ) : null}
-          <div className="flex min-h-11 flex-1 items-end rounded-3xl bg-container px-4">
+        <div className="flex items-end gap-2">
+          <div className="relative flex min-h-12 flex-1 items-end rounded-2xl border border-line bg-card pr-1.5 pl-4 shadow-2xs transition-colors focus-within:border-primary/50">
             <textarea
               ref={textarea}
               value={body}
@@ -1074,17 +1122,37 @@ function Composer({
               }}
               rows={1}
               maxLength={2000}
-              placeholder={editing ? 'Modifier le message…' : 'Écrire un message…'}
+              placeholder={editing ? 'Modifier le message…' : 'Écrire votre message…'}
               aria-label="Votre message"
-              className="max-h-32 min-h-11 flex-1 resize-none bg-transparent py-2.5 text-body-md text-ink outline-none placeholder:text-ink-faint"
+              className="max-h-32 min-h-12 flex-1 resize-none bg-transparent py-3 text-body-sm text-ink outline-none placeholder:text-ink-faint"
             />
+            <div className="flex shrink-0 items-center gap-0.5 pb-1.5">
+              <ComposerIcon label="Emojis" onClick={() => setEmojiOpen((open) => !open)} active={emojiOpen}>
+                <Smile />
+              </ComposerIcon>
+              {!editing ? (
+                <ComposerIcon
+                  label={text ? 'Photo ou vidéo (le texte sera la légende)' : 'Photo ou vidéo'}
+                  onClick={() => fileInput.current?.click()}
+                  disabled={Boolean(uploading)}
+                >
+                  <Paperclip />
+                </ComposerIcon>
+              ) : null}
+              {!editing ? (
+                <ComposerIcon label="Réponses suggérées par l’IA" onClick={() => suggestions.mutate(conversationId)} disabled={suggestions.isPending}>
+                  {suggestions.isPending ? <Loader2 className="animate-spin" /> : <Sparkles />}
+                </ComposerIcon>
+              ) : null}
+            </div>
+            {emojiOpen ? <EmojiPicker onPick={insertEmoji} onClose={closeEmoji} /> : null}
           </div>
           {editing ? (
             <button
               type="submit"
               disabled={edit.isPending || (!text && !editing.media)}
               aria-label="Enregistrer la modification"
-              className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary transition-opacity disabled:opacity-40"
+              className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-on-primary shadow-xs transition-opacity disabled:opacity-40"
             >
               {edit.isPending ? <Loader2 className="size-5 animate-spin" aria-hidden /> : <Check className="size-5" aria-hidden />}
             </button>
@@ -1093,7 +1161,7 @@ function Composer({
               type="submit"
               disabled={send.isPending || Boolean(uploading)}
               aria-label="Envoyer"
-              className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary transition-opacity disabled:opacity-40"
+              className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-on-primary shadow-xs transition-opacity disabled:opacity-40"
             >
               <Send className="size-5" aria-hidden />
             </button>
@@ -1103,7 +1171,7 @@ function Composer({
               onClick={() => void voice.start()}
               disabled={Boolean(uploading)}
               aria-label="Enregistrer un message vocal"
-              className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary transition-opacity disabled:opacity-40"
+              className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-on-primary shadow-xs transition-opacity disabled:opacity-40"
             >
               <Mic className="size-5" aria-hidden />
             </button>
@@ -1118,6 +1186,38 @@ function Composer({
         onChange={(event) => void pickFile(event.target.files?.[0]).finally(() => (event.target.value = ''))}
       />
     </form>
+  );
+}
+
+/** Petite icône d'action intégrée au champ de saisie (emojis, pièce jointe, IA). */
+function ComposerIcon({
+  label,
+  onClick,
+  disabled,
+  active,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  active?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      aria-pressed={active}
+      className={cn(
+        'flex size-9 items-center justify-center rounded-lg transition-colors disabled:opacity-40 [&_svg]:size-[18px]',
+        active ? 'bg-primary-soft text-primary-ink' : 'text-ink-faint hover:bg-container hover:text-ink',
+      )}
+    >
+      {children}
+    </button>
   );
 }
 

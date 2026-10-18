@@ -9,3 +9,7 @@ def set_member_active(*, actor, user_id, active: bool):
 
 def set_member_staff(*, actor, user_id, staff: bool):
     return account_services.set_account_staff(actor=actor, user_id=user_id, staff=staff)
+
+
+def delete_member(*, actor, user_id) -> None:
+    account_services.remove_account(actor=actor, user_id=user_id)

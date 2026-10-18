@@ -1,15 +1,15 @@
 import { type InfiniteData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AtSign, Bell, CheckCheck, CheckCircle2, Heart, MessageSquare, Sparkles, UserPlus } from 'lucide-react-native';
-import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { AtSign, Bell, CheckCheck, CheckCircle2, Heart, MessageSquare, Sparkles, Trash2, UserPlus } from 'lucide-react-native';
+import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
-import { api, type Schemas, unwrap } from '@/shared/api';
+import { api, errorMessage, type Schemas, unwrap } from '@/shared/api';
 import { goToRoute, notificationRoute, notificationWebUrl, openLink, timeAgo } from '@/shared/lib';
 import { useT } from '@/shared/i18n';
-import { AppearItem } from '@/shared/motion';
+import { AppearItem, haptic } from '@/shared/motion';
 import { type Page, useInfiniteList } from '@/shared/query';
 import { useSession } from '@/shared/session';
 import { useTheme } from '@/shared/theme';
-import { EmptyState, ErrorState, Header, IconButton, ListFooter, Loading, Text } from '@/shared/ui';
+import { EmptyState, ErrorState, Header, IconButton, ListFooter, Loading, Text, useToast } from '@/shared/ui';
 
 type Notification = Schemas['Notification'];
 
@@ -63,6 +63,49 @@ function useMarkRead() {
   });
 }
 
+type NotificationPages = InfiniteData<Page<Notification>>;
+
+/** Retire la notification de la liste tout de suite (et du compteur si elle n'était pas lue). */
+function useDeleteNotification() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (notification: Notification) =>
+      unwrap(api.DELETE('/api/notifications/{notification_id}/', { params: { path: { notification_id: notification.id } } })),
+    onMutate: async (notification) => {
+      await queryClient.cancelQueries({ queryKey: ['notifications', 'list'] });
+      const previous = queryClient.getQueryData<NotificationPages>(['notifications', 'list']);
+      queryClient.setQueryData<NotificationPages>(['notifications', 'list'], (data) =>
+        data
+          ? { ...data, pages: data.pages.map((page) => ({ ...page, results: page.results.filter((item) => item.id !== notification.id) })) }
+          : data,
+      );
+      if (!notification.read_at) {
+        queryClient.setQueryData<{ unread: number }>(UNREAD_KEY, (data) => (data ? { unread: Math.max(0, data.unread - 1) } : data));
+      }
+      return { previous };
+    },
+    onError: (_error, _notification, context) => {
+      if (context?.previous) queryClient.setQueryData(['notifications', 'list'], context.previous);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+}
+
+/** Efface toutes les notifications du membre. */
+function useClearNotifications() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => unwrap(api.DELETE('/api/notifications/')),
+    onMutate: () => {
+      queryClient.setQueryData<NotificationPages>(['notifications', 'list'], (data) =>
+        data ? { ...data, pages: data.pages.map((page) => ({ ...page, results: [], next: null })) } : data,
+      );
+      queryClient.setQueryData<{ unread: number }>(UNREAD_KEY, (data) => (data ? { unread: 0 } : data));
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+}
+
 const hrefOf = (notification: Notification) => notificationRoute(notification.data);
 
 const ICONS: Partial<Record<Notification['kind'], typeof Bell>> = {
@@ -75,13 +118,15 @@ const ICONS: Partial<Record<Notification['kind'], typeof Bell>> = {
   new_follower: UserPlus,
 };
 
-function NotificationRow({ notification, onOpen }: { notification: Notification; onOpen: () => void }) {
+function NotificationRow({ notification, onOpen, onDelete }: { notification: Notification; onOpen: () => void; onDelete: () => void }) {
   const { colors } = useTheme();
+  const { t } = useT();
   const Icon = ICONS[notification.kind] ?? Bell;
   const unread = !notification.read_at;
   return (
     <Pressable
       onPress={onOpen}
+      onLongPress={onDelete}
       style={({ pressed }) => [
         styles.row,
         { borderBottomColor: colors.line, backgroundColor: pressed ? colors.pressed : unread ? colors.surface : colors.background },
@@ -103,7 +148,10 @@ function NotificationRow({ notification, onOpen }: { notification: Notification;
           {timeAgo(notification.created_at)}
         </Text>
       </View>
-      {unread ? <View style={[styles.dot, { backgroundColor: colors.primary }]} /> : null}
+      <View style={styles.side}>
+        {unread ? <View style={[styles.dot, { backgroundColor: colors.primary }]} /> : null}
+        <IconButton icon={Trash2} label={t('notif.delete')} size={17} color={colors.inkFaint} onPress={onDelete} />
+      </View>
     </Pressable>
   );
 }
@@ -113,7 +161,28 @@ export function NotificationsScreen() {
   const { t } = useT();
   const list = useNotifications();
   const markRead = useMarkRead();
+  const remove = useDeleteNotification();
+  const clear = useClearNotifications();
+  const toast = useToast();
   const hasUnread = list.items.some((item) => !item.read_at);
+
+  const deleteOne = (notification: Notification) => {
+    haptic.tap();
+    remove.mutate(notification, { onError: (error) => toast(errorMessage(error), 'error') });
+  };
+  const confirmClear = () =>
+    Alert.alert(t('notif.clear_confirm'), t('notif.clear_body'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('notif.clear_all'),
+        style: 'destructive',
+        onPress: () =>
+          clear.mutate(undefined, {
+            onSuccess: () => toast(t('notif.cleared')),
+            onError: (error) => toast(errorMessage(error), 'error'),
+          }),
+      },
+    ]);
 
   const open = (notification: Notification) => {
     if (!notification.read_at) markRead.mutate(notification);
@@ -128,7 +197,12 @@ export function NotificationsScreen() {
       <Header
         title={t('nav.notifications')}
         back
-        right={hasUnread ? <IconButton icon={CheckCheck} label={t('notif.mark_all')} onPress={() => markRead.mutate('all')} /> : null}
+        right={
+          <>
+            {hasUnread ? <IconButton icon={CheckCheck} label={t('notif.mark_all')} onPress={() => markRead.mutate('all')} /> : null}
+            {list.items.length ? <IconButton icon={Trash2} label={t('notif.clear_all')} onPress={confirmClear} /> : null}
+          </>
+        }
       />
       {list.isPending ? (
         <Loading />
@@ -140,7 +214,7 @@ export function NotificationsScreen() {
           keyExtractor={(item) => item.id}
           renderItem={({ item, index }) => (
             <AppearItem index={index}>
-              <NotificationRow notification={item} onOpen={() => open(item)} />
+              <NotificationRow notification={item} onOpen={() => open(item)} onDelete={() => deleteOne(item)} />
             </AppearItem>
           )}
           onEndReached={list.loadMore}
@@ -167,5 +241,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth },
   icon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1, gap: 3 },
+  side: { alignItems: 'center', gap: 2 },
   dot: { width: 8, height: 8, borderRadius: 4, marginTop: 8 },
 });

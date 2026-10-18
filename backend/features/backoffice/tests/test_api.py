@@ -163,6 +163,27 @@ def test_team_management_rules(client_for, moderator, admin, user):
     )
 
 
+def test_delete_member(client_for, moderator, admin, user, make_user):
+    from django.contrib.auth import get_user_model
+
+    users = get_user_model().objects
+    staff = client_for(moderator)
+    # Jamais soi-même, ni un autre membre de l'équipe, ni un administrateur.
+    assert staff.delete(f"/api/backoffice/members/{moderator.id}/").status_code == 403
+    assert staff.delete(f"/api/backoffice/members/{admin.id}/").status_code == 403
+    assert client_for(admin).delete(f"/api/backoffice/members/{admin.id}/").status_code == 403
+
+    assert staff.delete(f"/api/backoffice/members/{user.id}/").status_code == 204
+    assert not users.filter(id=user.id).exists()
+    assert staff.delete(f"/api/backoffice/members/{user.id}/").status_code == 404
+
+    # Un administrateur peut retirer un modérateur, jamais un autre administrateur.
+    other_admin = make_user("autre_cheffe", is_staff=True, is_superuser=True)
+    boss = client_for(admin)
+    assert boss.delete(f"/api/backoffice/members/{other_admin.id}/").status_code == 403
+    assert boss.delete(f"/api/backoffice/members/{moderator.id}/").status_code == 204
+
+
 def test_me_exposes_staff_flags(client_for, moderator):
     me = client_for(moderator).get("/api/accounts/me/").data
     assert me["is_staff"] is True and me["is_superuser"] is False

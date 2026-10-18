@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { DataSaverSync } from '@/shared/data-saver';
 import { LangProvider } from '@/shared/i18n';
 import { InAppBrowserProvider, LinkInterceptor } from '@/shared/links';
-import { OutboxSync, PowerSyncProvider } from '@/shared/offline';
+import { ConnectivityStrip, OutboxSync, PowerSyncProvider } from '@/shared/offline';
 import { QueryProvider } from '@/shared/query';
 import { SessionProvider } from '@/shared/session';
 import { ThemeSync } from '@/shared/theme';
@@ -41,6 +41,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                 <ThemeSync />
                 <DataSaverSync />
                 <OutboxSync />
+                <ConnectivityStrip />
                 <LinkInterceptor />
                 {children}
               </InAppBrowserProvider>

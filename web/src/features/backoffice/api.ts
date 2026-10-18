@@ -17,7 +17,7 @@ export type Period = 7 | 30 | 90;
 const PRIVATE = { persist: false } as const;
 
 /** Lignes par page des tableaux du back-office. */
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 8;
 
 export const backofficeKeys = {
   all: ['backoffice'] as const,
@@ -124,6 +124,15 @@ export function useMembers(filters: MemberFilters) {
     (cursor) => unwrap(api.GET('/api/backoffice/members/', { params: { query: { cursor, page_size: PAGE_SIZE, ...filters } } })),
     PRIVATE,
   );
+}
+
+/** Suppression définitive d'un compte (profil, publications, messages…). */
+export function useDeleteMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => unwrap(api.DELETE('/api/backoffice/members/{user_id}/', { params: { path: { user_id: id } } })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: backofficeKeys.all }),
+  });
 }
 
 export function useUpdateMember() {

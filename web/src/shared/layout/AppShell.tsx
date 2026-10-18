@@ -24,7 +24,6 @@ import { useDataSaver } from '@/shared/data-saver';
 import { useIsClient } from '@/shared/hooks';
 import { useLang } from '@/shared/i18n';
 import { cn } from '@/shared/lib';
-import { ConnectivityStrip } from '@/shared/offline';
 import { EnablePushBanner } from '@/shared/push';
 import { useSession } from '@/shared/session';
 import { useTheme } from '@/shared/theme';
@@ -97,7 +96,6 @@ export function AppShell({
       <header className="sticky top-0 z-30 bg-shell">
         <TopBar notifications={notifications} onMenu={() => setDrawer(pathname)} onHelp={openHelp} openAuthModal={openAuthModal} />
       </header>
-      <ConnectivityStrip />
       <div className="mx-auto flex w-full max-w-[1440px]">
         <aside
           className={cn(
