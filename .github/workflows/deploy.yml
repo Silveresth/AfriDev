@@ -41,7 +41,6 @@ jobs:
           build-args: |
             NEXT_PUBLIC_API_URL=https://afridev.duckdns.org
             NEXT_PUBLIC_POWERSYNC_URL=https://afridev.duckdns.org/sync
-            NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=uAfwwtAkFE69g01GNRZXTWkGXeOHF1kzk1Zp/Mah9x8=
       - name: Build and Push Backend Image
         uses: docker/build-push-action@v5
         with:

@@ -52,6 +52,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/accounts/email/resend/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Renvoie le lien de confirmation à l'adresse du compte connecté. */
+        post: operations["accounts_email_resend_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/accounts/email/verify/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Lien reçu par e-mail (« /verify-email?token=… » sur le site). */
+        post: operations["accounts_email_verify_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/accounts/login/": {
         parameters: {
             query?: never;
@@ -79,6 +113,26 @@ export interface paths {
         put?: never;
         /** @description Deuxième étape de la connexion : le code à 6 chiffres de l'application. */
         post: operations["accounts_login_2fa_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/accounts/logout/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Déconnexion : la session (appareil) est révoquée côté serveur et le cookie effacé.
+         *     Le jeton de renouvellement vient du cookie (site) ou du corps (appli).
+         */
+        post: operations["accounts_logout_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -329,8 +383,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description Takes a refresh type JSON web token and returns an access type JSON web
-         *     token if the refresh token is valid.
+         * @description Renouvelle les jetons. Site web (X-Auth-Mode: cookie) : le jeton de renouvellement est lu
+         *     dans le cookie httpOnly et le nouveau y est reposé ; l'appli mobile l'envoie dans le corps.
+         *     Un ancien jeton envoyé dans le corps par le site est migré vers le cookie.
          */
         post: operations["accounts_token_refresh_create"];
         delete?: never;
@@ -3083,6 +3138,9 @@ export interface components {
             /** @description En préparation : suivre ce job. */
             job_id: string | null;
         };
+        EmailVerifyInputRequest: {
+            token: string;
+        };
         Endorsement: {
             skill: string;
             count: number;
@@ -3515,6 +3573,9 @@ export interface components {
             identifier: string;
             password: string;
         };
+        LogoutInputRequest: {
+            refresh?: string;
+        };
         MFALoginInputRequest: {
             mfa_token: string;
             code: string;
@@ -3786,6 +3847,7 @@ export interface components {
             code: string;
             /** Format: uri */
             redirect_uri?: string;
+            code_verifier?: string;
         };
         OAuthProviders: {
             providers: components["schemas"]["ProvidersEnum"][];
@@ -4988,6 +5050,8 @@ export interface components {
              */
             readonly is_superuser: boolean;
             readonly two_factor_enabled: boolean;
+            /** @description Adresse e-mail confirmée. */
+            readonly email_verified: boolean;
             /** @description Faux pour un compte SMS / GitHub / Google : la suppression demande le pseudo. */
             readonly has_password: boolean;
         };
@@ -5190,6 +5254,49 @@ export interface operations {
             };
         };
     };
+    accounts_email_resend_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accounts_email_verify_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailVerifyInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EmailVerifyInputRequest"];
+                "multipart/form-data": components["schemas"]["EmailVerifyInputRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+        };
+    };
     accounts_login_create: {
         parameters: {
             query?: never;
@@ -5237,6 +5344,30 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AuthResponse"];
                 };
+            };
+        };
+    };
+    accounts_logout_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["LogoutInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["LogoutInputRequest"];
+                "multipart/form-data": components["schemas"]["LogoutInputRequest"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -5334,6 +5465,8 @@ export interface operations {
     accounts_oauth_start_retrieve: {
         parameters: {
             query: {
+                /** @description Appli : secret aléatoire (32 à 128 caractères), redemandé à l'échange du code. */
+                code_verifier?: string;
                 nonce?: string;
                 return_to: string;
             };

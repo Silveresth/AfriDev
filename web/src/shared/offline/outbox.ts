@@ -74,7 +74,7 @@ export function flushOutbox(): Promise<void> {
   flushing ??= (async () => {
     try {
       await load();
-      if (!entries.length || !navigator.onLine || !tokenStore.get()) return;
+      if (!entries.length || !navigator.onLine || !tokenStore.hasSession()) return;
       const batch = entries;
       const response = await authFetch(
         new Request(`${API_URL}/api/sync/upload/`, {

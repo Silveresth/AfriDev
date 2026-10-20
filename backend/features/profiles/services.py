@@ -30,6 +30,23 @@ EDITABLE_FIELDS = {
 }
 
 
+URL_FIELDS = {"website", "avatar_url", "banner_url"}
+
+
+def clean_web_url(value, *, field: str) -> str:
+    """Lien http(s) uniquement. Vérifié ici et non dans le sérialiseur : la synchro hors ligne
+    écrit sans passer par l'API REST (un « javascript: » y passerait sinon)."""
+    url = str(value or "").strip()
+    if not url:
+        return ""
+    parts = urlsplit(url)
+    if parts.scheme.lower() not in ("http", "https") or not parts.netloc or len(url) > 200:
+        raise DomainError(
+            "Lien invalide : il doit commencer par https://.", code=f"invalid_{field}"
+        )
+    return url
+
+
 def create_profile(
     *, user_id, username: str, display_name: str = "", avatar_url: str = "", github_username=""
 ) -> Profile:
@@ -58,6 +75,8 @@ def update_profile(*, profile: Profile, **fields) -> Profile:
             value = [code for code in dict.fromkeys(value or []) if code in WORK_PREFERENCES]
         elif name == "social_links":
             value = clean_social_links(value)
+        elif name in URL_FIELDS:
+            value = clean_web_url(value, field=name)
         elif isinstance(value, str):
             value = value.strip()
         if getattr(profile, name) != value:

@@ -21,6 +21,17 @@ def _validate_repo(repo_url: str) -> str:
     return repo_url
 
 
+def _validate_image_url(value: str) -> str:
+    """Bannière / logo : lien http(s) uniquement (vérifié ici : la synchro hors ligne ne passe
+    pas par les sérialiseurs de l'API)."""
+    value = (value or "").strip()
+    if value and (not value.lower().startswith(("https://", "http://")) or len(value) > 500):
+        raise DomainError(
+            "Lien d'image invalide : il doit commencer par https://.", code="invalid_image"
+        )
+    return value
+
+
 def _after_save(project: Project, *, sync_repo: bool) -> None:
     from .tasks import sync_project_repo
 
@@ -60,8 +71,8 @@ def create_project(
         repo_url=_validate_repo(repo_url),
         tags=normalize_tags(tags, limit=12),
         is_recruiting=is_recruiting,
-        banner_url=banner_url.strip(),
-        logo_url=logo_url.strip(),
+        banner_url=_validate_image_url(banner_url),
+        logo_url=_validate_image_url(logo_url),
     )
     if project_id:
         project.id = project_id
@@ -89,6 +100,8 @@ def update_project(*, project: Project, user, **fields) -> Project:
         value = fields[name]
         if name == "repo_url":
             value = _validate_repo(value)
+        elif name in ("banner_url", "logo_url"):
+            value = _validate_image_url(value)
         elif name == "tags":
             value = normalize_tags(value, limit=12)
         elif isinstance(value, str):

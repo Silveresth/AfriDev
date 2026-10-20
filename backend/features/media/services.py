@@ -2,7 +2,6 @@
 
 import mimetypes
 from datetime import timedelta
-from pathlib import PurePath
 
 from django.conf import settings
 from django.core import signing
@@ -33,6 +32,30 @@ ALLOWED_TYPES = {
         "audio/3gpp",
     },
 }
+# Extension du fichier stocké, déduite du type validé et JAMAIS du nom envoyé par le client :
+# « photo.html » déclaré image/png serait sinon servi en page HTML sous /media/, sur le domaine
+# du site (XSS stockée).
+EXTENSIONS = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+    "video/mp4": ".mp4",
+    "video/quicktime": ".mov",
+    "video/webm": ".webm",
+    "video/3gpp": ".3gp",
+    "audio/mp4": ".m4a",
+    "audio/x-m4a": ".m4a",
+    "audio/m4a": ".m4a",
+    "audio/aac": ".aac",
+    "audio/mpeg": ".mp3",
+    "audio/ogg": ".ogg",
+    "audio/opus": ".opus",
+    "audio/webm": ".weba",
+    "audio/wav": ".wav",
+    "audio/x-wav": ".wav",
+    "audio/3gpp": ".3gp",
+}
 # Plafonds par type, en Mo (la vidéo est déjà compressée sur le téléphone avant l'envoi).
 MAX_SIZE_MB = {MediaAsset.Kind.IMAGE: 10, MediaAsset.Kind.AUDIO: 10}
 LOCAL_UPLOAD_SALT = "media.local-upload"
@@ -56,12 +79,11 @@ def _validate(*, kind: str, mime_type: str, size_bytes: int) -> None:
         raise InvalidMediaError(f"Fichier vide ou trop lourd (maximum {max_mb} Mo).")
 
 
-def _new_asset(*, owner, kind: str, mime_type: str, size_bytes: int, filename: str, status: str):
+def _new_asset(*, owner, kind: str, mime_type: str, size_bytes: int, status: str):
     asset = MediaAsset(
         owner=owner, kind=kind, mime_type=mime_type, size_bytes=size_bytes, status=status
     )
-    suffix = PurePath(filename).suffix.lower()[:10] or (mimetypes.guess_extension(mime_type) or "")
-    asset.original_path = f"{_base_path(asset)}/original{suffix}"
+    asset.original_path = f"{_base_path(asset)}/original{EXTENSIONS[mime_type]}"
     return asset
 
 
@@ -87,7 +109,6 @@ def start_upload(*, owner, kind: str, mime_type: str, size_bytes: int, filename:
         kind=kind,
         mime_type=mime_type,
         size_bytes=size_bytes,
-        filename=filename,
         status=MediaAsset.Status.UPLOADING,
     )
     if not cloudinary.is_configured():
@@ -209,7 +230,6 @@ def upload_media(*, owner, kind: str, uploaded_file) -> MediaAsset:
         kind=kind,
         mime_type=mime_type,
         size_bytes=uploaded_file.size,
-        filename=uploaded_file.name,
         status=MediaAsset.Status.PROCESSING,
     )
     # Copie par morceaux : le fichier n'est jamais chargé entier en mémoire.

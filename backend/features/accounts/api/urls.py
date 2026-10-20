@@ -1,12 +1,14 @@
 from django.urls import path
-from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views import (
     AccessTokenDetailView,
     AccessTokenListCreateView,
     DataExportView,
     DeleteAccountView,
+    EmailResendView,
+    EmailVerifyView,
     LoginView,
+    LogoutView,
     MeView,
     MFALoginView,
     OAuthCallbackView,
@@ -21,6 +23,7 @@ from .views import (
     RevokeOtherSessionsView,
     SessionDetailView,
     SessionListView,
+    SessionTokenRefreshView,
     TOTPDisableView,
     TOTPEnableView,
     TOTPSetupView,
@@ -32,7 +35,10 @@ app_name = "accounts"
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="login"),
-    path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+    path("token/refresh/", SessionTokenRefreshView.as_view(), name="token-refresh"),
+    path("logout/", LogoutView.as_view(), name="logout"),
+    path("email/verify/", EmailVerifyView.as_view(), name="email-verify"),
+    path("email/resend/", EmailResendView.as_view(), name="email-resend"),
     path("username-status/", UsernameStatusView.as_view(), name="username-status"),
     path("password/reset/", PasswordResetRequestView.as_view(), name="password-reset"),
     path(

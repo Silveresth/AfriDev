@@ -127,7 +127,8 @@ def exchange_gitlab_code(code: str, redirect_uri: str | None = None) -> OAuthIde
         provider="gitlab",
         uid=str(user["id"]),
         username=user["username"],
-        email=user.get("email") or "",
+        # Adresse confirmée seulement : elle sert à rattacher un compte existant.
+        email=(user.get("email") or "") if user.get("confirmed_at") else "",
         name=user.get("name") or "",
         avatar_url=user.get("avatar_url") or "",
         access_token=token,

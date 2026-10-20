@@ -11,11 +11,12 @@ from django.core import signing
 from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.exceptions import DomainError, NotFoundError
 
-from . import totp
+from . import lockout, totp
 from .authentication import TOKEN_PREFIX
 from .models import PersonalAccessToken, User, UserSession
 
@@ -27,8 +28,9 @@ REVOKED_KEY = "accounts:revoked-session:{}"
 def _client_info(request) -> tuple[str, str]:
     if request is None:
         return "", ""
+    # Dernière adresse : celle ajoutée par nginx. Les précédentes sont écrites par le client.
     forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    ip = forwarded.split(",")[0].strip() or request.META.get("REMOTE_ADDR", "")
+    ip = forwarded.split(",")[-1].strip() or request.META.get("REMOTE_ADDR", "")
     return request.META.get("HTTP_USER_AGENT", "")[:300], ip[:45]
 
 
@@ -76,6 +78,19 @@ def _revoke(sessions) -> int:
     for sid in ids:
         cache.set(REVOKED_KEY.format(sid), True, ttl)
     return len(ids)
+
+
+def end_session(refresh: str) -> None:
+    """Déconnexion : révoque la session portée par ce jeton de renouvellement (s'il est valide).
+    Silencieux sinon : se déconnecter ne doit jamais échouer."""
+    if not refresh:
+        return
+    try:
+        sid = RefreshToken(refresh).get("sid")
+    except TokenError:
+        return
+    if sid:
+        _revoke(UserSession.objects.filter(id=sid, revoked_at__isnull=True))
 
 
 def revoke_session(*, user: User, session_id) -> None:
@@ -194,7 +209,14 @@ def complete_mfa(*, mfa_token: str, code: str) -> User:
     user = User.objects.filter(id=data.get("uid"), is_active=True).first()
     if user is None or not user.two_factor_enabled:
         raise DomainError("Session de connexion expirée, recommencez.", code="mfa_expired")
-    _check_code(user, code)
+    # Code à 6 chiffres : essais comptés par compte, pas seulement par adresse IP.
+    lockout.ensure_allowed("mfa", str(user.id))
+    try:
+        _check_code(user, code)
+    except InvalidTOTPError:
+        lockout.record_failure("mfa", str(user.id))
+        raise
+    lockout.reset("mfa", str(user.id))
     return user
 
 

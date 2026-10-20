@@ -12,6 +12,7 @@ from ..models import User
 
 class UserSerializer(ReadOnlyModelSerializer):
     two_factor_enabled = serializers.BooleanField(read_only=True)
+    email_verified = serializers.SerializerMethodField(help_text="Adresse e-mail confirmée.")
     has_password = serializers.SerializerMethodField(
         help_text="Faux pour un compte SMS / GitHub / Google : la suppression demande le pseudo."
     )
@@ -28,8 +29,12 @@ class UserSerializer(ReadOnlyModelSerializer):
             "is_staff",
             "is_superuser",
             "two_factor_enabled",
+            "email_verified",
             "has_password",
         ]
+
+    def get_email_verified(self, user) -> bool:
+        return user.email_verified_at is not None
 
     def get_has_password(self, user) -> bool:
         return user.has_usable_password()
@@ -183,9 +188,20 @@ class OTPVerifyInputSerializer(serializers.Serializer):
     code = serializers.RegexField(r"^\d{6}$")
 
 
+class EmailVerifyInputSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=500)
+
+
+class LogoutInputSerializer(serializers.Serializer):
+    # Appli : jeton de renouvellement de la session à fermer (le site l'envoie en cookie).
+    refresh = serializers.CharField(required=False, allow_blank=True)
+
+
 class OAuthInputSerializer(serializers.Serializer):
     code = serializers.CharField()
     redirect_uri = serializers.URLField(required=False)
+    # Appli : le secret envoyé au démarrage (/oauth/<provider>/start/?code_verifier=…).
+    code_verifier = serializers.CharField(required=False, allow_blank=True, max_length=128)
 
 
 class UsernameStatusSerializer(serializers.Serializer):

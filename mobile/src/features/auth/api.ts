@@ -28,11 +28,25 @@ export class OAuthCancelled extends Error {}
  * appli → API /start → fournisseur → API /callback → retour appli (exp:// ou afridev://) avec le
  * code, échangé ensuite contre les jetons. Les identifiants OAuth restent sur le serveur.
  */
+const VERIFIER_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+
+/** 64 caractères aléatoires (générateur cryptographique quand le moteur JS en fournit un). */
+function randomVerifier(): string {
+  const bytes = new Uint8Array(64);
+  const cryptoApi = (globalThis as { crypto?: { getRandomValues?: (array: Uint8Array) => Uint8Array } }).crypto;
+  if (cryptoApi?.getRandomValues) cryptoApi.getRandomValues(bytes);
+  else for (let i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256);
+  return Array.from(bytes, (byte) => VERIFIER_ALPHABET[byte % VERIFIER_ALPHABET.length]).join('');
+}
+
 export async function signInWithProvider(provider: OAuthProvider): Promise<AuthResponse> {
   const returnUrl = Linking.createURL('oauth');
   // Renvoyé tel quel par l'API : prouve que ce retour répond bien à cette demande.
   const nonce = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
-  const query = `return_to=${encodeURIComponent(returnUrl)}&nonce=${nonce}`;
+  // Secret gardé en mémoire : l'API le redemande à l'échange du code. Une autre appli qui
+  // capterait le lien afridev://oauth?code=… (même schéma déclaré) ne pourrait pas s'en servir.
+  const codeVerifier = randomVerifier();
+  const query = `return_to=${encodeURIComponent(returnUrl)}&nonce=${nonce}&code_verifier=${codeVerifier}`;
   const result = await WebBrowser.openAuthSessionAsync(`${API_URL}/api/accounts/oauth/${provider}/start/?${query}`, returnUrl);
   if (result.type !== 'success') throw new OAuthCancelled();
 
@@ -51,7 +65,7 @@ export async function signInWithProvider(provider: OAuthProvider): Promise<AuthR
   return unwrap(
     api.POST('/api/accounts/oauth/{provider}/', {
       params: { path: { provider } },
-      body: { code: read('code'), redirect_uri: read('redirect_uri') || undefined },
+      body: { code: read('code'), redirect_uri: read('redirect_uri') || undefined, code_verifier: codeVerifier },
     }),
   );
 }

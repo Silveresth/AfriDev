@@ -21,6 +21,22 @@ def send_password_reset_email(email: str, link: str) -> None:
     )
 
 
+@shared_task(autoretry_for=(OSError,), retry_backoff=True, max_retries=3)
+def send_verification_email(email: str, link: str) -> None:
+    send_mail(
+        subject="AfriDev : confirmez votre adresse e-mail",
+        message=(
+            "Bonjour,\n\nBienvenue sur AfriDev ! Pour confirmer que cette adresse est bien la "
+            f"vôtre, ouvrez ce lien (valable 3 jours) :\n{link}\n\n"
+            "Si vous n'avez pas créé de compte, ignorez cet e-mail : personne ne pourra "
+            "s'en servir sans votre confirmation.\n\n"
+            "L'équipe AfriDev"
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[email],
+    )
+
+
 @shared_task(autoretry_for=(sms.SMSError,), retry_backoff=True, max_retries=3)
 def send_otp_sms(phone_number: str, code: str) -> None:
     sms.send_sms(

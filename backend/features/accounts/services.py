@@ -5,6 +5,7 @@ import re
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
 from django.contrib.auth.password_validation import validate_password
+from django.core import signing
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -12,7 +13,7 @@ from django.utils import timezone
 from core.exceptions import ConflictError, DomainError, NotFoundError, PermissionDeniedError
 from integrations import sms
 
-from . import oauth, otp
+from . import lockout, oauth, otp
 from .events import user_registered
 from .models import SocialAccount, User
 
@@ -114,20 +115,69 @@ def register_user(*, username: str, email: str, password: str, display_name: str
         username=username, email=email, password=password, first_name=display_name[:150]
     )
     _announce(user, display_name=display_name)
+    send_email_verification(user)
     return user
 
 
+# ── Vérification de l'adresse e-mail ──
+
+EMAIL_VERIFY_SALT = "afridev.accounts.email-verify"
+EMAIL_VERIFY_MAX_AGE = 3 * 24 * 3600
+
+
+def send_email_verification(user: User) -> bool:
+    """Lien signé envoyé à l'adresse du compte. Il ne vaut que pour cette adresse : changer
+    d'e-mail invalide les liens déjà envoyés."""
+    from django.conf import settings
+
+    from .tasks import send_verification_email
+
+    if not user.email or user.email_verified_at:
+        return False
+    token = signing.dumps({"u": str(user.id), "e": user.email.lower()}, salt=EMAIL_VERIFY_SALT)
+    link = f"{settings.PUBLIC_WEB_URL.rstrip('/')}/verify-email?token={token}"
+    email = user.email
+    transaction.on_commit(lambda: send_verification_email.delay(email, link))
+    return True
+
+
+def verify_email(*, token: str) -> User:
+    try:
+        data = signing.loads(token, salt=EMAIL_VERIFY_SALT, max_age=EMAIL_VERIFY_MAX_AGE)
+    except signing.BadSignature as exc:
+        raise DomainError(
+            "Lien invalide ou expiré : demandez un nouvel e-mail.", code="invalid_verification"
+        ) from exc
+    user = User.objects.filter(id=data.get("u")).first()
+    if user is None or (user.email or "").lower() != data.get("e"):
+        raise DomainError(
+            "Lien invalide ou expiré : demandez un nouvel e-mail.", code="invalid_verification"
+        )
+    mark_email_verified(user)
+    return user
+
+
+def mark_email_verified(user: User) -> None:
+    if user.email and not user.email_verified_at:
+        user.email_verified_at = timezone.now()
+        user.save(update_fields=["email_verified_at"])
+
+
 def authenticate_user(*, identifier: str, password: str) -> User:
-    """Connexion par nom d'utilisateur ou e-mail."""
+    """Connexion par nom d'utilisateur ou e-mail. Après 10 échecs en 15 minutes sur un même
+    compte, il est verrouillé temporairement (quelle que soit l'adresse IP de l'attaquant)."""
     match = User.objects.filter(email__iexact=identifier).first() if "@" in identifier else None
     username = match.username if match else identifier
+    lockout.ensure_allowed("login", username)
     user = authenticate(username=username, password=password)
     if user is None:
+        lockout.record_failure("login", username)
         # authenticate() refuse aussi les comptes suspendus : on le dit clairement.
         suspended = User.objects.filter(username=username, is_active=False).first()
         if suspended and suspended.check_password(password):
             raise AccountSuspendedError("Ce compte est suspendu. Contactez la modération.")
         raise InvalidCredentialsError("Identifiants incorrects.")
+    lockout.reset("login", username)
     return user
 
 
@@ -170,8 +220,11 @@ def login_with_phone(*, phone_number: str, code: str) -> tuple[User, bool]:
 
 
 @transaction.atomic
-def login_with_oauth(*, provider: str, code: str, redirect_uri: str | None = None):
-    """Connexion GitHub / GitLab. Renvoie (user, créé)."""
+def login_with_oauth(
+    *, provider: str, code: str, redirect_uri: str | None = None, code_verifier: str = ""
+):
+    """Connexion GitHub / GitLab / Google. Renvoie (user, créé)."""
+    oauth.check_verifier(code, code_verifier)
     identity = oauth.fetch_identity(provider, code, redirect_uri)
 
     account = (
@@ -188,6 +241,17 @@ def login_with_oauth(*, provider: str, code: str, redirect_uri: str | None = Non
     # L'e-mail est vérifié par le fournisseur : on rattache au compte existant.
     user = User.objects.filter(email__iexact=identity.email).first() if identity.email else None
     created = user is None
+    if user is not None and user.has_usable_password() and not user.email_verified_at:
+        # Adresse jamais vérifiée : quelqu'un a pu créer ce compte avec l'e-mail d'autrui pour
+        # garder un accès par mot de passe une fois la vraie propriétaire connectée par Google ou
+        # GitHub (pré-détournement). La personne qui prouve détenir l'adresse l'emporte : mot de
+        # passe invalidé, sessions fermées. Elle peut en définir un nouveau par « mot de passe
+        # oublié » (le lien arrive dans sa boîte). Un compte à l'adresse vérifiée garde le sien.
+        from .security import revoke_other_sessions
+
+        user.set_unusable_password()
+        user.save(update_fields=["password"])
+        revoke_other_sessions(user=user, current_sid=None)
     if created:
         user = User(
             username=_unique_username(identity.username),
@@ -200,6 +264,8 @@ def login_with_oauth(*, provider: str, code: str, redirect_uri: str | None = Non
     SocialAccount.objects.create(
         user=user, provider=provider, uid=identity.uid, username=identity.username
     )
+    if identity.email and (user.email or "").lower() == identity.email.lower():
+        mark_email_verified(user)  # adresse vérifiée par le fournisseur
     if created:
         _announce(
             user,
@@ -271,6 +337,7 @@ def reset_password(*, uid: str, token: str, password: str) -> User:
     user.set_password(password)
     user.save(update_fields=["password"])
     revoke_other_sessions(user=user, current_sid=None)
+    mark_email_verified(user)  # le lien est arrivé dans cette boîte : l'adresse est prouvée
     return user
 
 

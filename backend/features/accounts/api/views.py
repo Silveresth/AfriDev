@@ -11,10 +11,12 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.views import TokenRefreshView
 
-from core.throttling import OTPThrottle
+from core.throttling import EmailThrottle, OTPThrottle
 
-from .. import oauth, security, services
+from .. import oauth, security, services, web_session
 from ..authentication import NotPersonalAccessToken
 from ..export import export_user_data
 from .serializers import (
@@ -23,7 +25,9 @@ from .serializers import (
     AuthResponseSerializer,
     CreatedAccessTokenSerializer,
     DeleteAccountSerializer,
+    EmailVerifyInputSerializer,
     LoginInputSerializer,
+    LogoutInputSerializer,
     MFALoginInputSerializer,
     OAuthInputSerializer,
     OAuthProvidersSerializer,
@@ -58,14 +62,60 @@ def _auth_response(
             "mfa_token": security.mfa_challenge(user=user),
         }
         return Response(payload, status=status_code)
+    tokens = services.issue_tokens(user, request=request)
     payload = {
         "user": UserSerializer(user).data,
-        "tokens": services.issue_tokens(user, request=request),
+        "tokens": tokens,
         "created": created,
         "mfa_required": False,
         "mfa_token": None,
     }
-    return Response(payload, status=status_code)
+    response = Response(payload, status=status_code)
+    web_session.present(request, response, tokens)  # site web : renouvellement en cookie httpOnly
+    return response
+
+
+class SessionTokenRefreshView(TokenRefreshView):
+    """Renouvelle les jetons. Site web (X-Auth-Mode: cookie) : le jeton de renouvellement est lu
+    dans le cookie httpOnly et le nouveau y est reposé ; l'appli mobile l'envoie dans le corps.
+    Un ancien jeton envoyé dans le corps par le site est migré vers le cookie."""
+
+    def post(self, request, *args, **kwargs):
+        cookie_mode = web_session.wants_cookie(request)
+        refresh = request.data.get("refresh") or ""
+        if cookie_mode:
+            web_session.ensure_trusted_origin(request)
+            refresh = refresh or web_session.cookie_refresh(request)
+        if not refresh:
+            raise InvalidToken("Aucune session à renouveler.")
+        serializer = self.get_serializer(data={"refresh": refresh})
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as exc:
+            raise InvalidToken(exc.args[0]) from exc
+        tokens = dict(serializer.validated_data)
+        tokens.setdefault("refresh", refresh)  # sans rotation, le jeton reste le même
+        response = Response(tokens, status=status.HTTP_200_OK)
+        web_session.present(request, response, tokens)  # modifie `tokens`, rendu ensuite
+        return response
+
+
+class LogoutView(APIView):
+    """Déconnexion : la session (appareil) est révoquée côté serveur et le cookie effacé.
+    Le jeton de renouvellement vient du cookie (site) ou du corps (appli)."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    @extend_schema(request=LogoutInputSerializer, responses={204: None})
+    def post(self, request):
+        if web_session.wants_cookie(request):
+            web_session.ensure_trusted_origin(request)
+        refresh = request.data.get("refresh") or web_session.cookie_refresh(request)
+        security.end_session(refresh)
+        response = Response(status=status.HTTP_204_NO_CONTENT)
+        web_session.clear(response)
+        return response
 
 
 class RegisterView(APIView):
@@ -130,6 +180,31 @@ class PasswordResetConfirmView(APIView):
         data.is_valid(raise_exception=True)
         user = services.reset_password(**data.validated_data)
         return _auth_response(request, user, created=False)
+
+
+class EmailVerifyView(APIView):
+    """Lien reçu par e-mail (« /verify-email?token=… » sur le site)."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [OTPThrottle]
+
+    @extend_schema(request=EmailVerifyInputSerializer, responses=UserSerializer)
+    def post(self, request):
+        data = EmailVerifyInputSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        return Response(UserSerializer(services.verify_email(**data.validated_data)).data)
+
+
+class EmailResendView(APIView):
+    """Renvoie le lien de confirmation à l'adresse du compte connecté."""
+
+    throttle_classes = [EmailThrottle]
+
+    @extend_schema(request=None, responses={202: None})
+    def post(self, request):
+        services.send_email_verification(request.user)
+        return Response(status=status.HTTP_202_ACCEPTED)
 
 
 class OTPRequestView(APIView):
@@ -202,6 +277,13 @@ class OAuthStartView(APIView):
         parameters=[
             OpenApiParameter("return_to", str, required=True),
             OpenApiParameter("nonce", str, required=False),
+            OpenApiParameter(
+                "code_verifier",
+                str,
+                required=False,
+                description="Appli : secret aléatoire (32 à 128 caractères), redemandé à l'échange "
+                "du code.",
+            ),
         ],
         responses={302: None},
     )
@@ -212,6 +294,7 @@ class OAuthStartView(APIView):
                 callback_url=_oauth_callback_url(request, provider),
                 return_to=request.query_params.get("return_to", ""),
                 nonce=request.query_params.get("nonce", ""),
+                code_verifier=request.query_params.get("code_verifier", ""),
             )
         except oauth.OAuthError as exc:
             return HttpResponse(

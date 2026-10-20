@@ -8,7 +8,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.utils import timezone
 
-from core.exceptions import DomainError
+from core.exceptions import DomainError, TooManyAttemptsError
 
 from .models import PhoneOTP
 
@@ -22,8 +22,28 @@ def _hash(phone_number: str, code: str) -> str:
     return hmac.new(key, f"{phone_number}:{code}".encode(), hashlib.sha256).hexdigest()
 
 
+RESEND_COOLDOWN = timedelta(seconds=60)
+MAX_CODES_PER_HOUR = 5
+
+
+def _ensure_can_send(phone_number: str) -> None:
+    """Limite par numéro (en plus de la limite par adresse IP) : sans elle, un attaquant qui
+    change d'IP peut bombarder un numéro de SMS, aux frais de la plateforme."""
+    now = timezone.now()
+    recent = PhoneOTP.objects.filter(
+        phone_number=phone_number, created_at__gte=now - timedelta(hours=1)
+    )
+    if recent.filter(created_at__gt=now - RESEND_COOLDOWN).exists():
+        raise TooManyAttemptsError("Un code vient d'être envoyé : patientez une minute.")
+    if recent.count() >= MAX_CODES_PER_HOUR:
+        raise TooManyAttemptsError(
+            "Trop de codes demandés pour ce numéro. Réessayez dans une heure."
+        )
+
+
 def generate(phone_number: str) -> str:
     """Invalide les codes précédents et en crée un nouveau (6 chiffres)."""
+    _ensure_can_send(phone_number)
     PhoneOTP.objects.filter(phone_number=phone_number, consumed_at__isnull=True).update(
         consumed_at=timezone.now()
     )

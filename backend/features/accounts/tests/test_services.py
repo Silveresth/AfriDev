@@ -1,7 +1,9 @@
+from datetime import timedelta
+
 import pytest
 
 from core.exceptions import ConflictError, DomainError
-from features.accounts import oauth, services
+from features.accounts import oauth, otp, services
 from features.accounts.otp import InvalidOTPError
 from features.profiles import selectors as profile_selectors
 from integrations.github import OAuthIdentity
@@ -62,6 +64,7 @@ def test_phone_otp_flow_creates_then_reuses_account(monkeypatch):
     # Un code ne sert qu'une fois ; un nouveau code reconnecte le même compte.
     with pytest.raises(InvalidOTPError):
         services.login_with_phone(phone_number=phone, code=code)
+    monkeypatch.setattr(otp, "RESEND_COOLDOWN", timedelta(0))  # une minute plus tard
     services.request_phone_otp(phone_number=phone)
     again, created_again = services.login_with_phone(
         phone_number=phone, code=sent[-1][1].split("est ")[1][:6]

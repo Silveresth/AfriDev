@@ -19,6 +19,12 @@ class LinkPreviewThrottle(UserRateThrottle):
     scope = "link_preview"
 
 
+class EmailThrottle(UserRateThrottle):
+    """Renvoi de l'e-mail de confirmation : même quota que les SMS, par membre."""
+
+    scope = "otp"
+
+
 class OTPThrottle(AnonRateThrottle):
     """Limite les envois de SMS (coût et abus) par adresse IP."""
 

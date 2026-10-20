@@ -25,18 +25,43 @@ class UnsafeURL(ValueError):
     pass
 
 
-def _check_public(url: str) -> None:
+DEFAULT_PORTS = {"http": 80, "https": 443}
+
+
+def _resolve_public(url: str) -> str:
+    """Adresse IP publique à contacter pour `url` (contrôlée puis réutilisée telle quelle).
+
+    Se connecter à l'IP vérifiée, et non au nom, ferme la faille du « DNS rebinding » : un
+    domaine piégé ne peut pas répondre une IP publique au contrôle puis 127.0.0.1 (ou un
+    conteneur interne) au moment de la connexion. Seuls les ports web standard sont admis.
+    """
     parts = urlsplit(url)
-    if parts.scheme not in ("http", "https") or not parts.hostname:
+    if parts.scheme not in DEFAULT_PORTS or not parts.hostname:
         raise UnsafeURL("Seuls les liens http et https sont acceptés.")
     try:
-        infos = socket.getaddrinfo(parts.hostname, parts.port or None, proto=socket.IPPROTO_TCP)
-    except socket.gaierror as exc:
+        port = parts.port
+    except ValueError as exc:
+        raise UnsafeURL("Port invalide.") from exc
+    if port not in (None, DEFAULT_PORTS[parts.scheme]):
+        raise UnsafeURL("Port non standard refusé.")
+    try:
+        infos = socket.getaddrinfo(parts.hostname, None, proto=socket.IPPROTO_TCP)
+    except (socket.gaierror, UnicodeError) as exc:
         raise UnsafeURL("Adresse introuvable.") from exc
-    for info in infos:
-        address = ipaddress.ip_address(info[4][0])
-        if not address.is_global or address.is_multicast:
-            raise UnsafeURL("Adresse non publique refusée.")
+    addresses = [ipaddress.ip_address(info[4][0]) for info in infos]
+    if not addresses or any(not a.is_global or a.is_multicast for a in addresses):
+        raise UnsafeURL("Adresse non publique refusée.")
+    return str(addresses[0])
+
+
+def _pinned_request(url: str, ip: str) -> tuple[str, dict, dict]:
+    """URL réécrite vers l'IP vérifiée ; Host et SNI gardent le nom (certificat contrôlé)."""
+    parts = urlsplit(url)
+    host = f"[{ip}]" if ":" in ip else ip
+    target = parts._replace(netloc=host).geturl()
+    headers = {"Host": parts.hostname}
+    extensions = {"sni_hostname": parts.hostname} if parts.scheme == "https" else {}
+    return target, headers, extensions
 
 
 def _meta(html: str, *names: str) -> str:
@@ -81,8 +106,11 @@ def preview(url: str) -> dict:
         timeout=TIMEOUT, follow_redirects=False, headers={"User-Agent": USER_AGENT}
     ) as client:
         for _ in range(MAX_REDIRECTS + 1):
-            _check_public(current)
-            with client.stream("GET", current) as response:
+            ip = _resolve_public(current)
+            target, request_headers, extensions = _pinned_request(current, ip)
+            with client.stream(
+                "GET", target, headers=request_headers, extensions=extensions
+            ) as response:
                 if response.is_redirect and response.headers.get("location"):
                     current = urljoin(current, response.headers["location"])
                     continue

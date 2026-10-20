@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 
 import environ
 from celery.schedules import crontab
+from corsheaders.defaults import default_headers as default_cors_headers
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 REPO_DIR = BASE_DIR.parent
@@ -168,6 +169,11 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 20,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "core.exceptions.api_exception_handler",
+    # Un seul proxy (nginx) devant l'API : l'adresse du client est la DERNIÈRE de
+    # X-Forwarded-For (ajoutée par nginx). Sans ce réglage, DRF identifie le client par l'en-tête
+    # entier, que le client écrit lui-même : changer l'en-tête suffisait à contourner toutes les
+    # limites (connexion, SMS, OTP…).
+    "NUM_PROXIES": env.int("TRUSTED_PROXY_COUNT", default=1),
     "DEFAULT_THROTTLE_RATES": {
         "user": "1000/hour",
         "anon": "100/hour",
@@ -213,6 +219,10 @@ SPECTACULAR_SETTINGS = {
 }
 
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
+# Session du site en cookie httpOnly (features/accounts/web_session.py) : en développement, le
+# site (port 3000) et l'API (port 8000) sont des origines distinctes. Origines listées une à une.
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = (*default_cors_headers, "x-auth-mode")
 
 # URL du site web (cible des QR codes de profil et des liens dans les e-mails).
 PUBLIC_WEB_URL = env("PUBLIC_WEB_URL", default="http://localhost:3000")

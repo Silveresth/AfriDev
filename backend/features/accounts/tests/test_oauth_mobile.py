@@ -8,7 +8,8 @@ from integrations.github import OAuthIdentity
 
 pytestmark = pytest.mark.django_db
 
-RETURN_TO = "exp://192.168.1.10:8081/--/oauth"
+RETURN_TO = "afridev://oauth"
+EXPO_GO_RETURN = "exp://192.168.1.10:8081/--/oauth"
 
 
 @pytest.fixture
@@ -45,6 +46,15 @@ def test_start_redirects_to_google_with_signed_state(api_client, oauth_settings)
 
 def test_start_refuses_web_return_urls(api_client, oauth_settings):
     assert _start(api_client, "github", "https://evil.example/steal").status_code == 400
+
+
+def test_expo_go_return_only_in_development(api_client, oauth_settings):
+    # exp:// ouvre n'importe quel projet Expo : en production, le code partirait chez un tiers.
+    oauth_settings.DEBUG = False
+    assert _start(api_client, "github", EXPO_GO_RETURN).status_code == 400
+    assert _start(api_client, "github", "exps://evil.example/--/oauth").status_code == 400
+    oauth_settings.DEBUG = True
+    assert _start(api_client, "github", EXPO_GO_RETURN).status_code == 302
 
 
 def test_start_refuses_unconfigured_provider(api_client, oauth_settings):

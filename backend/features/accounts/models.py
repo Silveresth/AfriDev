@@ -11,6 +11,8 @@ class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     phone_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
     phone_verified_at = models.DateTimeField(null=True, blank=True)
+    # Adresse prouvée : lien reçu par e-mail ouvert, ou adresse vérifiée par Google / GitHub.
+    email_verified_at = models.DateTimeField(null=True, blank=True)
     # Double authentification par application (TOTP, RFC 6238) : secret base32, activée à la date
     # de confirmation ; dernier pas de 30 s accepté (un code ne sert qu'une fois).
     totp_secret = models.CharField(max_length=64, blank=True)

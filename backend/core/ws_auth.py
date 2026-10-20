@@ -12,9 +12,15 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 @database_sync_to_async
 def _user_from_token(raw_token: str):
+    from features.accounts.security import is_session_revoked
+
     try:
         token = AccessToken(raw_token)
     except TokenError:
+        return AnonymousUser()
+    # Comme l'API HTTP : un appareil déconnecté (session révoquée) perd aussi le temps réel.
+    sid = token.get("sid")
+    if sid and is_session_revoked(sid):
         return AnonymousUser()
     return get_user_model().objects.filter(id=token["user_id"], is_active=True).first() or (
         AnonymousUser()

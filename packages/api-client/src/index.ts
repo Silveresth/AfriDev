@@ -9,6 +9,7 @@ export { type ApiClient, type ApiClientOptions, createApiClient } from './client
 export {
   type AfriDevClient,
   ApiError,
+  COOKIE_SESSION,
   createAfriDevClient,
   type DirectUploadFile,
   errorMessage,

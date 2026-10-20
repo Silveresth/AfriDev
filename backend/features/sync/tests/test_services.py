@@ -55,6 +55,26 @@ def test_replaying_a_batch_after_network_cut_is_harmless(user):
     assert feed_selectors.get_post(post_id=post_id) is None
 
 
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"website": "javascript:alert(document.cookie)"},
+        {"avatar_url": "data:text/html,<script>alert(1)</script>"},
+        {"banner_url": "JaVaScRiPt:alert(1)"},
+    ],
+)
+def test_offline_profile_urls_are_validated_like_the_api(user, data):
+    """La synchro ne passe pas par les sérialiseurs : le service vérifie lui-même les liens."""
+    from features.profiles import selectors as profile_selectors
+
+    result = services.apply_operations(
+        user=user, operations=[_op("PATCH", "profiles", user.id, data)]
+    )
+    assert result["applied"] == 0 and len(result["rejected"]) == 1
+    profile = profile_selectors.get_profile_for_user(user_id=user.id)
+    assert not any(getattr(profile, field) for field in data)
+
+
 def test_business_errors_are_rejected_without_blocking_the_queue(user, other_user):
     foreign_profile = other_user.id
     good_snippet = uuid.uuid4()

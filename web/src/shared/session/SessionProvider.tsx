@@ -4,7 +4,7 @@ import type { Schemas } from '@afridev/api-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
 
-import { api, tokenStore, type Tokens, unwrap } from '@/shared/api';
+import { api, logout, tokenStore, type Tokens, unwrap } from '@/shared/api';
 import { unsubscribeWebPush, WebPushSync } from '@/shared/push';
 
 type User = Schemas['User'];
@@ -25,7 +25,7 @@ const SessionContext = createContext<Session | null>(null);
 export const ME_KEY = ['session', 'me'] as const;
 export const MY_PROFILE_KEY = ['session', 'profile'] as const;
 
-const hasToken = () => Boolean(tokenStore.get() || tokenStore.getRefresh());
+const hasToken = () => tokenStore.hasSession();
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
@@ -54,7 +54,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(() => {
     void unsubscribeWebPush({ server: false });
-    tokenStore.set(null);
+    // Session révoquée côté serveur et cookie effacé (pas seulement oubliée par le navigateur).
+    void logout();
     queryClient.clear(); // la copie locale contient des données personnelles
   }, [queryClient]);
 

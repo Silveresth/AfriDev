@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
 
-import { api, type Schemas, tokenStore, type Tokens, unwrap } from '@/shared/api';
+import { api, logout, type Schemas, tokenStore, type Tokens, unwrap } from '@/shared/api';
 import { unregisterPush } from '@/shared/push';
 
 type User = Schemas['User'];
@@ -50,7 +50,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(() => {
     unregisterPush();
-    tokenStore.set(null);
+    // Session révoquée côté serveur (l'appareil disparaît de « Sessions »), jetons effacés.
+    void logout();
     queryClient.clear();
   }, [queryClient]);
 

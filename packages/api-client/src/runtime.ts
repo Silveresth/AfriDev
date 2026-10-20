@@ -27,8 +27,24 @@ export interface Tokens {
 
 export interface TokenStorage {
   get(): string | null;
+  /** Jeton de renouvellement, ou COOKIE_SESSION quand il vit dans un cookie httpOnly (site). */
   getRefresh(): string | null;
   set(tokens: Tokens | null): void;
+}
+
+/** getRefresh() du site : le jeton existe mais vit dans un cookie illisible par JavaScript. */
+export const COOKIE_SESSION = 'cookie';
+
+/** Secondes avant expiration du jeton d'accès (lues dans le JWT, sans vérifier la signature). */
+function secondsLeft(token: string): number {
+  try {
+    const payload = token.split('.')[1] ?? '';
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payload.length / 4) * 4, '='));
+    const exp = (JSON.parse(json) as { exp?: number }).exp;
+    return exp ? exp - Date.now() / 1000 : Infinity;
+  } catch {
+    return Infinity; // jeton illisible : le serveur tranchera (401 puis renouvellement)
+  }
 }
 
 /** Erreur de l'API au format du backend : {"error": {"code", "message", "details"}}. */
@@ -97,13 +113,26 @@ export function createAfriDevClient({
   baseUrl,
   tokens,
   timeoutMs,
+  cookieSession = false,
 }: {
   baseUrl: string;
   tokens: TokenStorage;
   /** Au-delà, la requête est abandonnée (réseau mobile instable) : erreur « network ». */
   timeoutMs?: number;
+  /**
+   * Site web : jeton de renouvellement dans un cookie httpOnly posé par l'API (en-tête
+   * X-Auth-Mode: cookie), jeton d'accès en mémoire seulement. Une XSS ne peut pas voler la session.
+   */
+  cookieSession?: boolean;
 }) {
   let refreshing: Promise<string | null> | null = null;
+
+  /** En-têtes et cookies du mode « session en cookie » (site web). */
+  function withSession(init: RequestInit, headers: Headers): RequestInit {
+    if (!cookieSession) return { ...init, headers };
+    headers.set('X-Auth-Mode', 'cookie');
+    return { ...init, headers, credentials: 'include' };
+  }
 
   /** Un seul renouvellement à la fois, même si plusieurs requêtes reçoivent un 401. */
   function refreshAccessToken(): Promise<string | null> {
@@ -111,17 +140,18 @@ export function createAfriDevClient({
     if (!refresh) return Promise.resolve(null);
     refreshing ??= (async () => {
       try {
-        const response = await fetch(`${baseUrl}/api/accounts/token/refresh/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh }),
-        });
+        // Site : le cookie suffit ; un ancien jeton encore en stockage local est migré vers lui.
+        const body = refresh === COOKIE_SESSION ? {} : { refresh };
+        const response = await fetch(
+          `${baseUrl}/api/accounts/token/refresh/`,
+          withSession({ method: 'POST', body: JSON.stringify(body) }, new Headers({ 'Content-Type': 'application/json' })),
+        );
         if (!response.ok) {
-          tokens.set(null); // session expirée : retour à l'écran de connexion
+          tokens.set(null); // session expirée ou révoquée : retour à l'écran de connexion
           return null;
         }
         const data = (await response.json()) as { access: string; refresh?: string };
-        tokens.set({ access: data.access, refresh: data.refresh ?? refresh });
+        tokens.set({ access: data.access, refresh: data.refresh || (cookieSession ? COOKIE_SESSION : refresh) });
         return data.access;
       } catch {
         return null; // hors ligne : la session est gardée pour plus tard
@@ -132,13 +162,41 @@ export function createAfriDevClient({
     return refreshing;
   }
 
+  /**
+   * Jeton d'accès utilisable : renouvelé d'avance s'il manque (site rechargé : il ne vit qu'en
+   * mémoire) ou expire dans moins de 30 s. Pour le WebSocket, qui ne peut pas rejouer sur 401.
+   */
+  async function getAccessToken(): Promise<string | null> {
+    const access = tokens.get();
+    if (access && secondsLeft(access) > 30) return access;
+    if (!tokens.getRefresh()) return access;
+    return (await refreshAccessToken()) ?? access;
+  }
+
+  /** Déconnexion : la session est révoquée côté serveur (et le cookie du site effacé). */
+  async function logout(): Promise<void> {
+    const refresh = tokens.getRefresh();
+    tokens.set(null);
+    if (!refresh) return;
+    try {
+      const body = refresh === COOKIE_SESSION ? {} : { refresh };
+      await fetch(
+        `${baseUrl}/api/accounts/logout/`,
+        withSession({ method: 'POST', body: JSON.stringify(body) }, new Headers({ 'Content-Type': 'application/json' })),
+      );
+    } catch {
+      // hors ligne : la session expirera d'elle-même ; les jetons locaux sont déjà effacés
+    }
+  }
+
   async function send(url: string, init: RequestInit, token: string | null): Promise<Response> {
     const headers = new Headers(init.headers);
     if (token) headers.set('Authorization', `Bearer ${token}`);
+    init = withSession(init, headers);
     const controller = timeoutMs ? new AbortController() : null;
     const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
     try {
-      return await fetch(url, { ...init, headers, ...(controller ? { signal: controller.signal } : {}) });
+      return await fetch(url, { ...init, ...(controller ? { signal: controller.signal } : {}) });
     } catch {
       throw networkError();
     } finally {
@@ -148,10 +206,13 @@ export function createAfriDevClient({
 
   /** fetch authentifié : ajoute le jeton, le renouvelle sur 401 et rejoue la requête une fois. */
   async function request(url: string, init: RequestInit = {}): Promise<Response> {
-    const response = await send(url, init, tokens.get());
+    // Jeton absent (site rechargé) ou expiré : renouvelé d'abord, sinon un point d'entrée ouvert
+    // aux visiteurs répondrait comme à un anonyme, sans 401 pour déclencher le renouvellement.
+    const current = cookieSession ? await getAccessToken() : tokens.get();
+    const response = await send(url, init, current);
     if (response.status !== 401 || !tokens.getRefresh()) return response;
-    const access = await refreshAccessToken();
-    return access ? send(url, init, access) : response;
+    const renewed = await refreshAccessToken();
+    return renewed ? send(url, init, renewed) : response;
   }
 
   /** Adaptateur pour openapi-fetch (qui manipule des objets Request). */
@@ -240,7 +301,7 @@ export function createAfriDevClient({
     );
   }
 
-  return { api, request, authFetch, unwrap, apiFetch, waitForJob, uploadDirect };
+  return { api, request, authFetch, unwrap, apiFetch, waitForJob, uploadDirect, getAccessToken, logout };
 }
 
 export type AfriDevClient = ReturnType<typeof createAfriDevClient>;

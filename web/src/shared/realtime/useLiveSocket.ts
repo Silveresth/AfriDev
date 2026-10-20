@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 
-import { tokenStore, WS_URL } from '@/shared/api';
+import { getAccessToken, tokenStore, WS_URL } from '@/shared/api';
 
 /**
  * WebSocket temps réel (commentaires, notifications) authentifié par ?token=<jwt>.
@@ -22,9 +22,12 @@ export function useLiveSocket<T>(path: string | null, onMessage: (message: T) =>
     let timer: number | undefined;
     let closed = false;
 
-    const connect = () => {
-      const token = tokenStore.get();
-      if (closed || !token || !navigator.onLine) return;
+    const connect = async () => {
+      if (closed || !navigator.onLine || !tokenStore.hasSession()) return;
+      // Jeton frais : absent après un rechargement (il ne vit qu'en mémoire) ou proche de
+      // l'expiration à une reconnexion. Sans lui, la socket serait refusée en boucle.
+      const token = await getAccessToken();
+      if (closed || !token) return;
       socket = new WebSocket(`${WS_URL}${path}?token=${encodeURIComponent(token)}`);
       socket.onopen = () => {
         attempt = 0;
@@ -39,17 +42,17 @@ export function useLiveSocket<T>(path: string | null, onMessage: (message: T) =>
       socket.onclose = () => {
         if (closed) return;
         attempt += 1;
-        timer = window.setTimeout(connect, Math.min(30_000, 1000 * 2 ** attempt));
+        timer = window.setTimeout(() => void connect(), Math.min(30_000, 1000 * 2 ** attempt));
       };
     };
 
     const onOnline = () => {
       window.clearTimeout(timer);
       attempt = 0;
-      if (!socket || socket.readyState === WebSocket.CLOSED) connect();
+      if (!socket || socket.readyState === WebSocket.CLOSED) void connect();
     };
 
-    connect();
+    void connect();
     window.addEventListener('online', onOnline);
     return () => {
       closed = true;

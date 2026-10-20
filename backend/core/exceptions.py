@@ -29,6 +29,11 @@ class PermissionDeniedError(DomainError):
     status_code = 403
 
 
+class TooManyAttemptsError(DomainError):
+    code = "too_many_attempts"
+    status_code = 429
+
+
 class ConflictError(DomainError):
     code = "conflict"
     status_code = 409

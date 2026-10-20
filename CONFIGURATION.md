@@ -238,6 +238,6 @@ WEBPUSH_VAPID_SUBJECT=mailto:contact@afridev.dev
 
 ## 7. Points d'attention
 
-- **Clé Next.js en clair** : `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` est écrite dans `deploy.yml` et `docker-compose.yml`, donc visible sur GitHub. Il vaut mieux la remplacer par un secret GitHub (`openssl rand -base64 32`).
+- **Clé des Server Actions de Next.js** : `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` n'est plus fournie (l'ancienne valeur, publiée dans le dépôt, ne doit plus servir). Le site n'utilise pas de Server Actions : Next.js génère une clé à chaque build. Si un jour il en utilise, la passer comme secret GitHub (`openssl rand -base64 32`), jamais en clair dans un fichier versionné.
 - **Modèles Groq** : ne mettez pas `GROQ_SMART_MODEL` / `GROQ_FAST_MODEL` dans le `.env` sauf besoin précis ; les anciennes valeurs `llama-3.x` n'existent plus chez Groq et cassent toute l'IA. Sans ces lignes, les bons modèles par défaut s'appliquent.
 - **Mémoire (2 Go)** : le worker IA séparé (`celery-ai`) ajoute environ 150 Mo. Surveille-le avec `docker stats`.

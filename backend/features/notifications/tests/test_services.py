@@ -40,6 +40,7 @@ def test_push_is_sent_to_registered_devices(user, monkeypatch):
 
 
 def test_important_kinds_also_send_an_email(user):
+    mail.outbox.clear()  # e-mail de confirmation de l'adresse, envoyé à l'inscription
     services.notify(recipient_id=user.id, kind="new_comment", title="Commentaire")
     assert mail.outbox == []
     services.notify(recipient_id=user.id, kind="content_hidden", title="Contenu masqué")
