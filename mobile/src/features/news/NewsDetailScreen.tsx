@@ -16,7 +16,10 @@ export function NewsDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
   const { t, tp } = useT();
-  const { textOnly } = useDataSaver();
+  // Actus : vignettes affichées sauf « Texte seul » choisi par le membre. En mode automatique
+  // (réseau mobile), elles disparaissaient sans moyen de les voir.
+  const { mode } = useDataSaver();
+  const textOnly = mode === 'on';
   const item = useNewsItem(id);
 
   if (!item) {

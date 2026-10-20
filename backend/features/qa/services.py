@@ -14,8 +14,10 @@ from .events import (
     ai_answer_ready,
     answer_accepted,
     answer_created,
+    answer_edited,
     answer_voted,
     question_created,
+    question_edited,
 )
 from .models import Answer, AnswerVote, Question
 
@@ -112,6 +114,11 @@ def update_question(*, question: Question, user, title=None, body=None, tags=Non
     if fields:
         _guard(question.title, question.body)
         question.save(update_fields=[*fields, "updated_at"])
+        if {"title", "body"} & set(fields):
+            text = f"{question.title}\n\n{question.body}"
+            transaction.on_commit(
+                lambda: question_edited.send(sender=Question, question_id=question.id, text=text)
+            )
     return question
 
 
@@ -369,3 +376,7 @@ def apply_offline_answer(*, user, op: str, record_id, data: dict) -> None:
             _guard(data["body"])
             answer.body = data["body"].strip()
             answer.save(update_fields=["body", "updated_at"])
+            body = answer.body
+            transaction.on_commit(
+                lambda: answer_edited.send(sender=Answer, answer_id=answer.id, text=body)
+            )

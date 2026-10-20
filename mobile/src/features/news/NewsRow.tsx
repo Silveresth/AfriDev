@@ -31,7 +31,10 @@ function SourceMark({ item }: { item: NewsItem }) {
 export const NewsRow = memo(function NewsRow({ item }: { item: NewsItem }) {
   const { colors } = useTheme();
   const { t } = useT();
-  const { textOnly } = useDataSaver();
+  // Actus : vignettes affichées sauf « Texte seul » choisi par le membre. En mode automatique
+  // (réseau mobile), elles disparaissaient sans moyen de les voir.
+  const { mode } = useDataSaver();
+  const textOnly = mode === 'on';
   const domain = domainOf(item.url);
   const hasDiscussion = item.comment_count !== null && Boolean(item.discussion_url);
 

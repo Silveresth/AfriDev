@@ -9,7 +9,13 @@ from features.feed import selectors as feed_selectors
 from features.jobs_events import selectors as jobs_selectors
 from features.projects import selectors as project_selectors
 
-from .events import comment_created, comment_deleted, comment_restored, target_comment_created
+from .events import (
+    comment_created,
+    comment_deleted,
+    comment_edited,
+    comment_restored,
+    target_comment_created,
+)
 from .models import Comment, TargetComment, ThreadSummary
 
 # ── Projets et offres d'emploi ──
@@ -250,3 +256,7 @@ def apply_offline_write(*, user, op: str, record_id, data: dict) -> None:
         if data.get("body", "").strip():
             comment.body = data["body"].strip()
             comment.save(update_fields=["body", "updated_at"])
+            body = comment.body
+            transaction.on_commit(
+                lambda: comment_edited.send(sender=Comment, comment_id=comment.id, text=body)
+            )

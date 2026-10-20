@@ -343,8 +343,9 @@ PASSWORD_RESET_TIMEOUT = 60 * 60
 MODERATION_AUTO_HIDE_REPORTS = env.int("MODERATION_AUTO_HIDE_REPORTS", default=3)
 # Analyse IA de chaque nouveau contenu (posts, commentaires, questions, réponses).
 MODERATION_SCREEN_NEW_CONTENT = env.bool("MODERATION_SCREEN_NEW_CONTENT", default=True)
-# Confiance minimale de l'IA pour masquer un contenu sans attendre un modérateur.
-MODERATION_AI_HIDE_CONFIDENCE = env.float("MODERATION_AI_HIDE_CONFIDENCE", default=0.9)
+# Confiance minimale de l'IA pour masquer un contenu sans attendre un modérateur (en dessous,
+# le contenu reste visible et un signalement attend l'équipe).
+MODERATION_AI_HIDE_CONFIDENCE = env.float("MODERATION_AI_HIDE_CONFIDENCE", default=0.75)
 
 LOGGING = {
     "version": 1,

@@ -13,3 +13,6 @@ answer_accepted = Signal()
 answer_voted = Signal()
 # Envoyé après commit avec question_id, author_id quand la réponse IA est prête.
 ai_answer_ready = Signal()
+# Envoyés après commit avec l'identifiant et le texte quand une question / réponse est modifiée.
+question_edited = Signal()
+answer_edited = Signal()

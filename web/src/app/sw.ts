@@ -146,9 +146,12 @@ const runtimeCaching: RuntimeCaching[] = [
 // Supervision (/monitoring/, Basic Auth nginx) : jamais interceptée. Un 401 relayé par le service
 // worker n'ouvre pas la fenêtre de mot de passe du navigateur ; on laisse donc le navigateur faire.
 // Enregistré avant Serwist : stopImmediatePropagation l'empêche de répondre à ces requêtes.
+// Autres domaines (images des actus tech, avatars GitHub, Cloudinary…) : laissés au navigateur.
+// Relayées par le service worker, elles tombaient sous la règle connect-src de la CSP (API et
+// Cloudinary seulement) et aucune image externe ne s'affichait.
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  if (url.origin === self.location.origin && url.pathname.startsWith('/monitoring/')) {
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/monitoring/')) {
     event.stopImmediatePropagation();
   }
 });

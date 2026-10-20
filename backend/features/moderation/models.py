@@ -17,6 +17,7 @@ class Report(BaseModel):
         HUB = "hub", "Hub"
         JOB = "job", "Offre d'emploi"
         TARGET_COMMENT = "target_comment", "Commentaire (projet ou offre)"
+        SNIPPET_COMMENT = "snippet_comment", "Commentaire de snippet"
 
     class Reason(models.TextChoices):
         SPAM = "spam", "Spam ou publicité"

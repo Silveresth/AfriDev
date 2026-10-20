@@ -292,3 +292,30 @@ def delete_comment(*, comment: SnippetComment, user) -> None:
             default=Value(0),
         )
     )
+
+
+def hide_comment(*, comment_id) -> bool:
+    """Modération : masque un commentaire (réversible). Faux s'il était déjà masqué ou absent."""
+    comment = SnippetComment.objects.alive().filter(id=comment_id).first()
+    if comment is None:
+        return False
+    comment.soft_delete()
+    Snippet.objects.filter(pk=comment.snippet_id).update(
+        comment_count=Case(
+            When(comment_count__gt=0, then=F("comment_count") - 1),
+            default=Value(0),
+        )
+    )
+    return True
+
+
+def restore_comment(*, comment_id) -> bool:
+    """Modération : rétablit un commentaire masqué."""
+    updated = SnippetComment.objects.filter(id=comment_id, deleted_at__isnull=False).update(
+        deleted_at=None
+    )
+    if not updated:
+        return False
+    comment = SnippetComment.objects.get(id=comment_id)
+    Snippet.objects.filter(pk=comment.snippet_id).update(comment_count=F("comment_count") + 1)
+    return True

@@ -121,6 +121,14 @@ def _target_comment(target_id, include_hidden=False):
     return Content(comment.body, comment.author_id, url, comment.deleted_at is not None)
 
 
+def _snippet_comment(target_id, include_hidden=False):
+    comment = snippet_selectors.get_comment(comment_id=target_id, include_hidden=include_hidden)
+    if comment is None:
+        return None
+    url = f"/snippets/{comment.snippet_id}"
+    return Content(comment.body, comment.author_id, url, comment.deleted_at is not None)
+
+
 def _hub(target_id, include_hidden=False):
     hub = hub_selectors.get_hub(hub_id=target_id, include_hidden=include_hidden)
     if hub is None:
@@ -178,5 +186,10 @@ TARGETS: dict[str, Target] = {
         load=_target_comment,
         hide=lambda i: discussion_services.hide_target_comment(comment_id=i),
         restore=lambda i: discussion_services.restore_target_comment(comment_id=i),
+    ),
+    "snippet_comment": Target(
+        load=_snippet_comment,
+        hide=lambda i: snippet_services.hide_comment(comment_id=i),
+        restore=lambda i: snippet_services.restore_comment(comment_id=i),
     ),
 }

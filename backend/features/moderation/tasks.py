@@ -21,7 +21,7 @@ def ai_review_report(report_id: str) -> None:
     if not text:
         return
     try:
-        verdict = review(text)
+        verdict = review(text, report.target_type)
     except llm.LLMError:
         logger.warning("Modération IA indisponible pour le signalement %s", report_id)
         return
@@ -33,7 +33,7 @@ def ai_screen_content(target_type: str, target_id: str, text: str) -> None:
     if not text.strip():
         return
     try:
-        verdict = review(text)
+        verdict = review(text, target_type)
     except llm.LLMError:
         return
     services.flag_from_screening(target_type=target_type, target_id=target_id, verdict=verdict)

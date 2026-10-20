@@ -11,7 +11,7 @@ from core.utils import normalize_tags, parse_json_list
 from features.hubs import services as hub_services
 from features.media import selectors as media_selectors
 
-from .events import post_liked, post_published, post_vote_changed
+from .events import post_edited, post_liked, post_published, post_vote_changed
 from .models import PollVote, Post, PostLike
 
 MEDIA_KIND = {Post.Kind.IMAGE: "image", Post.Kind.SHORT: "video"}
@@ -151,6 +151,9 @@ def update_post(
         fields.append("hub_id")
     if fields:
         post.save(update_fields=[*fields, "updated_at"])
+        if {"title", "body"} & set(fields):
+            text = f"{post.title}\n\n{post.body}".strip()
+            transaction.on_commit(lambda: post_edited.send(sender=Post, post_id=post.id, text=text))
     return post
 
 

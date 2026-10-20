@@ -12,8 +12,12 @@ from .targets import TARGETS
 
 AI_CATEGORY_TO_REASON = {
     "spam": Report.Reason.SPAM,
+    "insult": Report.Reason.ABUSE,
+    "harassment": Report.Reason.ABUSE,
+    "hate": Report.Reason.ABUSE,
     "abuse": Report.Reason.ABUSE,
     "scam": Report.Reason.SCAM,
+    "personal_data": Report.Reason.SECRET,
 }
 
 
