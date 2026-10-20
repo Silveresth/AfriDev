@@ -225,6 +225,12 @@ export function parseTags(raw: string): string[] {
 }
 
 /** Le champ `media` de l'API n'est pas typé : on ne garde que les images prêtes. */
+/** Vidéo du post (prête ou encore en traitement : l'écran l'indique). */
+export function videoOf(post: Post): Media | null {
+  const media = post.media as Media | null | undefined;
+  return media && media.kind === 'video' && media.status !== 'failed' ? media : null;
+}
+
 export function imageOf(post: Post): Media | null {
   const media = post.media as Media | null | undefined;
   return media && media.kind === 'image' && media.status === 'ready' ? media : null;

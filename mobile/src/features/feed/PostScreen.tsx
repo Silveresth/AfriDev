@@ -13,10 +13,11 @@ import { useSession } from '@/shared/session';
 import { radius, useTheme } from '@/shared/theme';
 import { EmptyState, ErrorState, Header, IconButton, ListFooter, Loading, Markdown, TagRow, Text, useToast } from '@/shared/ui';
 
-import { type Comment, imageOf, type Post, useComments, useDeletePost, usePinPost, usePost } from './api';
+import { type Comment, imageOf, type Post, useComments, useDeletePost, usePinPost, usePost, videoOf } from './api';
 import { CommentComposer, CommentRow, threadRows } from './Comments';
 import { Poll } from './Poll';
 import { PostImage } from './PostImage';
+import { PostVideo } from './PostVideo';
 import { PostByline } from './PostRow';
 import { VoteCapsule } from './VoteCapsule';
 
@@ -24,6 +25,7 @@ function PostBody({ post }: { post: Post }) {
   const { colors } = useTheme();
   const { t, tp } = useT();
   const image = imageOf(post);
+  const video = videoOf(post);
 
   return (
     <View style={[styles.post, { borderBottomColor: colors.line }]}>
@@ -32,6 +34,7 @@ function PostBody({ post }: { post: Post }) {
       {post.body ? <Markdown source={post.body} /> : null}
       <TranslateBar text={[post.title, post.body].filter(Boolean).join('\n\n')} />
       {image ? <PostImage media={image} variant="detail" /> : null}
+      {video ? <PostVideo media={video} /> : null}
       {post.kind === 'poll' ? <Poll post={post} /> : null}
       <TagRow tags={post.tags} max={5} />
       <View style={styles.actions}>

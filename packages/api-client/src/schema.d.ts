@@ -261,6 +261,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/accounts/password/reset/code/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Appli : code à 6 chiffres reçu par e-mail + nouveau mot de passe, puis connexion directe. */
+        post: operations["accounts_password_reset_code_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/accounts/password/reset/confirm/": {
         parameters: {
             query?: never;
@@ -4007,6 +4024,12 @@ export interface components {
             previous: string | null;
             results: components["schemas"]["TargetCommentOutput"][];
         };
+        PasswordResetCodeRequest: {
+            /** Format: email */
+            email: string;
+            code: string;
+            password: string;
+        };
         PasswordResetConfirmRequest: {
             uid: string;
             token: string;
@@ -5484,6 +5507,31 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    accounts_password_reset_code_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetCodeRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PasswordResetCodeRequest"];
+                "multipart/form-data": components["schemas"]["PasswordResetCodeRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthResponse"];
+                };
             };
         };
     };

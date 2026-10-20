@@ -293,3 +293,56 @@ def test_verification_link_is_bound_to_the_address(make_user):
         services.verify_email(token=token)
     with pytest.raises(DomainError):
         services.verify_email(token="faux")
+
+
+# ── Mot de passe oublié par code (appli) ──
+
+
+def _request_code(client, mailoutbox, captured):
+    with captured(execute=True):
+        assert (
+            client.post(
+                "/api/accounts/password/reset/", {"email": "amina@example.com"}, format="json"
+            ).status_code
+            == 202
+        )
+    body = mailoutbox[-1].body
+    return body.split("(valable 15 minutes) :")[1].split()[0]
+
+
+def _reset(client, code, password="N0uveau-secret-pass"):
+    return client.post(
+        "/api/accounts/password/reset/code/",
+        {"email": "amina@example.com", "code": code, "password": password},
+        format="json",
+    )
+
+
+def test_reset_code_logs_in_with_new_password(
+    api_client, user, mailoutbox, django_capture_on_commit_callbacks
+):
+    code = _request_code(api_client, mailoutbox, django_capture_on_commit_callbacks)
+    assert len(code) == 6 and code.isdigit()
+    response = _reset(api_client, code)
+    assert response.status_code == 200 and response.data["tokens"]["access"]
+    assert services.authenticate_user(identifier="amina", password="N0uveau-secret-pass") == user
+    assert _reset(api_client, code).status_code == 400  # code à usage unique
+
+
+def test_reset_code_is_burnt_after_five_wrong_tries(
+    api_client, user, mailoutbox, django_capture_on_commit_callbacks
+):
+    code = _request_code(api_client, mailoutbox, django_capture_on_commit_callbacks)
+    wrong = "000000" if code != "000000" else "111111"
+    for _ in range(services.RESET_CODE_ATTEMPTS):
+        assert _reset(api_client, wrong).status_code == 400
+    assert _reset(api_client, code).status_code == 400  # brûlé : même le bon code ne passe plus
+
+
+def test_reset_code_for_unknown_email_reveals_nothing(api_client):
+    response = api_client.post(
+        "/api/accounts/password/reset/code/",
+        {"email": "personne@example.com", "code": "123456", "password": "N0uveau-secret-pass"},
+        format="json",
+    )
+    assert response.status_code == 400 and response.data["error"]["code"] == "invalid_reset"

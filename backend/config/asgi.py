@@ -9,7 +9,7 @@ django_asgi_app = get_asgi_application()
 
 from channels.routing import ProtocolTypeRouter, URLRouter  # noqa: E402
 
-from core.ws_auth import JWTAuthMiddleware  # noqa: E402
+from features.accounts.ws_auth import JWTAuthMiddleware  # noqa: E402
 from features.discussions.routing import websocket_urlpatterns as discussions_ws  # noqa: E402
 from features.notifications.routing import websocket_urlpatterns as notifications_ws  # noqa: E402
 

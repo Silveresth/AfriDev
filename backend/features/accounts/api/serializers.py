@@ -206,5 +206,13 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, min_length=8)
 
 
+class PasswordResetCodeSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.RegexField(
+        r"^\s*\d{6}\s*$", error_messages={"invalid": "Le code a 6 chiffres."}
+    )
+    password = serializers.CharField(write_only=True, min_length=8)
+
+
 class OAuthProvidersSerializer(serializers.Serializer):
     providers = serializers.ListField(child=serializers.ChoiceField(["github", "google", "gitlab"]))

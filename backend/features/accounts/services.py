@@ -1,11 +1,15 @@
 """Écritures (création, mise à jour, publication). Seul point d'entrée en écriture."""
 
+import hashlib
+import hmac
 import re
+import secrets
 
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
 from django.contrib.auth.password_validation import validate_password
 from django.core import signing
+from django.core.cache import cache
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -255,9 +259,22 @@ def username_status(username: str) -> dict:
     return {"available": True, "reason": "", "suggestion": ""}
 
 
+RESET_CODE_KEY = "accounts:reset-code:{}"
+RESET_CODE_TTL = 15 * 60
+RESET_CODE_ATTEMPTS = 5
+
+
+def _reset_code_hash(user_id, code: str) -> str:
+    from django.conf import settings
+
+    key = settings.SECRET_KEY.encode()
+    return hmac.new(key, f"reset:{user_id}:{code}".encode(), hashlib.sha256).hexdigest()
+
+
 def request_password_reset(*, email: str) -> None:
-    """Envoie un lien signé (valable PASSWORD_RESET_TIMEOUT). Toujours silencieux : la réponse
-    ne révèle jamais si l'adresse correspond à un compte."""
+    """Envoie par e-mail un code à 6 chiffres (appli, 15 min) et un lien signé (site,
+    PASSWORD_RESET_TIMEOUT). Toujours silencieux : la réponse ne révèle jamais si l'adresse
+    correspond à un compte. Un nouveau code remplace le précédent."""
     from django.conf import settings
     from django.contrib.auth.tokens import default_token_generator
     from django.utils.encoding import force_bytes
@@ -271,7 +288,55 @@ def request_password_reset(*, email: str) -> None:
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
     link = f"{settings.PUBLIC_WEB_URL.rstrip('/')}/reset-password?uid={uid}&token={token}"
-    transaction.on_commit(lambda: send_password_reset_email.delay(user.email, link))
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    # Seule l'empreinte du code est gardée (cache, 15 minutes).
+    cache.set(
+        RESET_CODE_KEY.format(user.id),
+        {"hash": _reset_code_hash(user.id, code), "attempts": 0},
+        RESET_CODE_TTL,
+    )
+    transaction.on_commit(lambda: send_password_reset_email.delay(user.email, link, code))
+
+
+@transaction.atomic
+def reset_password_with_code(*, email: str, code: str, password: str) -> User:
+    """Appli : code à 6 chiffres reçu par e-mail, puis nouveau mot de passe ; toutes les
+    sessions ouvertes sont révoquées. 5 essais par code, et verrou par adresse (force brute
+    répartie sur plusieurs codes ou plusieurs adresses IP)."""
+    from .security import revoke_other_sessions
+
+    invalid = DomainError(
+        "Code invalide ou expiré. Demandez un nouveau code.", code="invalid_reset"
+    )
+    email = (email or "").strip()
+    lockout.ensure_allowed("reset", email)
+    user = User.objects.filter(email__iexact=email, is_active=True).first()
+    key = RESET_CODE_KEY.format(user.id) if user else ""
+    stored = cache.get(key) if user else None
+    if not stored:
+        lockout.record_failure("reset", email)
+        raise invalid
+    if not hmac.compare_digest(stored["hash"], _reset_code_hash(user.id, (code or "").strip())):
+        lockout.record_failure("reset", email)
+        attempts = stored["attempts"] + 1
+        if attempts >= RESET_CODE_ATTEMPTS:
+            cache.delete(key)  # code brûlé : il faut en redemander un
+        else:
+            cache.set(key, {**stored, "attempts": attempts}, RESET_CODE_TTL)
+        raise invalid
+    try:
+        validate_password(password, user)
+    except DjangoValidationError as exc:
+        raise DomainError(
+            "Mot de passe trop faible.", code="weak_password", details={"password": exc.messages}
+        ) from exc
+    cache.delete(key)
+    lockout.reset("reset", email)
+    user.set_password(password)
+    user.save(update_fields=["password"])
+    revoke_other_sessions(user=user, current_sid=None)
+    mark_email_verified(user)  # le code est arrivé dans cette boîte : l'adresse est prouvée
+    return user
 
 
 @transaction.atomic

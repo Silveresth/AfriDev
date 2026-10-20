@@ -1,4 +1,8 @@
-"""Authentification des WebSockets par JWT (?token=<access>), faute de cookie de session."""
+"""Authentification des WebSockets par JWT (?token=<access>), faute de cookie de session.
+
+Ici et non dans core : elle dépend des sessions révocables de la feature (le socle n'importe
+jamais le métier, contrat import-linter).
+"""
 
 from urllib.parse import parse_qs
 
@@ -9,11 +13,11 @@ from django.contrib.auth.models import AnonymousUser
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken
 
+from .security import is_session_revoked
+
 
 @database_sync_to_async
 def _user_from_token(raw_token: str):
-    from features.accounts.security import is_session_revoked
-
     try:
         token = AccessToken(raw_token)
     except TokenError:

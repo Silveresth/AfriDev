@@ -11,8 +11,9 @@ import { useSession } from '@/shared/session';
 import { radius, useTheme } from '@/shared/theme';
 import { HubRoleBadge, PinnedBadge, ProfileAvatar, TagRow, Text, useToast } from '@/shared/ui';
 
-import { imageOf, type Post, useDeletePost, useScoreVote } from './api';
+import { imageOf, type Post, useDeletePost, useScoreVote, videoOf } from './api';
 import { PostImage } from './PostImage';
+import { PostVideo } from './PostVideo';
 
 /** Ligne de communauté : « h/lome-dev » si le post est dans un hub, sinon l'auteur. */
 export function PostByline({ post, showHub = true }: { post: Post; showHub?: boolean }) {
@@ -53,6 +54,7 @@ export const PostRow = memo(function PostRow({ post, showHub = true }: { post: P
   const { colors } = useTheme();
   const { t } = useT();
   const image = imageOf(post);
+  const video = videoOf(post);
   const excerpt = plainText(post.body, 200);
   const open = () => router.push(`/post/${post.id}`);
 
@@ -77,6 +79,7 @@ export const PostRow = memo(function PostRow({ post, showHub = true }: { post: P
         </View>
       ) : null}
       {image ? <PostImage media={image} variant="feed" recyclingKey={post.id} /> : null}
+      {video ? <PostVideo media={video} /> : null}
       {post.kind === 'poll' ? (
         <View style={[styles.poll, { backgroundColor: colors.container }]}>
           <BarChart3 size={14} color={colors.inkMuted} />

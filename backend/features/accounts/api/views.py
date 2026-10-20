@@ -31,6 +31,7 @@ from .serializers import (
     MFALoginInputSerializer,
     OAuthInputSerializer,
     OAuthProvidersSerializer,
+    PasswordResetCodeSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     RegisterInputSerializer,
@@ -176,6 +177,21 @@ class PasswordResetConfirmView(APIView):
         data = PasswordResetConfirmSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         user = services.reset_password(**data.validated_data)
+        return _auth_response(request, user, created=False)
+
+
+class PasswordResetCodeView(APIView):
+    """Appli : code à 6 chiffres reçu par e-mail + nouveau mot de passe, puis connexion directe."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [OTPThrottle]
+
+    @extend_schema(request=PasswordResetCodeSerializer, responses=AuthResponseSerializer)
+    def post(self, request):
+        data = PasswordResetCodeSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        user = services.reset_password_with_code(**data.validated_data)
         return _auth_response(request, user, created=False)
 
 
