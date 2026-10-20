@@ -88,6 +88,7 @@ function Navigator() {
         */}
         <Stack.Protected guard={!isAuthenticated}>
           <Stack.Screen name="login" options={{ animation: 'fade' }} />
+          <Stack.Screen name="forgot-password" />
         </Stack.Protected>
         <Stack.Screen name="index" />
         <Stack.Screen name="oauth" />

@@ -15,8 +15,6 @@ from .views import (
     OAuthLoginView,
     OAuthProvidersView,
     OAuthStartView,
-    OTPRequestView,
-    OTPVerifyView,
     PasswordResetConfirmView,
     PasswordResetRequestView,
     RegisterView,
@@ -46,8 +44,6 @@ urlpatterns = [
         PasswordResetConfirmView.as_view(),
         name="password-reset-confirm",
     ),
-    path("otp/request/", OTPRequestView.as_view(), name="otp-request"),
-    path("otp/verify/", OTPVerifyView.as_view(), name="otp-verify"),
     # « providers » avant « <provider> » : sinon il serait pris pour un nom de fournisseur.
     path("oauth/providers/", OAuthProvidersView.as_view(), name="oauth-providers"),
     path("oauth/<str:provider>/start/", OAuthStartView.as_view(), name="oauth-start"),

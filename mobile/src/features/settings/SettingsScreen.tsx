@@ -147,7 +147,8 @@ export function SettingsScreen() {
           <Animated.View entering={FadeIn.duration(300)}>
             <PressableScale
               scaleTo={0.98}
-              onPress={() => router.push('/profile')}
+              // Onglet existant rejoint (pas une seconde barre d'onglets empilée).
+              onPress={() => router.navigate('/(tabs)/profile')}
               style={[styles.profile, { borderColor: colors.line, backgroundColor: colors.background }]}
             >
               <Avatar name={name} src={profile?.avatar_url} size={52} color={profileColorHex(user.username, profile?.accent_color)} />

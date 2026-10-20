@@ -9,7 +9,6 @@ export type AuthResponse = Schemas['AuthResponse'];
 export type OAuthProvider = 'github' | 'gitlab' | 'google';
 export type UsernameStatus = Schemas['UsernameStatus'];
 
-const PHONE_KEY = 'afridev.otp-phone';
 const NONCE_KEY = 'afridev.oauth-nonce';
 const NEXT_KEY = 'afridev.after-login';
 const MFA_KEY = 'afridev.mfa';
@@ -24,10 +23,6 @@ export const authApi = {
     unwrap(api.POST('/api/accounts/login/', { body: { identifier, password } })),
   register: (body: Schemas['RegisterInputRequest']) =>
     unwrap(api.POST('/api/accounts/register/', { body })),
-  requestOtp: (phone_number: string) =>
-    unwrap(api.POST('/api/accounts/otp/request/', { body: { phone_number } })),
-  verifyOtp: (phone_number: string, code: string) =>
-    unwrap(api.POST('/api/accounts/otp/verify/', { body: { phone_number, code } })),
   loginMfa: (mfa_token: string, code: string) =>
     unwrap(api.POST('/api/accounts/login/2fa/', { body: { mfa_token, code } })),
   oauth: (provider: OAuthProvider, code: string, redirect_uri: string) =>
@@ -64,12 +59,6 @@ export function completeAuth(response: AuthResponse, signIn: (tokens: Schemas['T
   if (response.tokens) signIn(response.tokens);
   return Boolean(response.tokens);
 }
-
-export const pendingPhone = {
-  get: () => sessionStorage.getItem(PHONE_KEY),
-  set: (phone: string) => sessionStorage.setItem(PHONE_KEY, phone),
-  clear: () => sessionStorage.removeItem(PHONE_KEY),
-};
 
 /** Page où revenir après la connexion (paramètre ?next=, limité au site). */
 export const afterLogin = {
@@ -124,11 +113,4 @@ export function consumeOAuthReturn(params: URLSearchParams): { provider: OAuthPr
   const redirectUri = params.get('redirect_uri');
   if (!provider || !code || !redirectUri || expected !== `${provider}:${params.get('nonce')}`) return null;
   return { provider, code, redirectUri };
-}
-
-/** Indicatifs de la connexion par SMS (liste partagée avec le mobile). */
-export { PHONE_COUNTRIES as COUNTRIES } from '@afridev/validation';
-
-export function maskPhone(phone: string): string {
-  return phone.length > 6 ? `${phone.slice(0, 6)} •• •• ${phone.slice(-2)}` : phone;
 }

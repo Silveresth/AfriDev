@@ -171,7 +171,7 @@ export function LandingScreen() {
         </span>
         <h2 className="max-w-2xl text-headline-lg">Prêt à coder plus vite sans vous soucier de votre forfait ?</h2>
         <p className="max-w-xl text-body-md text-ink-muted">
-          Créez votre profil en quelques secondes avec GitHub, votre numéro de téléphone ou un e-mail.
+          Créez votre profil en quelques secondes avec Google, GitHub ou un e-mail.
         </p>
         <Link href="/login" className={buttonClasses({ size: 'lg' })}>
           Créer mon compte <ArrowRight className="size-5" aria-hidden />

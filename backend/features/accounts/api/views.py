@@ -31,9 +31,6 @@ from .serializers import (
     MFALoginInputSerializer,
     OAuthInputSerializer,
     OAuthProvidersSerializer,
-    OTPRequestInputSerializer,
-    OTPRequestOutputSerializer,
-    OTPVerifyInputSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     RegisterInputSerializer,
@@ -205,33 +202,6 @@ class EmailResendView(APIView):
     def post(self, request):
         services.send_email_verification(request.user)
         return Response(status=status.HTTP_202_ACCEPTED)
-
-
-class OTPRequestView(APIView):
-    permission_classes = [AllowAny]
-    throttle_classes = [OTPThrottle]
-
-    @extend_schema(request=OTPRequestInputSerializer, responses={202: OTPRequestOutputSerializer})
-    def post(self, request):
-        data = OTPRequestInputSerializer(data=request.data)
-        data.is_valid(raise_exception=True)
-        phone = services.request_phone_otp(**data.validated_data)
-        return Response(
-            {"phone_number": phone, "expires_in": settings.OTP_TTL_SECONDS},
-            status=status.HTTP_202_ACCEPTED,
-        )
-
-
-class OTPVerifyView(APIView):
-    permission_classes = [AllowAny]
-    throttle_classes = [OTPThrottle]
-
-    @extend_schema(request=OTPVerifyInputSerializer, responses=AuthResponseSerializer)
-    def post(self, request):
-        data = OTPVerifyInputSerializer(data=request.data)
-        data.is_valid(raise_exception=True)
-        user, created = services.login_with_phone(**data.validated_data)
-        return _auth_response(request, user, created=created)
 
 
 class OAuthLoginView(APIView):

@@ -5,5 +5,4 @@ export { OAuthCallback } from './components/OAuthCallback';
 export { OnboardingGate } from './components/OnboardingGate';
 export { ForgotPasswordScreen, ResetPasswordScreen } from './components/PasswordResetScreens';
 export { VerifyEmailScreen } from './components/VerifyEmailScreen';
-export { VerifyOtpScreen } from './components/VerifyOtpScreen';
 export { VerifyTwoFactorScreen } from './components/VerifyTwoFactorScreen';

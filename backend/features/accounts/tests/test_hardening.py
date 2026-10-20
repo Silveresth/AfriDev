@@ -1,15 +1,13 @@
 """Non-régression des failles corrigées lors de l'audit de sécurité (comptes et connexion)."""
 
-from datetime import timedelta
 from urllib.parse import parse_qs, urlparse
 
 import pytest
 from django.core import signing
 
-from core.exceptions import DomainError, TooManyAttemptsError
-from features.accounts import lockout, oauth, otp, services, web_session
+from core.exceptions import DomainError
+from features.accounts import lockout, oauth, services, web_session
 from features.accounts.models import SocialAccount
-from features.accounts.otp import InvalidOTPError
 from integrations.github import OAuthIdentity
 
 pytestmark = pytest.mark.django_db
@@ -61,22 +59,6 @@ def test_successful_login_resets_the_counter(user):
         services.authenticate_user(identifier="amina", password="faux")  # compteur reparti de 0
 
 
-def test_sms_codes_are_limited_per_number(monkeypatch):
-    monkeypatch.setattr("integrations.sms.send_sms", lambda *, to, message: None)
-    services.request_phone_otp(phone_number="+22890000001")
-    with pytest.raises(TooManyAttemptsError):
-        services.request_phone_otp(phone_number="+22890000001")  # moins d'une minute après
-    monkeypatch.setattr(otp, "RESEND_COOLDOWN", timedelta(0))
-    for _ in range(otp.MAX_CODES_PER_HOUR - 1):
-        services.request_phone_otp(phone_number="+22890000001")
-    with pytest.raises(TooManyAttemptsError):
-        services.request_phone_otp(phone_number="+22890000001")
-    # Un autre numéro n'est pas concerné.
-    services.request_phone_otp(phone_number="+22890000002")
-    with pytest.raises(InvalidOTPError):
-        services.login_with_phone(phone_number="+22890000002", code="abcdef")
-
-
 def test_throttling_ignores_spoofed_forwarded_for(api_client, monkeypatch):
     """Changer X-Forwarded-For à chaque requête ne doit pas remettre le quota à zéro."""
     from core.throttling import OTPThrottle
@@ -84,15 +66,23 @@ def test_throttling_ignores_spoofed_forwarded_for(api_client, monkeypatch):
     monkeypatch.setattr(OTPThrottle, "rate", "3/hour", raising=False)
     codes = [
         api_client.post(
-            "/api/accounts/otp/request/",
-            {"phone_number": "123"},
+            "/api/accounts/password/reset/",
+            {"email": "inconnu@example.com"},
             format="json",
             HTTP_X_FORWARDED_FOR=f"10.0.0.{i}, 203.0.113.7",
         ).status_code
         for i in range(5)
     ]
-    assert codes[:3] == [400, 400, 400]
+    assert codes[:3] == [202, 202, 202]
     assert codes[3:] == [429, 429]
+
+
+def test_sms_login_is_gone(api_client):
+    for path in ("/api/accounts/otp/request/", "/api/accounts/otp/verify/"):
+        assert (
+            api_client.post(path, {"phone_number": "+22890000001"}, format="json").status_code
+            == 404
+        )
 
 
 # ── OAuth ──

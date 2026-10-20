@@ -244,38 +244,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/accounts/otp/request/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["accounts_otp_request_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/accounts/otp/verify/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["accounts_otp_verify_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/accounts/password/reset/": {
         parameters: {
             query?: never;
@@ -3107,7 +3075,7 @@ export interface components {
              */
             password: string;
             /**
-             * @description Nom d'utilisateur retapé (comptes sans mot de passe : SMS, GitHub, Google).
+             * @description Nom d'utilisateur retapé (comptes sans mot de passe : GitHub, Google).
              * @default
              */
             confirm: string;
@@ -3851,17 +3819,6 @@ export interface components {
         };
         OAuthProviders: {
             providers: components["schemas"]["ProvidersEnum"][];
-        };
-        OTPRequestInputRequest: {
-            phone_number: string;
-        };
-        OTPRequestOutput: {
-            phone_number: string;
-            expires_in: number;
-        };
-        OTPVerifyInputRequest: {
-            phone_number: string;
-            code: string;
         };
         /** @description Tout ce que l'écran d'accueil affiche : catalogue, choix actuels, stack GitHub détectée. */
         Onboarding: {
@@ -5052,7 +5009,7 @@ export interface components {
             readonly two_factor_enabled: boolean;
             /** @description Adresse e-mail confirmée. */
             readonly email_verified: boolean;
-            /** @description Faux pour un compte SMS / GitHub / Google : la suppression demande le pseudo. */
+            /** @description Faux pour un compte GitHub / Google : la suppression demande le pseudo. */
             readonly has_password: boolean;
         };
         UsernameStatus: {
@@ -5502,56 +5459,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OAuthProviders"];
-                };
-            };
-        };
-    };
-    accounts_otp_request_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["OTPRequestInputRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["OTPRequestInputRequest"];
-                "multipart/form-data": components["schemas"]["OTPRequestInputRequest"];
-            };
-        };
-        responses: {
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OTPRequestOutput"];
-                };
-            };
-        };
-    };
-    accounts_otp_verify_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["OTPVerifyInputRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["OTPVerifyInputRequest"];
-                "multipart/form-data": components["schemas"]["OTPVerifyInputRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AuthResponse"];
                 };
             };
         };

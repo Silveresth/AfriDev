@@ -14,7 +14,7 @@ class UserSerializer(ReadOnlyModelSerializer):
     two_factor_enabled = serializers.BooleanField(read_only=True)
     email_verified = serializers.SerializerMethodField(help_text="Adresse e-mail confirmée.")
     has_password = serializers.SerializerMethodField(
-        help_text="Faux pour un compte SMS / GitHub / Google : la suppression demande le pseudo."
+        help_text="Faux pour un compte GitHub / Google : la suppression demande le pseudo."
     )
 
     class Meta:
@@ -73,7 +73,7 @@ class DeleteAccountSerializer(serializers.Serializer):
         required=False,
         allow_blank=True,
         default="",
-        help_text="Nom d'utilisateur retapé (comptes sans mot de passe : SMS, GitHub, Google).",
+        help_text="Nom d'utilisateur retapé (comptes sans mot de passe : GitHub, Google).",
     )
 
 
@@ -172,20 +172,6 @@ class RegisterInputSerializer(serializers.Serializer):
 class LoginInputSerializer(serializers.Serializer):
     identifier = serializers.CharField(help_text="Nom d'utilisateur ou e-mail.")
     password = serializers.CharField(write_only=True)
-
-
-class OTPRequestInputSerializer(serializers.Serializer):
-    phone_number = serializers.CharField(max_length=20)
-
-
-class OTPRequestOutputSerializer(serializers.Serializer):
-    phone_number = serializers.CharField()
-    expires_in = serializers.IntegerField()
-
-
-class OTPVerifyInputSerializer(serializers.Serializer):
-    phone_number = serializers.CharField(max_length=20)
-    code = serializers.RegexField(r"^\d{6}$")
 
 
 class EmailVerifyInputSerializer(serializers.Serializer):

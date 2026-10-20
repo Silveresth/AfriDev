@@ -31,7 +31,9 @@ export function Header({
   const { colors } = useTheme();
   const { t } = useT();
   const insets = useSafeAreaInsets();
-  const leave = () => (router.canGoBack() ? router.back() : router.replace('/feed'));
+  // Rien derrière (lien ouvert directement) : « / » mène à l'accueil ou à la connexion selon la
+  // session. Viser /feed hors connexion (mot de passe oublié…) donnait un écran noir.
+  const leave = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   return (
     <View

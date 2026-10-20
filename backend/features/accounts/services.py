@@ -11,9 +11,8 @@ from django.db import transaction
 from django.utils import timezone
 
 from core.exceptions import ConflictError, DomainError, NotFoundError, PermissionDeniedError
-from integrations import sms
 
-from . import lockout, oauth, otp
+from . import lockout, oauth
 from .events import user_registered
 from .models import SocialAccount, User
 
@@ -78,7 +77,7 @@ def ensure_active(user: User) -> None:
 
 
 def issue_tokens(user: User, *, request=None) -> dict:
-    """Jetons de session, pour toutes les méthodes de connexion (mot de passe, SMS, OAuth).
+    """Jetons de session, pour toutes les méthodes de connexion (mot de passe, OAuth).
     Chaque connexion ouvre une session (appareil) révocable depuis les réglages."""
     from .security import start_session
 
@@ -179,44 +178,6 @@ def authenticate_user(*, identifier: str, password: str) -> User:
         raise InvalidCredentialsError("Identifiants incorrects.")
     lockout.reset("login", username)
     return user
-
-
-def request_phone_otp(*, phone_number: str) -> str:
-    """Génère un code et programme l'envoi du SMS. Renvoie le numéro normalisé."""
-    try:
-        phone_number = sms.normalize_phone(phone_number)
-    except ValueError as exc:
-        raise DomainError(str(exc), code="invalid_phone") from exc
-
-    from .tasks import send_otp_sms
-
-    with transaction.atomic():
-        code = otp.generate(phone_number)
-        transaction.on_commit(lambda: send_otp_sms.delay(phone_number, code))
-    return phone_number
-
-
-@transaction.atomic
-def login_with_phone(*, phone_number: str, code: str) -> tuple[User, bool]:
-    """Vérifie le code ; crée le compte au premier passage. Renvoie (user, créé)."""
-    try:
-        phone_number = sms.normalize_phone(phone_number)
-    except ValueError as exc:
-        raise DomainError(str(exc), code="invalid_phone") from exc
-    otp.verify(phone_number, code)
-
-    user = User.objects.filter(phone_number=phone_number).first()
-    created = user is None
-    if created:
-        user = User(
-            username=_unique_username(f"dev_{phone_number[-4:]}"), phone_number=phone_number
-        )
-        user.set_unusable_password()
-    user.phone_verified_at = timezone.now()
-    user.save()
-    if created:
-        _announce(user)
-    return user, created
 
 
 @transaction.atomic
@@ -347,7 +308,7 @@ def reset_password(*, uid: str, token: str, password: str) -> User:
 @transaction.atomic
 def delete_account(*, user: User, password: str = "", confirm: str = "") -> None:
     """Supprime définitivement le compte et tout ce qui s'y rattache (profil, publications,
-    messages, médias…). Mot de passe exigé s'il existe ; sinon (SMS, GitHub, Google) le membre
+    messages, médias…). Mot de passe exigé s'il existe ; sinon (GitHub, Google) le membre
     retape son nom d'utilisateur."""
     from features.hubs import services as hub_services
     from features.profiles import services as profile_services

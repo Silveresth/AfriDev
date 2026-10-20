@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import { AtSign, Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react-native';
 import { useRef, useState } from 'react';
@@ -5,10 +6,9 @@ import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, Vie
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { api, ApiError, errorMessage, PUBLIC_WEB_URL, unwrap } from '@/shared/api';
+import { api, ApiError, errorMessage, unwrap } from '@/shared/api';
 import { BrandTile } from '@/shared/brand';
 import { type Key, useT } from '@/shared/i18n';
-import { openLink } from '@/shared/lib';
 import { haptic, Shake } from '@/shared/motion';
 import { useSession } from '@/shared/session';
 import { mono, radius, useTheme } from '@/shared/theme';
@@ -405,7 +405,7 @@ export function LoginScreen() {
                 />
                 {mode === 'register' && password ? <StrengthMeter password={password} /> : null}
                 {mode === 'login' ? (
-                  <Pressable onPress={() => void openLink(`${PUBLIC_WEB_URL}/forgot-password`)} style={styles.forgot} hitSlop={8}>
+                  <Pressable onPress={() => router.push('/forgot-password')} style={styles.forgot} hitSlop={8}>
                     <Text variant="small" tone="primary">
                       {t('login.forgot')}
                     </Text>

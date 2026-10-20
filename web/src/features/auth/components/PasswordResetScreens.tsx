@@ -69,7 +69,7 @@ export function ForgotPasswordScreen() {
         </Button>
       </form>
       <p className="mt-5 text-body-sm text-ink-muted">
-        Inscrit·e par SMS, Google ou GitHub ? <Link href="/login" className="font-semibold text-primary-ink hover:underline">Reconnectez-vous de la même façon.</Link>
+        Inscrit·e avec Google ou GitHub ? <Link href="/login" className="font-semibold text-primary-ink hover:underline">Reconnectez-vous de la même façon.</Link>
       </p>
     </Frame>
   );

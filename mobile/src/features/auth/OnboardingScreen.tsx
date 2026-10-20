@@ -109,7 +109,7 @@ function Wizard({ catalogue }: { catalogue: Onboarding }) {
   const [draft, setDraft] = useState<Draft>(() => ({ ...catalogue.current }));
   const save = useSavePreferences();
   const skip = useSkipOnboarding();
-  const close = () => (router.canGoBack() ? router.back() : router.replace('/feed'));
+  const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   const toggle = (key: 'goals' | 'topics', id: string) => {
     haptic.select();

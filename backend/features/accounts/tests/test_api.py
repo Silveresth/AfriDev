@@ -43,17 +43,5 @@ def test_errors_use_the_unified_format(api_client):
     assert response.data["error"]["code"] == "invalid_credentials"
 
 
-def test_otp_request_validates_phone(api_client):
-    response = api_client.post("/api/accounts/otp/request/", {"phone_number": "123"}, format="json")
-    assert response.status_code == 400
-    assert response.data["error"]["code"] == "invalid_phone"
-
-    response = api_client.post(
-        "/api/accounts/otp/request/", {"phone_number": "+22890123456"}, format="json"
-    )
-    assert response.status_code == 202
-    assert response.data["expires_in"] == 300
-
-
 def test_me_requires_authentication(api_client):
     assert api_client.get("/api/accounts/me/").status_code == 401

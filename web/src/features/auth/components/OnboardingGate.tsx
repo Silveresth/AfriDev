@@ -9,7 +9,7 @@ import { OnboardingWizard } from './OnboardingWizard';
 
 /**
  * Ouvre l'assistant d'accueil tant que le profil n'est pas configuré (needs_onboarding),
- * quelle que soit la méthode d'inscription (e-mail, SMS, Google, GitHub) et l'appareil.
+ * quelle que soit la méthode d'inscription (e-mail, Google, GitHub) et l'appareil.
  */
 export function OnboardingGate() {
   const { profile } = useSession();
