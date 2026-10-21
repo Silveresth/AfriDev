@@ -24,5 +24,14 @@ def sync_project_repo(project_id: str) -> None:
             project_id=project_id, repo=None, issues=[], error="Dépôt introuvable ou privé."
         )
         return
-    issues = github.list_good_first_issues(owner, name)
-    services.store_repo_sync(project_id=project_id, repo=repo, issues=issues)
+    labeled = {
+        issue["number"]: {**issue, "labeled": True}
+        for issue in github.list_good_first_issues(owner, name)
+    }
+    # Aussi les issues récentes sans label : l'IA y repère des tâches pour débuter.
+    recent = [
+        {**issue, "labeled": False}
+        for issue in github.list_open_issues(owner, name)
+        if issue["number"] not in labeled
+    ]
+    services.store_repo_sync(project_id=project_id, repo=repo, issues=[*labeled.values(), *recent])

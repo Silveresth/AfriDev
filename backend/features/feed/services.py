@@ -2,12 +2,13 @@
 
 import math
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import transaction
 from django.db.models import Count, F, Q, Sum
+from django.utils import timezone
 
 from core.exceptions import DomainError, NotFoundError, PermissionDeniedError
 from core.utils import normalize_tags, parse_json_list
@@ -15,7 +16,7 @@ from features.hubs import services as hub_services
 from features.media import selectors as media_selectors
 
 from .events import post_edited, post_liked, post_published, post_vote_changed
-from .models import PollVote, Post, PostLike
+from .models import LinkPreview, PollVote, Post, PostLike
 
 MEDIA_KIND = {Post.Kind.IMAGE: "image", Post.Kind.SHORT: "video"}
 
@@ -93,6 +94,57 @@ def _validate(
     return options
 
 
+# ── Carte des ressources externes (liens des posts) ──
+
+PREVIEW_RETRY_AFTER = timedelta(hours=6)
+WORDS_PER_MINUTE = 220
+
+
+def request_link_preview(*, url: str) -> None:
+    """Carte de la ressource lue en tâche de fond, une fois par adresse (nouvel essai 6 h
+    après un échec)."""
+    if not url:
+        return
+    preview, created = LinkPreview.objects.get_or_create(url=url)
+    stale_failure = preview.status == LinkPreview.Status.FAILED and (
+        preview.fetched_at is None or timezone.now() - preview.fetched_at > PREVIEW_RETRY_AFTER
+    )
+    if created or stale_failure:
+        from .tasks import fetch_link_preview
+
+        transaction.on_commit(lambda: fetch_link_preview.delay(url))
+
+
+def store_link_preview(*, url: str, data: dict | None) -> None:
+    """data : résultat de core.links.page, ou None si la page est injoignable."""
+    preview = LinkPreview.objects.filter(url=url).first()
+    if preview is None:
+        return
+    preview.fetched_at = timezone.now()
+    if not data or (data.get("status", 200) >= 400 and not data.get("title")):
+        preview.status = LinkPreview.Status.FAILED
+        preview.save(update_fields=["status", "fetched_at", "updated_at"])
+        return
+    image = str(data.get("image") or "")
+    words = int(data.get("words") or 0)
+    preview.status = LinkPreview.Status.READY
+    preview.kind = "video" if data.get("kind") == "video" else "article"
+    preview.title = str(data.get("title") or "")[:300]
+    preview.description = str(data.get("description") or "")[:500]
+    # Image affichée par les navigateurs : https seulement (pas de contenu mixte).
+    preview.image_url = image[:1000] if image.startswith("https://") else ""
+    preview.site_name = str(data.get("site_name") or "")[:120]
+    preview.reading_minutes = max(1, round(words / WORDS_PER_MINUTE)) if words >= 150 else None
+    preview.save()
+
+
+def store_link_summary(*, url: str, points: list[str]) -> None:
+    LinkPreview.objects.filter(url=url).update(
+        summary=[str(point)[:240] for point in points if str(point).strip()][:3],
+        updated_at=timezone.now(),
+    )
+
+
 @transaction.atomic
 def create_post(
     *,
@@ -138,6 +190,7 @@ def create_post(
         post.id = post_id
     post.hot, post.top = ranks(score=0, created_at=post.created_at)
     post.save()
+    request_link_preview(url=post.link_url)
 
     text = _content_text(post)
     if not post.tags and len(text) >= 80:
@@ -179,6 +232,7 @@ def update_post(
         if link != post.link_url:
             post.link_url = link
             fields.append("link_url")
+            request_link_preview(url=link)
     if post.kind == Post.Kind.TEXT and not (post.title or post.body):
         raise DomainError("Le post est vide.", code="invalid_post")
     if tags is not None:

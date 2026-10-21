@@ -10,6 +10,7 @@ from .client import (
     get_tree,
     get_user_overview,
     list_good_first_issues,
+    list_open_issues,
     list_user_repos,
     parse_repo_url,
 )
@@ -26,6 +27,7 @@ __all__ = [
     "get_tree",
     "get_user_overview",
     "list_good_first_issues",
+    "list_open_issues",
     "list_user_repos",
     "parse_repo_url",
 ]

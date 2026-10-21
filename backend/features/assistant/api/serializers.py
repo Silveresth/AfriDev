@@ -47,6 +47,26 @@ class TeamInviteInputSerializer(serializers.Serializer):
     message = serializers.CharField(max_length=1500, allow_blank=True, required=False, default="")
 
 
+class AskTurnSerializer(serializers.Serializer):
+    role = serializers.ChoiceField(choices=["user", "assistant"])
+    content = serializers.CharField(max_length=4000)
+
+
+class AskInputSerializer(serializers.Serializer):
+    question = serializers.CharField(max_length=1000)
+    history = AskTurnSerializer(
+        many=True, required=False, default=list, help_text="Échanges précédents (6 au plus)."
+    )
+
+
+class HubSuggestInputSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=200)
+    body = serializers.CharField(max_length=3000, required=False, allow_blank=True, default="")
+    tags = serializers.ListField(
+        child=serializers.CharField(max_length=30), required=False, default=list, max_length=8
+    )
+
+
 class VoiceSearchInputSerializer(serializers.Serializer):
     media_id = serializers.UUIDField(help_text="Enregistrement audio déjà envoyé (/api/media/).")
     language = serializers.CharField(required=False, allow_null=True, max_length=5)

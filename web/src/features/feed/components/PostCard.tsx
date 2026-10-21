@@ -1,14 +1,11 @@
 'use client';
 
-import { linkDomain } from '@afridev/validation';
 import {
   BarChart3,
   CheckCircle2,
   Circle,
   Clapperboard,
   Ellipsis,
-  ExternalLink,
-  Globe,
   Link2,
   MessageSquare,
   Pencil,
@@ -47,6 +44,7 @@ import {
   useToast,
 } from '@/shared/ui';
 
+import { LinkCard } from './LinkCard';
 import { type Post, useDeletePost, usePinPost, useScoreVote, useUpdatePost, useVote } from '../api';
 
 /**
@@ -79,9 +77,9 @@ export function PostCard({ post, detail = false, community: showCommunity = true
     ? post.author.badges[0]?.label
     : undefined;
   const href = `/feed/${post.id}`;
-  // Post « ressource » : la carte mène au lien externe ; la discussion reste sur /feed/<id>.
+  // Post « ressource » : la carte s'ouvre comme les autres ; seule sa bannière mène au lien.
   const link = post.link_url || '';
-  const openCard = () => (link ? window.open(link, '_blank', 'noopener,noreferrer') : router.push(href));
+  const openCard = () => router.push(href);
   const isVideo = (post.media as MediaAsset | null)?.kind === 'video';
   // Posts antérieurs aux titres : la première ligne du texte en tient lieu.
   const title = post.title || (post.kind === 'poll' ? post.body : '');
@@ -139,13 +137,7 @@ export function PostCard({ post, detail = false, community: showCommunity = true
               {badgeLabel ? <TechBadge label={badgeLabel} /> : null}
             </div>
             <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-label-md text-ink-faint">
-              {detail ? (
-                <TimeAgo date={post.created_at} className="shrink-0" />
-              ) : (
-                <Link href={href} className="shrink-0 hover:text-ink hover:underline" title="Ouvrir la discussion">
-                  <TimeAgo date={post.created_at} />
-                </Link>
-              )}
+              <TimeAgo date={post.created_at} className="shrink-0" />
               {post.hub && showCommunity ? (
                 <>
                   <span aria-hidden>·</span>
@@ -242,17 +234,9 @@ export function PostCard({ post, detail = false, community: showCommunity = true
                 detail ? 'text-headline-xl' : 'text-[1.1875rem] leading-snug font-bold tracking-[-0.015em] transition-colors group-hover:text-primary-ink',
               )}
             >
-              {link && !detail ? (
-                <a href={link} target="_blank" rel="noopener noreferrer nofollow ugc" className="hover:underline">
-                  {title}
-                  <ExternalLink className="ml-1.5 inline size-4 align-[-0.125em] text-ink-faint" aria-label="(lien externe)" />
-                </a>
-              ) : (
-                title
-              )}
+              {title}
             </TitleTag>
           ) : null}
-          {link ? <ResourceLink url={link} large={detail} /> : null}
 
           {body ? (
             detail ? (
@@ -269,6 +253,8 @@ export function PostCard({ post, detail = false, community: showCommunity = true
               </div>
             )
           ) : null}
+
+          {link ? <LinkCard url={link} preview={post.link_preview} detail={detail} /> : null}
 
           {post.kind === 'poll' ? (
             <div className="mt-3">
@@ -342,33 +328,6 @@ function VotePill({ post }: { post: Post }) {
   // Un post mis en cache avant les votes ↑/↓ (cache hors ligne, ISR) n'a pas encore de score.
   const score = post.score ?? post.like_count ?? 0;
   return <ScorePill score={score} value={post.viewer?.post_vote ?? 0} onVote={(value) => vote.mutate(value)} loginNext={`/feed/${post.id}`} />;
-}
-
-/** Ressource externe du post : domaine et bouton d'ouverture (nouvel onglet, sans transmettre la page). */
-function ResourceLink({ url, large }: { url: string; large: boolean }) {
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer nofollow ugc"
-      className={cn(
-        'mt-2.5 flex items-center gap-3 rounded-xl border border-line bg-container-low transition-colors hover:border-primary/40 hover:bg-primary-soft/40',
-        large ? 'p-3.5' : 'px-3 py-2',
-      )}
-    >
-      <span className={cn('flex shrink-0 items-center justify-center rounded-lg bg-card text-primary-ink', large ? 'size-10' : 'size-8')}>
-        <Globe className={large ? 'size-5' : 'size-4'} aria-hidden />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-body-sm font-semibold text-ink">{linkDomain(url)}</span>
-        <span className="block truncate text-label-md text-ink-faint">{url.replace(/^https?:\/\/(www\.)?/i, '')}</span>
-      </span>
-      <span className="flex shrink-0 items-center gap-1 text-body-sm font-semibold text-primary-ink">
-        <span className={large ? undefined : 'hidden sm:inline'}>Ouvrir la ressource</span>
-        <ExternalLink className="size-4" aria-hidden />
-      </span>
-    </a>
-  );
 }
 
 /** Un clic dans le bloc ouvre la discussion (ou la ressource du post), sauf sur un élément interactif, du code ou une sélection. */

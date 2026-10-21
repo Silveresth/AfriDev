@@ -162,6 +162,71 @@ def invite_teammate(*, user, project_id, username: str, message: str) -> None:
     )
 
 
+# ── 9. Analyse du profil et du compte GitHub ──
+
+
+def request_profile_review(*, user) -> str:
+    from .tasks import ai_profile_review
+
+    _require_ai()
+    if profile_selectors.get_profile_for_user(user_id=user.id) is None:
+        raise NotFoundError("Profil introuvable.")
+    return jobs.start_job(owner_id=user.id, task=ai_profile_review, user_id=str(user.id))
+
+
+# ── 10. « Demande à AfriDev » (réponses appuyées sur la plateforme) ──
+
+MAX_QUESTION = 1000
+MAX_HISTORY = 6
+
+
+def request_ask(*, user, question: str, history: list | None = None) -> str:
+    from .tasks import ai_ask
+
+    _require_ai()
+    question = " ".join((question or "").split())
+    if len(question) < 3:
+        raise DomainError("Posez une question d'au moins quelques mots.", code="question_too_short")
+    turns = [
+        {"role": turn["role"], "content": str(turn["content"])[:1000]}
+        for turn in (history or [])[-MAX_HISTORY:]
+        if isinstance(turn, dict)
+        and turn.get("role") in {"user", "assistant"}
+        and turn.get("content")
+    ]
+    return jobs.start_job(
+        owner_id=user.id, task=ai_ask, question=question[:MAX_QUESTION], history=turns
+    )
+
+
+# ── 11. Premières contributions open source ──
+
+
+def request_first_contributions(*, user) -> str:
+    from .tasks import ai_first_contributions
+
+    _require_ai()
+    return jobs.start_job(owner_id=user.id, task=ai_first_contributions, user_id=str(user.id))
+
+
+# ── 12. Hub suggéré pour un post ──
+
+
+def request_hub_suggestions(*, user, title: str, body: str = "", tags: list | None = None) -> str:
+    from .tasks import ai_suggest_hubs
+
+    _require_ai()
+    text = f"{(title or '').strip()}\n\n{(body or '').strip()}".strip()
+    if len(text) < 10:
+        raise DomainError("Écrivez d'abord le titre du post.", code="post_too_short")
+    return jobs.start_job(
+        owner_id=user.id,
+        task=ai_suggest_hubs,
+        text=text[:1500],
+        tags=[str(tag)[:30] for tag in (tags or [])][:8],
+    )
+
+
 # ── 8. Recherche vocale ──
 
 

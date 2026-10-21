@@ -96,11 +96,9 @@ def _frameable(headers: httpx.Headers) -> bool:
     return True
 
 
-def preview(url: str) -> dict:
-    url = url.strip()
-    cached = cache.get(f"link-preview:{url}")
-    if cached:
-        return cached
+def _fetch(url: str, *, accept: tuple[str, ...] = ("html",)) -> tuple[str, int, httpx.Headers, str]:
+    """(adresse finale, statut, en-têtes, corps texte) ; le corps n'est lu que si son type
+    contient l'un des mots de `accept` (html, json…), et jamais au-delà de MAX_BYTES."""
     current = url
     with httpx.Client(
         timeout=TIMEOUT, follow_redirects=False, headers={"User-Agent": USER_AGENT}
@@ -116,7 +114,7 @@ def preview(url: str) -> dict:
                     continue
                 body = b""
                 content_type = response.headers.get("content-type", "")
-                if "html" in content_type:
+                if any(kind in content_type for kind in accept):
                     for chunk in response.iter_bytes():
                         body += chunk
                         if len(body) >= MAX_BYTES:
@@ -126,7 +124,15 @@ def preview(url: str) -> dict:
             break
         else:
             raise UnsafeURL("Trop de redirections.")
-    html = body.decode("utf-8", errors="ignore")
+    return current, status, headers, body.decode("utf-8", errors="ignore")
+
+
+def preview(url: str) -> dict:
+    url = url.strip()
+    cached = cache.get(f"link-preview:{url}")
+    if cached:
+        return cached
+    current, status, headers, html = _fetch(url)
     title_tag = re.search(r"<title[^>]*>(.*?)</title>", html, re.I | re.S)
     image = _meta(html, "og:image", "twitter:image")
     title = _meta(html, "og:title", "twitter:title")
@@ -144,3 +150,81 @@ def preview(url: str) -> dict:
     }
     cache.set(f"link-preview:{url}", result, CACHE_SECONDS)
     return result
+
+
+# ── Contenu d'une page (carte d'un post « ressource » et résumé IA) ──
+
+MAX_TEXT_CHARS = 8000
+_DROPPED = re.compile(
+    r"<(script|style|noscript|svg|nav|footer|form|aside|template)\b[^>]*>.*?</\1\s*>", re.I | re.S
+)
+_BLOCKS = re.compile(r"<(h[1-3]|p|li|pre|blockquote)\b[^>]*>(.*?)</\1\s*>", re.I | re.S)
+_TAGS = re.compile(r"<[^>]+>")
+_YOUTUBE = re.compile(r"^(?:www\.|m\.|music\.)?(?:youtube\.com|youtu\.be)$", re.I)
+
+
+def _page_text(html: str) -> tuple[str, int]:
+    """Texte lisible de la page (titres, paragraphes, listes) et nombre de mots de l'article."""
+    html = _DROPPED.sub(" ", html)
+    parts = []
+    for match in _BLOCKS.finditer(html):
+        text = " ".join(unescape(_TAGS.sub(" ", match.group(2))).split())
+        # Les menus et boutons restés dans la page font des blocs très courts.
+        if len(text) >= 40 or match.group(1).lower().startswith("h"):
+            parts.append(text)
+    text = "\n".join(parts)
+    return text[:MAX_TEXT_CHARS], len(text.split())
+
+
+def _youtube(url: str) -> dict:
+    """Vidéo YouTube : l'oEmbed officiel (la page renvoie souvent un écran de consentement)."""
+    from json import JSONDecodeError, loads
+    from urllib.parse import quote
+
+    _, status, _, body = _fetch(
+        f"https://www.youtube.com/oembed?format=json&url={quote(url, safe='')}", accept=("json",)
+    )
+    try:
+        data = loads(body) if status == 200 else {}
+    except JSONDecodeError:
+        data = {}
+    author = str(data.get("author_name") or "")
+    return {
+        "url": url,
+        "final_url": url,
+        "status": status,
+        "kind": "video",
+        "title": str(data.get("title") or "")[:300],
+        "description": f"Vidéo de {author}"[:500] if author else "",
+        "image": str(data.get("thumbnail_url") or ""),
+        "site_name": "YouTube",
+        "text": "",
+        "words": 0,
+    }
+
+
+def page(url: str) -> dict:
+    """Aperçu complet d'une ressource : titre, description, image, site, texte de l'article
+    (pour le résumé IA) et nombre de mots. Mêmes protections SSRF que `preview`."""
+    url = url.strip()
+    if _YOUTUBE.match(urlsplit(url).hostname or ""):
+        return _youtube(url)
+    current, status, _, html = _fetch(url)
+    title_tag = re.search(r"<title[^>]*>(.*?)</title>", html, re.I | re.S)
+    title = _meta(html, "og:title", "twitter:title")
+    if not title and title_tag:
+        title = unescape(" ".join(title_tag.group(1).split()))
+    image = _meta(html, "og:image", "twitter:image", "twitter:image:src")
+    text, words = _page_text(html)
+    return {
+        "url": url,
+        "final_url": current,
+        "status": status,
+        "kind": "video" if _meta(html, "og:type").startswith("video") else "article",
+        "title": title[:300],
+        "description": _meta(html, "og:description", "description", "twitter:description")[:500],
+        "image": urljoin(current, image) if image else "",
+        "site_name": _meta(html, "og:site_name") or (urlsplit(current).hostname or ""),
+        "text": text,
+        "words": words,
+    }

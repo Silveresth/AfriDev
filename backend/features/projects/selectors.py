@@ -29,14 +29,39 @@ def get_project(*, project_id, include_hidden: bool = False) -> Project | None:
 
 
 def list_open_issues(*, project_id) -> QuerySet[Issue]:
-    return Issue.objects.alive().filter(project_id=project_id, is_open=True)
+    """« Good first issues » ouvertes du projet (marquées sur GitHub)."""
+    return Issue.objects.alive().filter(project_id=project_id, is_open=True, labeled=True)
 
 
 def list_good_first_issues(*, tag: str | None = None) -> QuerySet[Issue]:
-    issues = Issue.objects.alive().filter(is_open=True, project__deleted_at__isnull=True)
+    issues = Issue.objects.alive().filter(
+        is_open=True, labeled=True, project__deleted_at__isnull=True
+    )
     if tag:
         issues = issues.filter(project__tags__icontains=f'"{tag.lower()}"')
     return issues.select_related("project").order_by("-created_at")
+
+
+def contribution_pool(*, tags, limit: int = 40) -> list[Issue]:
+    """Issues ouvertes (marquées ou non) des projets dont les technologies recoupent `tags`,
+    les marquées d'abord ; sans recoupement, les plus récentes de tous les projets."""
+    issues = (
+        Issue.objects.alive()
+        .filter(is_open=True, project__deleted_at__isnull=True)
+        .select_related("project")
+        .order_by("-labeled", "-updated_at")
+    )
+    wanted = {str(tag).lower() for tag in tags if tag}
+    if wanted:
+        matching = [
+            issue
+            for issue in issues[: limit * 5]
+            if wanted
+            & {str(t).lower() for t in [*(issue.project.tags or []), issue.project.language] if t}
+        ]
+        if matching:
+            return matching[:limit]
+    return list(issues[:limit])
 
 
 def list_recruiting_projects() -> QuerySet[Project]:
@@ -46,7 +71,7 @@ def list_recruiting_projects() -> QuerySet[Project]:
 def open_issue_counts(*, project_ids) -> dict:
     rows = (
         Issue.objects.alive()
-        .filter(project_id__in=project_ids, is_open=True)
+        .filter(project_id__in=project_ids, is_open=True, labeled=True)
         .values("project_id")
         .annotate(total=Count("id"))
     )

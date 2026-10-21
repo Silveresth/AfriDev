@@ -10,6 +10,7 @@ import {
   MessageCircle,
   MessagesSquare,
   Newspaper,
+  Sparkles,
   UserRound,
   UsersRound,
 } from 'lucide-react';
@@ -38,6 +39,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/news', label: 'Actu tech', short: 'Actu', icon: Newspaper, key: 'n', msgKey: 'nav.news', shortKey: 'nav.news' },
   { href: '/messages', label: 'Messages', short: 'Messages', icon: MessageCircle, key: 'd', auth: true },
   { href: '/search', label: 'Explorer', short: 'Explorer', icon: Compass, key: 'e', msgKey: 'nav.search', shortKey: 'nav.search' },
+  { href: '/assistant', label: 'Assistant IA', short: 'IA', icon: Sparkles, key: 'a', auth: true },
   { href: '/hubs', label: 'Hubs', short: 'Hubs', icon: UsersRound, key: 'u', msgKey: 'nav.hubs', shortKey: 'nav.hubs' },
   { href: '/questions', label: 'Q&A', short: 'Q&A', icon: MessagesSquare, key: 'q', msgKey: 'nav.questions', shortKey: 'nav.questions' },
   { href: '/snippets', label: 'Snippets', short: 'Snippets', icon: Code2, key: 's', msgKey: 'nav.snippets', shortKey: 'nav.snippets', auth: true },
@@ -59,7 +61,7 @@ export interface NavSection {
 
 /** Regroupement de la colonne de gauche : communauté, savoir partagé, carrière, espace perso. */
 export const NAV_SECTIONS: NavSection[] = [
-  { title: null, hrefs: ['/feed', '/messages', '/news', '/search', '/hubs'] },
+  { title: null, hrefs: ['/feed', '/messages', '/news', '/search', '/assistant', '/hubs'] },
   { title: 'Savoir', msgKey: 'nav.section.know', hrefs: ['/questions', '/snippets', '/projects'] },
   { title: 'Carrière', msgKey: 'nav.section.career', hrefs: ['/jobs', '/events'] },
   { title: 'Mon espace', msgKey: 'nav.section.my_space', hrefs: ['/bookmarks', '/profile'] },

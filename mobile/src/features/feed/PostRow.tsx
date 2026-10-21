@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { ActionBar } from '@/features/engage';
 import { errorMessage } from '@/shared/api';
 import { useT } from '@/shared/i18n';
-import { openExternal, plainText, timeAgo } from '@/shared/lib';
+import { plainText, timeAgo } from '@/shared/lib';
 import { useSession } from '@/shared/session';
 import { radius, useTheme } from '@/shared/theme';
 import { HubRoleBadge, PinnedBadge, ProfileAvatar, TagRow, Text, useToast } from '@/shared/ui';
@@ -57,9 +57,8 @@ export const PostRow = memo(function PostRow({ post, showHub = true }: { post: P
   const image = imageOf(post);
   const video = videoOf(post);
   const excerpt = plainText(post.body, 200);
-  // Post « ressource » : la carte mène directement au lien externe ; la discussion reste
-  // accessible par les commentaires.
-  const open = () => (post.link_url ? void openExternal(post.link_url, colors.background) : router.push(`/post/${post.id}`));
+  // Post « ressource » : la carte ouvre le post comme les autres ; sa bannière mène au lien.
+  const open = () => router.push(`/post/${post.id}`);
 
   return (
     <Pressable
@@ -81,8 +80,8 @@ export const PostRow = memo(function PostRow({ post, showHub = true }: { post: P
           ) : null}
         </View>
       ) : null}
-      {post.link_url ? <ResourceLink url={post.link_url} /> : null}
       {image ? <PostImage media={image} variant="feed" recyclingKey={post.id} /> : null}
+      {post.link_url ? <ResourceLink url={post.link_url} preview={post.link_preview} /> : null}
       {video ? <PostVideo media={video} /> : null}
       {post.kind === 'poll' ? (
         <View style={[styles.poll, { backgroundColor: colors.container }]}>

@@ -48,6 +48,31 @@ class Post(BaseModel):
         return f"{self.kind}:{(self.title or self.body)[:40]}"
 
 
+class LinkPreview(BaseModel):
+    """Carte d'une ressource externe (lien d'un post) : lue une fois par adresse, partagée par
+    tous les posts qui y mènent. Le résumé IA est ajouté ensuite (file « ai »)."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "En cours"
+        READY = "ready", "Prête"
+        FAILED = "failed", "Échec"
+
+    url = models.URLField(max_length=500, unique=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    kind = models.CharField(max_length=10, default="article")  # article | video
+    title = models.CharField(max_length=300, blank=True)
+    description = models.CharField(max_length=500, blank=True)
+    image_url = models.URLField(max_length=1000, blank=True)
+    site_name = models.CharField(max_length=120, blank=True)
+    reading_minutes = models.PositiveSmallIntegerField(null=True, blank=True)
+    # Résumé IA en 3 points au plus (vide : pas assez de texte, ou IA indisponible).
+    summary = models.JSONField(default=list, blank=True)
+    fetched_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return self.url
+
+
 class PollVote(BaseModel):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="votes")
     voter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)

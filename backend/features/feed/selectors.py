@@ -6,7 +6,7 @@ from core.admin_lists import admin_filter
 from core.stats import count_per_day
 from core.utils import keyset_before
 
-from .models import PollVote, Post, PostLike
+from .models import LinkPreview, PollVote, Post, PostLike
 
 # Tri du fil → champ d'ordre (curseur) : Populaires, Nouveaux, Top.
 SORTS = {"hot": "-hot", "new": "-created_at", "top": "-top"}
@@ -65,6 +65,33 @@ def home_candidates(*, before=None, limit: int, author_ids=None) -> list[dict]:
         }
         for post in keyset_before(posts, "created_at", before)[:limit]
     ]
+
+
+def link_previews(*, urls) -> dict:
+    """{url: carte de la ressource} pour les liens des posts affichés (une requête)."""
+    from urllib.parse import urlsplit
+
+    urls = {url for url in urls if url}
+    if not urls:
+        return {}
+    return {
+        preview.url: {
+            "status": preview.status,
+            "kind": preview.kind,
+            "title": preview.title,
+            "description": preview.description,
+            "image_url": preview.image_url,
+            "site_name": preview.site_name,
+            "domain": (urlsplit(preview.url).hostname or "").removeprefix("www."),
+            "reading_minutes": preview.reading_minutes,
+            "summary": list(preview.summary or [])[:3],
+        }
+        for preview in LinkPreview.objects.filter(url__in=urls)
+    }
+
+
+def get_link_preview(*, url) -> LinkPreview | None:
+    return LinkPreview.objects.filter(url=url).first()
 
 
 def get_post(*, post_id, include_hidden: bool = False) -> Post | None:

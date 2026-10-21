@@ -109,3 +109,93 @@ export async function voiceSearch(mediaId: string, language?: string): Promise<V
   );
   return waitForJob<VoiceResult>(job_id, SLOW);
 }
+
+export type ProfileAction =
+  | 'edit_profile'
+  | 'link_github'
+  | 'pin_content'
+  | 'answer_questions'
+  | 'publish_snippet'
+  | 'add_project'
+  | 'open_to_work'
+  | 'none';
+
+export interface ProfileReview {
+  score: number;
+  headline: string;
+  strengths: string[];
+  improvements: { title: string; detail: string; action: ProfileAction }[];
+  github: string[];
+}
+
+/** Analyse IA du profil et du compte GitHub. */
+export function useProfileReview() {
+  return useMutation({
+    mutationFn: async () => {
+      const { job_id } = await unwrap(api.POST('/api/assistant/profile-review/'));
+      return waitForJob<ProfileReview>(job_id, SLOW);
+    },
+  });
+}
+
+export interface AskTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface AskAnswer {
+  answer: string;
+  sources: { n: number; title: string; url: string; type: string }[];
+}
+
+/** « Demande à AfriDev » : réponse appuyée sur les contenus de la plateforme. */
+export function useAsk() {
+  return useMutation({
+    mutationFn: async (input: { question: string; history: AskTurn[] }) => {
+      const { job_id } = await unwrap(api.POST('/api/assistant/ask/', { body: input }));
+      return waitForJob<AskAnswer>(job_id, SLOW);
+    },
+  });
+}
+
+export interface ContributionPick {
+  issue_id: string;
+  number: number;
+  title: string;
+  url: string;
+  labels: string[];
+  labeled: boolean;
+  project: { id: string; name: string; language: string; logo_url: string };
+  level: 'facile' | 'moyen';
+  why: string;
+  first_step: string;
+}
+
+/** Issues des projets de la communauté adaptées à une première contribution. */
+export function useFirstContributions() {
+  return useMutation({
+    mutationFn: async () => {
+      const { job_id } = await unwrap(api.POST('/api/assistant/first-contributions/'));
+      return waitForJob<{ picks: ContributionPick[] }>(job_id, SLOW);
+    },
+  });
+}
+
+export interface SuggestedHub {
+  id: string;
+  slug: string;
+  name: string;
+  icon: string;
+  is_verified: boolean;
+  reason: string;
+}
+
+/** Hubs proposés pour un post en cours d'écriture. */
+export function useHubSuggestions() {
+  return useMutation({
+    mutationFn: async (input: { title: string; body: string; tags: string[] }) => {
+      const { job_id } = await unwrap(api.POST('/api/assistant/hub-suggest/', { body: input }));
+      return waitForJob<{ hubs: SuggestedHub[] }>(job_id, SLOW);
+    },
+  });
+}

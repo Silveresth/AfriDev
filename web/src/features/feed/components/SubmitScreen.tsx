@@ -5,6 +5,7 @@ import { BarChart3, Check, ImageIcon, Link2, Plus, Send, Type, Video, X } from '
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRef, useState } from 'react';
 
+import { HubSuggestions } from '@/features/assistant';
 import { HubPicker, type PickedHub, toPickedHub, useHub } from '@/features/hubs';
 import { errorMessage } from '@/shared/api';
 import { DraftStatus, useAutosaveDraft } from '@/shared/drafts';
@@ -127,6 +128,17 @@ export function SubmitScreen() {
           set('hub', picked);
         }}
       />
+      {!hub ? (
+        <HubSuggestions
+          title={draft.title}
+          body={draft.body}
+          tags={draft.tags}
+          onPick={(picked) => {
+            setHubTouched(true);
+            set('hub', { id: picked.id, slug: picked.slug, name: picked.name, icon: picked.icon });
+          }}
+        />
+      ) : null}
 
       <Tabs<Mode>
         value={draft.mode}

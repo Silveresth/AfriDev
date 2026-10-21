@@ -39,6 +39,69 @@ def member_profile(*, user_id) -> str:
     return "\n".join(lines)
 
 
+def profile_audit(*, user_id) -> str:
+    """Faits pour l'analyse du profil : complétude, activité, réputation et compte GitHub."""
+    profile = profile_selectors.get_profile_for_user(user_id=user_id)
+    if profile is None:
+        return "Profil introuvable."
+    github = profile_selectors.github_overview(profile=profile) or {}
+    links = ", ".join(k for k, v in (profile.social_links or {}).items() if v) or "aucun"
+    github_account = f"oui ({profile.github_username})" if profile.github_username else "non"
+    badges = [b.get("label", b) if isinstance(b, dict) else b for b in profile.badges or []]
+    lines = [
+        member_profile(user_id=user_id),
+        "",
+        "COMPLÉTUDE",
+        f"Photo de profil : {'oui' if profile.avatar_url else 'non'}",
+        f"Bannière : {'oui' if profile.banner_url else 'non'}",
+        f"Longueur de la bio : {len(profile.bio)} caractères",
+        f"Site web : {'oui' if profile.website else 'non'} · Réseaux : {links}",
+        f"Compte GitHub relié : {github_account}",
+        f"Contenus épinglés sur le profil : {len(profile.pinned or [])}",
+        f"Préférences de travail : {', '.join(profile.work_preferences or []) or 'aucune'}",
+        "",
+        "RÉPUTATION",
+        f"Craft Score : {profile.karma_score} (aide : {profile.craft_help}, création : "
+        f"{profile.craft_creation})",
+        f"Détail : {profile.karma_details or {}}",
+        f"Badges : {', '.join(str(b) for b in badges) or 'aucun'}",
+        f"Abonnés : {profile.followers_count}",
+    ]
+    if github:
+        repos = "; ".join(
+            f"{r['name']} ({r.get('language') or '?'}, {r.get('stars', 0)} étoiles, "
+            f"description : {'oui' if r.get('description') else 'non'})"
+            for r in github.get("top_repos", [])
+        )
+        lines += [
+            "",
+            "GITHUB",
+            f"Dépôts publics : {github.get('public_repos', 0)} · Étoiles : "
+            f"{github.get('total_stars', 0)} · Abonnés : {github.get('followers', 0)}",
+            f"Dépôts phares : {repos or 'aucun'}",
+        ]
+    return "\n".join(lines)
+
+
+def contribution_issues(issues) -> str:
+    """Issues candidates pour une première contribution, identifiées par leur rang (#1, #2…)."""
+    return "\n\n".join(
+        f"#{rank}\nProjet : {issue.project.name} ({issue.project.language or '?'} ; "
+        f"{', '.join(list(issue.project.tags or [])[:5])})\n"
+        f"Issue : {issue.title}\nLabels : {', '.join(issue.labels or []) or 'aucun'}"
+        f"{' (marquée good first issue)' if issue.labeled else ''}\n"
+        f"Texte : {issue.excerpt or '(vide)'}"
+        for rank, issue in enumerate(issues, start=1)
+    )
+
+
+def hub_candidates(hubs) -> str:
+    return "\n".join(
+        f"{hub['slug']} | {hub['name']} | {' '.join(hub['description'].split())[:140]}"
+        for hub in hubs
+    )
+
+
 def job_offer(job) -> str:
     place = ", ".join(filter(None, [job.location, job.country])) or "non précisé"
     return "\n".join(

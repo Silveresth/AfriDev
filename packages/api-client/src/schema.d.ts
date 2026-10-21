@@ -428,6 +428,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/assistant/ask/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description « Demande à AfriDev » : réponse Markdown appuyée sur les contenus de la plateforme (result : answer, sources[{n, title, url, type}]). */
+        post: operations["assistant_ask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/assistant/chat-replies/": {
         parameters: {
             query?: never;
@@ -479,6 +496,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/assistant/first-contributions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Issues des projets de la communauté adaptées à une première contribution (result : picks[{issue_id, number, title, url, labels, labeled, project, level, why, first_step}]). */
+        post: operations["assistant_first_contributions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistant/hub-suggest/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Hubs proposés pour un post en cours d'écriture (result : hubs[{id, slug, name, icon, is_verified, reason}]). */
+        post: operations["assistant_hub_suggest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/assistant/job-match/": {
         parameters: {
             query?: never;
@@ -490,6 +541,23 @@ export interface paths {
         put?: never;
         /** @description Score de correspondance offre ↔ profil, points forts, écarts et plan d'apprentissage (result : score, verdict, strengths, gaps, plan). */
         post: operations["assistant_job_match"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistant/profile-review/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Analyse du profil et du compte GitHub du membre connecté (result : score, headline, strengths, improvements[{title, detail, action}], github). */
+        post: operations["assistant_profile_review"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2828,6 +2896,21 @@ export interface components {
             /** @default  */
             message: string;
         };
+        AskInputRequest: {
+            question: string;
+            /** @description Échanges précédents (6 au plus). */
+            history?: components["schemas"]["AskTurnRequest"][];
+        };
+        AskTurnRequest: {
+            role: components["schemas"]["AskTurnRoleEnum"];
+            content: string;
+        };
+        /**
+         * @description * `user` - user
+         *     * `assistant` - assistant
+         * @enum {string}
+         */
+        AskTurnRoleEnum: "user" | "assistant";
         /**
          * @description Avec la double authentification : user et tokens sont null, mfa_required vaut true et
          *     mfa_token s'échange contre les jetons via POST /api/accounts/login/2fa/.
@@ -3382,7 +3465,7 @@ export interface components {
         };
         HubMember: {
             user: components["schemas"]["Author"];
-            role: components["schemas"]["RoleEnum"];
+            role: components["schemas"]["HubMemberRoleEnum"];
             is_creator: boolean;
             /** Format: date-time */
             joined_at: string;
@@ -3396,6 +3479,12 @@ export interface components {
             /** @default  */
             reason: string;
         };
+        /**
+         * @description * `member` - member
+         *     * `moderator` - moderator
+         * @enum {string}
+         */
+        HubMemberRoleEnum: "member" | "moderator";
         HubModeratorActionRequest: {
             username: string;
         };
@@ -3416,6 +3505,12 @@ export interface components {
             viewer: components["schemas"]["HubViewer"] | null;
             /** Format: date-time */
             created_at: string;
+        };
+        HubSuggestInputRequest: {
+            title: string;
+            /** @default  */
+            body: string;
+            tags?: string[];
         };
         /** @description Hub (h/<slug>) auquel un post, une question ou un snippet est rattaché. */
         HubSummary: {
@@ -4236,6 +4331,35 @@ export interface components {
          * @enum {string}
          */
         PostKindEnum: "text" | "image" | "poll" | "short";
+        /**
+         * @description Carte de la ressource d'un post (lue en tâche de fond : `pending` juste après la
+         *     publication, `failed` si la page est injoignable).
+         */
+        PostLinkCard: {
+            status: components["schemas"]["PostLinkCardStatusEnum"];
+            kind: components["schemas"]["PostLinkCardKindEnum"];
+            title: string;
+            description: string;
+            image_url: string;
+            site_name: string;
+            domain: string;
+            reading_minutes: number | null;
+            /** @description Résumé IA (≤ 3). */
+            summary: string[];
+        };
+        /**
+         * @description * `article` - article
+         *     * `video` - video
+         * @enum {string}
+         */
+        PostLinkCardKindEnum: "article" | "video";
+        /**
+         * @description * `pending` - pending
+         *     * `ready` - ready
+         *     * `failed` - failed
+         * @enum {string}
+         */
+        PostLinkCardStatusEnum: "pending" | "ready" | "failed";
         PostOutput: {
             /** Format: uuid */
             id: string;
@@ -4249,6 +4373,7 @@ export interface components {
             media: unknown;
             /** @default  */
             link_url: string;
+            link_preview?: components["schemas"]["PostLinkCard"] | null;
             tags: string[];
             hub: components["schemas"]["HubSummary"] | null;
             /** @default false */
@@ -4603,12 +4728,6 @@ export interface components {
         RevokedCount: {
             revoked: number;
         };
-        /**
-         * @description * `member` - member
-         *     * `moderator` - moderator
-         * @enum {string}
-         */
-        RoleEnum: "member" | "moderator";
         SavedTarget: {
             target_type: components["schemas"]["BookmarkTargetTypeEnum"];
             /** Format: uuid */
@@ -5784,6 +5903,31 @@ export interface operations {
             };
         };
     };
+    assistant_ask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AskInputRequest"];
+                "multipart/form-data": components["schemas"]["AskInputRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"];
+                };
+            };
+        };
+    };
     assistant_chat_replies: {
         parameters: {
             query?: never;
@@ -5861,6 +6005,50 @@ export interface operations {
             };
         };
     };
+    assistant_first_contributions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"];
+                };
+            };
+        };
+    };
+    assistant_hub_suggest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HubSuggestInputRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["HubSuggestInputRequest"];
+                "multipart/form-data": components["schemas"]["HubSuggestInputRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"];
+                };
+            };
+        };
+    };
     assistant_job_match: {
         parameters: {
             query?: never;
@@ -5875,6 +6063,25 @@ export interface operations {
                 "multipart/form-data": components["schemas"]["JobMatchInputRequest"];
             };
         };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"];
+                };
+            };
+        };
+    };
+    assistant_profile_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             202: {
                 headers: {

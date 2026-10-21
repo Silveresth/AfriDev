@@ -180,11 +180,13 @@ def store_repo_sync(*, project_id, repo: dict | None, issues: list[dict], error:
                 "title": item["title"][:300],
                 "url": item["url"],
                 "labels": item.get("labels", []),
+                "excerpt": (item.get("excerpt") or "")[:500],
+                "labeled": item.get("labeled", True),
                 "is_open": True,
                 "deleted_at": None,
             },
         )
-    # Issues fermées ou sans label « good first issue » depuis la dernière synchro.
+    # Issues fermées (ou sorties des plus récentes) depuis la dernière synchro.
     project.issues.filter(is_open=True).exclude(number__in=seen).update(is_open=False)
 
 

@@ -10,6 +10,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from core import jobs
+from features.hubs import selectors as hub_selectors
 from features.jobs_events import selectors as jobs_selectors
 from features.media import selectors as media_selectors
 from features.messaging import selectors as messaging_selectors
@@ -167,6 +168,82 @@ def ai_team(*, job_id: str, project_id: str) -> None:
                 }
             )
         return result
+
+    _run(job_id, compute)
+
+
+@shared_task
+def ai_profile_review(*, job_id: str, user_id: str) -> None:
+    _run(job_id, lambda: ai.profile_review(user_id=user_id))
+
+
+@shared_task
+def ai_ask(*, job_id: str, question: str, history: list) -> None:
+    _run(job_id, lambda: ai.ask(question=question, history=history))
+
+
+@shared_task
+def ai_first_contributions(*, job_id: str, user_id: str) -> None:
+    profile = profile_selectors.get_profile_for_user(user_id=user_id)
+    tags = [*(profile.stack if profile else []), *(profile.interests if profile else [])]
+    pool = project_selectors.contribution_pool(tags=tags, limit=30)
+    if not pool:
+        jobs.finish_job(job_id, {"picks": []})
+        return
+
+    def compute():
+        picks = ai.first_contributions(user_id=user_id, issues=pool)
+        return {
+            "picks": [
+                {
+                    "issue_id": str(pick["issue"].id),
+                    "number": pick["issue"].number,
+                    "title": pick["issue"].title,
+                    "url": pick["issue"].url,
+                    "labels": list(pick["issue"].labels or [])[:5],
+                    "labeled": pick["issue"].labeled,
+                    "project": {
+                        "id": str(pick["issue"].project.id),
+                        "name": pick["issue"].project.name,
+                        "language": pick["issue"].project.language,
+                        "logo_url": pick["issue"].project.logo_url,
+                    },
+                    "level": pick["level"],
+                    "why": pick["why"],
+                    "first_step": pick["first_step"],
+                }
+                for pick in picks
+            ]
+        }
+
+    _run(job_id, compute)
+
+
+# Mots trop courts ou trop vagues pour chercher un hub à partir du titre.
+_STOPWORDS = {"pour", "avec", "dans", "comment", "quel", "quelle", "votre", "notre", "cette"}
+
+
+@shared_task
+def ai_suggest_hubs(*, job_id: str, text: str, tags: list) -> None:
+    words = [w.strip(".,;:!?()«»\"'").lower() for w in text.split()[:40]]
+    keywords = [*tags, *[w for w in words if len(w) > 3 and w not in _STOPWORDS][:10]]
+    # Hubs dont le nom ou la description évoque le post, complétés par les plus actifs.
+    hubs = hub_selectors.suggested_hubs(tags=keywords, limit=20)
+
+    def compute():
+        return {
+            "hubs": [
+                {
+                    "id": str(pick["hub"]["id"]),
+                    "slug": pick["hub"]["slug"],
+                    "name": pick["hub"]["name"],
+                    "icon": pick["hub"]["icon"],
+                    "is_verified": pick["hub"]["is_verified"],
+                    "reason": pick["reason"],
+                }
+                for pick in ai.suggest_hubs(text=text, hubs=hubs)
+            ]
+        }
 
     _run(job_id, compute)
 

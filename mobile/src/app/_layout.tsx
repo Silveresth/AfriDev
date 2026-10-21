@@ -80,6 +80,7 @@ function Navigator() {
           <Stack.Screen name="job/[id]" />
           <Stack.Screen name="bookmarks" />
           <Stack.Screen name="search" options={{ animation: 'fade' }} />
+          <Stack.Screen name="assistant" />
         </Stack.Protected>
         {/*
           À la déconnexion, Stack.Protected renvoie vers le PREMIER écran encore accessible :

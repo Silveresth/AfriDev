@@ -32,13 +32,17 @@ class Project(BaseModel):
 
 
 class Issue(BaseModel):
-    """« Good first issue » importée du dépôt GitHub du projet."""
+    """Issue ouverte importée du dépôt GitHub du projet. `labeled` : marquée « good first
+    issue » (ou équivalent) sur GitHub ; les autres servent à l'IA qui repère les tâches
+    accessibles aux débutants (Premières contributions)."""
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="issues")
     number = models.PositiveIntegerField()
     title = models.CharField(max_length=300)
     url = models.URLField()
     labels = models.JSONField(default=list, blank=True)
+    excerpt = models.CharField(max_length=500, blank=True)
+    labeled = models.BooleanField(default=True)
     is_open = models.BooleanField(default=True)
 
     class Meta:

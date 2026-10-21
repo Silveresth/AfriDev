@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Bell, MessageCircle, Rows3, Search, UsersRound } from 'lucide-react-native';
+import { Bell, MessageCircle, Rows3, Search, Sparkles, UsersRound } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
@@ -50,6 +50,7 @@ export function FeedScreen() {
         large
         right={
           <>
+            <IconButton icon={Sparkles} label={t('ai.title')} onPress={() => router.push('/assistant')} />
             <IconButton icon={Search} label={t('search.title')} onPress={() => router.push('/search')} />
             <IconButton icon={MessageCircle} label={t('dm.title')} badge={unreadMessages.data} onPress={() => router.push('/messages')} />
             <IconButton icon={Bell} label={t('nav.notifications')} badge={unread.data} onPress={() => router.push('/notifications')} />

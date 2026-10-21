@@ -6,6 +6,7 @@ l'API ne renvoie jamais une forme inattendue aux clients.
 
 import re
 
+from features.knowledge import selectors as knowledge_selectors
 from integrations import llm
 
 from . import context
@@ -173,6 +174,136 @@ def team(*, project_text: str, candidates_text: str, allowed: set[str]) -> dict:
                 }
             )
     return {"candidates": picked, "invitation": str(data.get("invitation") or "")[:600]}
+
+
+PROFILE_ACTIONS = {
+    "edit_profile",
+    "link_github",
+    "pin_content",
+    "answer_questions",
+    "publish_snippet",
+    "add_project",
+    "open_to_work",
+    "none",
+}
+LEVELS = {"facile", "moyen"}
+
+
+def profile_review(*, user_id) -> dict:
+    data = llm.complete_json(
+        model=llm.SMART_MODEL,
+        system=load("profile_review.md"),
+        prompt=context.profile_audit(user_id=user_id),
+        max_tokens=900,
+    )
+    return {
+        "score": _int(data.get("score")),
+        "headline": _plain(data.get("headline"), 200),
+        "strengths": [_plain(s, 200) for s in _list(data.get("strengths"), 3) if s],
+        "improvements": [
+            {
+                "title": _plain(item.get("title"), 120),
+                "detail": _plain(item.get("detail"), 400),
+                "action": item.get("action") if item.get("action") in PROFILE_ACTIONS else "none",
+            }
+            for item in _list(data.get("improvements"), 5)
+            if isinstance(item, dict) and item.get("title")
+        ],
+        "github": [_plain(s, 300) for s in _list(data.get("github"), 3) if s],
+    }
+
+
+ASK_MIN_SCORE = 0.25
+
+
+def ask(*, question: str, history: list[dict]) -> dict:
+    """Réponse appuyée sur les contenus de la plateforme, sources numérotées et citées."""
+    previous = " ".join(turn["content"] for turn in history if turn["role"] == "user")[-500:]
+    query = f"{previous}\n{question}".strip()
+    hits = knowledge_selectors.semantic_search(query=query, limit=6, min_score=ASK_MIN_SCORE)
+    if not hits:
+        hits = knowledge_selectors.fulltext_search(query=question, limit=4)
+    sources = "\n\n".join(
+        f"[{n}] {hit.title} ({hit.source_type}, {hit.url})\n{hit.excerpt[:1200]}"
+        for n, hit in enumerate(hits, start=1)
+    )
+    conversation = "\n".join(
+        f"{'Membre' if turn['role'] == 'user' else 'AfriDev'} : {turn['content'][:800]}"
+        for turn in history[-6:]
+    )
+    completion = llm.complete(
+        model=llm.SMART_MODEL,
+        system=load("ask.md"),
+        prompt=(
+            f"Sources :\n{sources or '(aucune source pertinente sur la plateforme)'}\n\n"
+            f"Historique :\n{conversation or '(début de la conversation)'}\n\n"
+            f"---\nQuestion : {question}"
+        ),
+        max_tokens=1100,
+        temperature=0.2,
+    )
+    answer = completion.text.strip()
+    cited = {int(n) for n in re.findall(r"\[(\d{1,2})\]", answer)}
+    return {
+        "answer": answer,
+        "sources": [
+            {"n": n, "title": hit.title, "url": hit.url, "type": hit.source_type}
+            for n, hit in enumerate(hits, start=1)
+            if n in cited
+        ],
+    }
+
+
+def first_contributions(*, user_id, issues: list) -> list[dict]:
+    """[{issue, level, why, first_step}] : issues choisies parmi `issues` (rangs vérifiés)."""
+    if not issues:
+        return []
+    data = llm.complete_json(
+        model=llm.SMART_MODEL,
+        system=load("first_contributions.md"),
+        prompt=f"MEMBRE\n{context.member_profile(user_id=user_id)}\n\nISSUES\n"
+        f"{context.contribution_issues(issues)}",
+        max_tokens=1000,
+    )
+    picks, seen = [], set()
+    for row in _list(data.get("picks"), 5):
+        if not isinstance(row, dict):
+            continue
+        # Rang hors de la liste : issue inventée, ignorée (jamais ramenée à la plus proche).
+        raw = str(row.get("id") or "").strip().lstrip("#")
+        rank = int(raw) if raw.isdigit() else 0
+        if not 1 <= rank <= len(issues) or rank in seen:
+            continue
+        seen.add(rank)
+        picks.append(
+            {
+                "issue": issues[rank - 1],
+                "level": row.get("level") if row.get("level") in LEVELS else "moyen",
+                "why": _plain(row.get("why"), 240),
+                "first_step": _plain(row.get("first_step"), 240),
+            }
+        )
+    return picks
+
+
+def suggest_hubs(*, text: str, hubs: list[dict]) -> list[dict]:
+    """[{hub, reason}] : 3 hubs au plus parmi `hubs` (slugs vérifiés)."""
+    if not hubs:
+        return []
+    data = llm.complete_json(
+        model=llm.FAST_MODEL,
+        system=load("hub_suggest.md"),
+        prompt=f"POST\n{text[:1500]}\n\nHUBS\n{context.hub_candidates(hubs)}",
+        max_tokens=250,
+        temperature=0,
+    )
+    by_slug = {hub["slug"]: hub for hub in hubs}
+    picked = []
+    for row in _list(data.get("hubs"), 3):
+        slug = str(row.get("slug") or "").strip().lower() if isinstance(row, dict) else ""
+        if slug in by_slug and slug not in {p["hub"]["slug"] for p in picked}:
+            picked.append({"hub": by_slug[slug], "reason": _plain(row.get("reason"), 120)})
+    return picked
 
 
 def voice_query(text: str) -> dict:

@@ -168,13 +168,32 @@ def list_good_first_issues(owner: str, name: str, *, limit: int = 30) -> list[di
             for issue in batch or []:
                 if "pull_request" in issue:
                     continue
-                issues[issue["number"]] = {
-                    "number": issue["number"],
-                    "title": issue["title"],
-                    "url": issue["html_url"],
-                    "labels": [lbl["name"] for lbl in issue.get("labels", [])],
-                }
+                issues[issue["number"]] = _issue(issue)
     return list(issues.values())[:limit]
+
+
+def _issue(issue: dict) -> dict:
+    return {
+        "number": issue["number"],
+        "title": issue["title"],
+        "url": issue["html_url"],
+        "labels": [lbl["name"] for lbl in issue.get("labels", [])],
+        # Début du texte : l'IA y juge si la tâche convient à un débutant.
+        "excerpt": " ".join((issue.get("body") or "").split())[:500],
+    }
+
+
+def list_open_issues(owner: str, name: str, *, limit: int = 20) -> list[dict]:
+    """Issues ouvertes les plus récemment actives (sans les pull requests), labels ou non."""
+    with _github() as client:
+        batch = _get(
+            client,
+            f"/repos/{owner}/{name}/issues",
+            state="open",
+            sort="updated",
+            per_page=limit,
+        )
+    return [_issue(issue) for issue in batch or [] if "pull_request" not in issue][:limit]
 
 
 def get_file(owner: str, name: str, path: str) -> str | None:

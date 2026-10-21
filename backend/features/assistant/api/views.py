@@ -9,9 +9,11 @@ from core.throttling import AIQuotaThrottle
 
 from .. import services
 from .serializers import (
+    AskInputSerializer,
     ChatRepliesInputSerializer,
     CodeReviewInputSerializer,
     DigestResponseSerializer,
+    HubSuggestInputSerializer,
     JobAcceptedSerializer,
     JobMatchInputSerializer,
     TeamInputSerializer,
@@ -108,6 +110,59 @@ class TeamInviteView(APIView):
         data.is_valid(raise_exception=True)
         services.invite_teammate(user=request.user, **data.validated_data)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ProfileReviewView(_AIView):
+    @extend_schema(
+        operation_id="assistant_profile_review",
+        request=None,
+        responses={202: JobAcceptedSerializer},
+        description="Analyse du profil et du compte GitHub du membre connecté (result : score, "
+        "headline, strengths, improvements[{title, detail, action}], github).",
+    )
+    def post(self, request):
+        return _accepted(services.request_profile_review(user=request.user))
+
+
+class AskView(_AIView):
+    @extend_schema(
+        operation_id="assistant_ask",
+        request=AskInputSerializer,
+        responses={202: JobAcceptedSerializer},
+        description="« Demande à AfriDev » : réponse Markdown appuyée sur les contenus de la "
+        "plateforme (result : answer, sources[{n, title, url, type}]).",
+    )
+    def post(self, request):
+        data = AskInputSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        return _accepted(services.request_ask(user=request.user, **data.validated_data))
+
+
+class FirstContributionsView(_AIView):
+    @extend_schema(
+        operation_id="assistant_first_contributions",
+        request=None,
+        responses={202: JobAcceptedSerializer},
+        description="Issues des projets de la communauté adaptées à une première contribution "
+        "(result : picks[{issue_id, number, title, url, labels, labeled, project, level, why, "
+        "first_step}]).",
+    )
+    def post(self, request):
+        return _accepted(services.request_first_contributions(user=request.user))
+
+
+class HubSuggestView(_AIView):
+    @extend_schema(
+        operation_id="assistant_hub_suggest",
+        request=HubSuggestInputSerializer,
+        responses={202: JobAcceptedSerializer},
+        description="Hubs proposés pour un post en cours d'écriture "
+        "(result : hubs[{id, slug, name, icon, is_verified, reason}]).",
+    )
+    def post(self, request):
+        data = HubSuggestInputSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        return _accepted(services.request_hub_suggestions(user=request.user, **data.validated_data))
 
 
 class VoiceSearchView(_AIView):

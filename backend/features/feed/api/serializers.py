@@ -59,6 +59,21 @@ class ViewerStateSerializer(serializers.Serializer):
     )
 
 
+class PostLinkCardSerializer(serializers.Serializer):
+    """Carte de la ressource d'un post (lue en tâche de fond : `pending` juste après la
+    publication, `failed` si la page est injoignable)."""
+
+    status = serializers.ChoiceField(choices=["pending", "ready", "failed"])
+    kind = serializers.ChoiceField(choices=["article", "video"])
+    title = serializers.CharField(allow_blank=True)
+    description = serializers.CharField(allow_blank=True)
+    image_url = serializers.CharField(allow_blank=True)
+    site_name = serializers.CharField(allow_blank=True)
+    domain = serializers.CharField(allow_blank=True)
+    reading_minutes = serializers.IntegerField(allow_null=True)
+    summary = serializers.ListField(child=serializers.CharField(), help_text="Résumé IA (≤ 3).")
+
+
 class PostOutputSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     kind = serializers.ChoiceField(choices=Post.Kind.choices)
@@ -69,6 +84,7 @@ class PostOutputSerializer(serializers.Serializer):
     media_id = serializers.UUIDField(allow_null=True)
     media = serializers.JSONField(allow_null=True)
     link_url = serializers.CharField(allow_blank=True, default="")
+    link_preview = PostLinkCardSerializer(allow_null=True, required=False)
     tags = serializers.ListField(child=serializers.CharField())
     hub = HubSummarySerializer(allow_null=True)
     is_pinned = serializers.BooleanField(default=False)
@@ -108,6 +124,7 @@ def present_posts(posts, *, viewer, authors: dict | None = None) -> list[dict]:
     if authors is None:
         authors = profile_selectors.author_cards(user_ids={post.author_id for post in posts})
     media = media_selectors.describe_many(asset_ids={post.media_id for post in posts})
+    previews = selectors.link_previews(urls={post.link_url for post in posts})
     polls = selectors.poll_results(post_ids=[p.id for p in posts if p.kind == Post.Kind.POLL])
     states = selectors.viewer_state(post_ids=ids, user=viewer)
     hubs = hub_selectors.hub_cards(hub_ids={post.hub_id for post in posts})
@@ -143,6 +160,7 @@ def present_posts(posts, *, viewer, authors: dict | None = None) -> list[dict]:
                 "media_id": post.media_id,
                 "media": media.get(post.media_id),
                 "link_url": post.link_url,
+                "link_preview": previews.get(post.link_url),
                 "tags": post.tags,
                 "hub": hubs.get(post.hub_id),
                 "is_pinned": post.is_pinned,

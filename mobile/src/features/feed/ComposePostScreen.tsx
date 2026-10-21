@@ -1,10 +1,11 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { linkDomain, normalizeLink } from '@afridev/validation';
-import { BarChart3, ImagePlus, Link2, Plus, X } from 'lucide-react-native';
+import { BarChart3, ImagePlus, Link2, Plus, Sparkles, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { type SuggestedHub, useHubSuggestions } from '@/features/assistant';
 import { errorMessage } from '@/shared/api';
 import { useT } from '@/shared/i18n';
 import { type MediaAsset, pickFromLibrary, uploadPicked } from '@/shared/media';
@@ -34,6 +35,9 @@ export function ComposePostScreen() {
   const [body, setBody] = useState('');
   const [tags, setTags] = useState('');
   const [link, setLink] = useState('');
+  // Hub proposé par l'IA (post commencé hors d'un hub).
+  const [chosenHub, setChosenHub] = useState<SuggestedHub | null>(null);
+  const suggest = useHubSuggestions();
   const [poll, setPoll] = useState<string[] | null>(null);
   const [picked, setPicked] = useState<Picked | null>(null);
   const [media, setMedia] = useState<MediaAsset | null>(null);
@@ -110,7 +114,7 @@ export function ComposePostScreen() {
         poll_options: poll ? options : undefined,
         media: media ? { id: media.id, kind: media.kind } : null,
         link_url: linkUrl ?? '',
-        hub_id: hubId ?? null,
+        hub_id: hubId ?? chosenHub?.id ?? null,
       },
       { onSuccess: (post) => router.replace(`/post/${post.id}`) },
     );
@@ -142,6 +146,58 @@ export function ComposePostScreen() {
           </View>
         ) : null}
         <TextField label={t('compose.title')} value={title} onChangeText={setTitle} placeholder={t('compose.title_ph')} maxLength={200} />
+        {hubId || editing ? null : chosenHub ? (
+          <View style={styles.hub}>
+            <Text variant="small" tone="muted">
+              {t('compose.in_hub')}
+            </Text>
+            <Tag label={`h/${chosenHub.slug}`} tone="primary" />
+            <Pressable hitSlop={8} onPress={() => setChosenHub(null)} accessibilityLabel={t('ai.hub.remove')}>
+              <X size={16} color={colors.inkMuted} />
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.suggest}>
+            <Pressable
+              hitSlop={6}
+              disabled={title.trim().length < 10 || suggest.isPending}
+              onPress={() => suggest.mutate({ title: title.trim(), body: body.trim().slice(0, 3000), tags: parseTags(tags) })}
+              style={[styles.inline, title.trim().length < 10 && styles.dim]}
+            >
+              {suggest.isPending ? <ActivityIndicator size="small" color={colors.primary} /> : <Sparkles size={15} color={colors.primaryInk} />}
+              <Text variant="smallStrong" tone="primary">
+                {t(suggest.isPending ? 'ai.hub.searching' : suggest.data ? 'ai.hub.more' : 'ai.hub.suggest')}
+              </Text>
+            </Pressable>
+            {suggest.isError ? (
+              <Text variant="caption" tone="danger">
+                {errorMessage(suggest.error)}
+              </Text>
+            ) : null}
+            {suggest.data && !suggest.data.hubs.length ? (
+              <Text variant="caption" tone="muted">
+                {t('ai.hub.none')}
+              </Text>
+            ) : null}
+            {suggest.data?.hubs.map((hub) => (
+              <Pressable
+                key={hub.id}
+                onPress={() => {
+                  haptic.select();
+                  setChosenHub(hub);
+                }}
+                style={({ pressed }) => [styles.hubChoice, { borderColor: colors.line, backgroundColor: pressed ? colors.pressed : colors.background }]}
+              >
+                <Text variant="smallStrong">{`h/${hub.slug}`}</Text>
+                {hub.reason ? (
+                  <Text variant="caption" tone="muted">
+                    {hub.reason}
+                  </Text>
+                ) : null}
+              </Pressable>
+            ))}
+          </View>
+        )}
         {poll ? null : (
           <TextField
             label={t('compose.link')}
@@ -301,6 +357,10 @@ const styles = StyleSheet.create({
   mediaIcon: { width: 44, height: 44, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   form: { padding: 16, gap: 18, paddingBottom: 48 },
   hub: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  suggest: { gap: 8 },
+  inline: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  dim: { opacity: 0.45 },
+  hubChoice: { borderWidth: StyleSheet.hairlineWidth * 2, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8, gap: 2 },
   poll: { gap: 10, padding: 14, borderWidth: StyleSheet.hairlineWidth * 2, borderRadius: radius.md },
   pollHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   addPoll: {
