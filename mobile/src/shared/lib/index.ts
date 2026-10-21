@@ -1,5 +1,6 @@
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 
 import { PUBLIC_WEB_URL } from '@/shared/api';
 import { type Key, t } from '@/shared/i18n';
@@ -230,6 +231,27 @@ export function goToRoute(route: string, { replace = false }: { replace?: boolea
   if (route.startsWith('/(tabs)')) router.navigate(route as never);
   else if (replace) router.replace(route as never);
   else router.push(route as never);
+}
+
+/**
+ * Ressource externe (lien d'un post) : ouverte directement dans le navigateur du système, en
+ * surimpression (Chrome Custom Tabs / Safari), et non dans la WebView interne. Le bouton retour
+ * ramène dans l'appli. Une page AfriDev rouvre l'écran natif. Ne lève jamais d'erreur.
+ */
+export async function openExternal(url: string, tint?: string): Promise<void> {
+  const trimmed = (url ?? '').trim();
+  const internalRoute = resolveInternalRoute(trimmed);
+  if (internalRoute) {
+    goToRoute(internalRoute);
+    return;
+  }
+  if (!/^https?:\/\//i.test(trimmed)) return;
+  try {
+    await WebBrowser.openBrowserAsync(trimmed, { toolbarColor: tint, enableBarCollapsing: true, showTitle: true });
+  } catch {
+    // Pas de navigateur compatible : l'application par défaut du téléphone.
+    await Linking.openURL(trimmed).catch(() => undefined);
+  }
 }
 
 export function openLink(url: string) {

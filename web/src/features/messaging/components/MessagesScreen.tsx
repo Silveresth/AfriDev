@@ -400,7 +400,8 @@ function Thread({ id }: { id: string }) {
           ) : (
             <Skeleton className="h-8 flex-1" />
           )}
-          <div className="flex items-center rounded-xl bg-container-low px-1 ring-1 ring-line/50 [&_button]:size-9">
+          {/* Taille fixée sur chaque icône : un sélecteur [&_button] atteindrait aussi les lignes du menu. */}
+          <div className="flex items-center rounded-xl bg-container-low px-1 ring-1 ring-line/50">
           {other ? (
             <Link
               href={`/u/${other.username}`}
@@ -411,12 +412,13 @@ function Thread({ id }: { id: string }) {
               <UserRound className="size-[18px]" aria-hidden />
             </Link>
           ) : null}
-          <IconAction label="Sélectionner des messages" onClick={() => setSelecting(true)} className="rounded-lg hover:bg-card [&_svg]:size-[18px]">
+          <IconAction label="Sélectionner des messages" onClick={() => setSelecting(true)} className="size-9 rounded-lg hover:bg-card [&_svg]:size-[18px]">
             <CheckSquare />
           </IconAction>
           <Menu
+            className="w-64"
             trigger={(props) => (
-              <IconAction label="Plus d’options" className="rounded-lg hover:bg-card [&_svg]:size-[18px]" {...props}>
+              <IconAction label="Plus d’options" className="size-9 rounded-lg hover:bg-card [&_svg]:size-[18px]" {...props}>
                 <MoreVertical />
               </IconAction>
             )}

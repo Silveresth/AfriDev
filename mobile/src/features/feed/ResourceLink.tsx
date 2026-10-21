@@ -3,12 +3,12 @@ import { ExternalLink, Globe } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 import { useT } from '@/shared/i18n';
-import { openLink } from '@/shared/lib';
+import { openExternal } from '@/shared/lib';
 import { PressableScale } from '@/shared/motion';
 import { radius, useTheme } from '@/shared/theme';
 import { Text } from '@/shared/ui';
 
-/** Ressource externe d'un post : domaine, adresse, et ouverture dans le navigateur interne. */
+/** Ressource externe d'un post : domaine, adresse, et ouverture directe dans le navigateur du système. */
 export function ResourceLink({ url, large = false }: { url: string; large?: boolean }) {
   const { colors } = useTheme();
   const { t } = useT();
@@ -17,7 +17,7 @@ export function ResourceLink({ url, large = false }: { url: string; large?: bool
       scaleTo={0.98}
       accessibilityRole="link"
       accessibilityLabel={`${t('post.open_resource')} : ${linkDomain(url)}`}
-      onPress={() => void openLink(url)}
+      onPress={() => void openExternal(url, colors.background)}
       style={[styles.box, { borderColor: colors.line, backgroundColor: colors.container }, large && styles.large]}
     >
       <View style={[styles.icon, { backgroundColor: colors.background }]}>
