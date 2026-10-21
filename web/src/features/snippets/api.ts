@@ -193,6 +193,8 @@ export interface SnippetComment {
   updated_at: string;
   parent_id: string | null;
   author: PublicSnippet['author'];
+  score?: number;
+  viewer_vote?: number;
 }
 
 export const commentKeys = {

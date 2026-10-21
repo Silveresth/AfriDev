@@ -151,7 +151,8 @@ export function VideoPlayer({
       aria-label="Lecteur vidéo"
       role="region"
       className={cn(
-        'group/player relative overflow-hidden rounded border border-line bg-black outline-none select-none focus-visible:ring-2 focus-visible:ring-primary',
+        // mx-auto : avec aspect-ratio, max-height réduit aussi la largeur (vidéo portrait) ; le lecteur reste centré.
+        'group/player relative mx-auto overflow-hidden rounded border border-line bg-black outline-none select-none focus-visible:ring-2 focus-visible:ring-primary',
         started && !visible && 'cursor-none',
         className,
       )}

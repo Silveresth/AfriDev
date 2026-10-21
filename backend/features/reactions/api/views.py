@@ -13,8 +13,8 @@ from .serializers import ReactionInputSerializer, ReactionSummarySerializer
 
 
 class ReactionView(APIView):
-    """/api/reactions/<type>/<id>/ (question, snippet, projet, offre) : score (GET) et vote
-    (POST, 0 = retrait)."""
+    """/api/reactions/<type>/<id>/ (question, snippet, projet, offre, commentaires) : score (GET)
+    et vote (POST, 0 = retrait)."""
 
     permission_classes = [ReadOnlyOrAuthenticated]
 

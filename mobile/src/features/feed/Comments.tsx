@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CommentActions } from '@/features/engage';
 import { TranslateBar } from '@/features/translation';
 import { errorMessage } from '@/shared/api';
 import { useT } from '@/shared/i18n';
@@ -12,7 +13,7 @@ import { useSession } from '@/shared/session';
 import { radius, typography, useTheme } from '@/shared/theme';
 import { Button, MentionText, ProfileAvatar, Text, useMentions } from '@/shared/ui';
 
-import { type Comment, useSendComment } from './api';
+import { type Comment, feedKeys, useSendComment } from './api';
 
 export interface ThreadRow {
   comment: Comment;
@@ -58,11 +59,13 @@ export function CommentRow({ row, onReply }: { row: ThreadRow; onReply: (comment
       </View>
       <MentionText text={comment.body} variant="body" />
       <TranslateBar text={comment.body} compact />
-      <Pressable hitSlop={8} onPress={() => onReply(comment)} style={styles.reply}>
-        <Text variant="caption" tone="muted">
-          {t('comment.reply')}
-        </Text>
-      </Pressable>
+      <CommentActions type="comment" comment={comment} listKey={feedKeys.comments(comment.post_id)} authorId={author?.id}>
+        <Pressable hitSlop={8} onPress={() => onReply(comment)} style={styles.reply}>
+          <Text variant="caption" tone="muted">
+            {t('comment.reply')}
+          </Text>
+        </Pressable>
+      </CommentActions>
     </View>
   );
 }
@@ -156,7 +159,7 @@ const styles = StyleSheet.create({
   comment: { paddingRight: 16, paddingVertical: 10, gap: 6 },
   byline: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   strong: { fontWeight: '700' },
-  reply: { alignSelf: 'flex-start' },
+  reply: { paddingHorizontal: 4 },
   bar: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: 12, paddingTop: 8, gap: 6 },
   replying: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4 },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },

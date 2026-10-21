@@ -24,6 +24,13 @@ class PostInputSerializer(serializers.Serializer):
         child=serializers.CharField(max_length=80), required=False, max_length=4
     )
     media_id = serializers.UUIDField(required=False, allow_null=True)
+    link_url = serializers.CharField(
+        max_length=500,
+        required=False,
+        allow_blank=True,
+        default="",
+        help_text="Ressource externe facultative (https://…) : la carte du post y mène.",
+    )
     tags = serializers.ListField(child=serializers.CharField(max_length=30), required=False)
     hub_id = serializers.UUIDField(required=False, allow_null=True, help_text="Hub facultatif.")
 
@@ -31,6 +38,9 @@ class PostInputSerializer(serializers.Serializer):
 class PostUpdateSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200, required=False, allow_blank=True)
     body = serializers.CharField(max_length=3000, required=False, allow_blank=True)
+    link_url = serializers.CharField(
+        max_length=500, required=False, allow_blank=True, help_text="Vide = retirer le lien."
+    )
     tags = serializers.ListField(child=serializers.CharField(max_length=30), required=False)
     hub_id = serializers.UUIDField(required=False, allow_null=True)
 
@@ -58,6 +68,7 @@ class PostOutputSerializer(serializers.Serializer):
     poll_results = serializers.ListField(child=serializers.IntegerField(), allow_null=True)
     media_id = serializers.UUIDField(allow_null=True)
     media = serializers.JSONField(allow_null=True)
+    link_url = serializers.CharField(allow_blank=True, default="")
     tags = serializers.ListField(child=serializers.CharField())
     hub = HubSummarySerializer(allow_null=True)
     is_pinned = serializers.BooleanField(default=False)
@@ -131,6 +142,7 @@ def present_posts(posts, *, viewer, authors: dict | None = None) -> list[dict]:
                 ),
                 "media_id": post.media_id,
                 "media": media.get(post.media_id),
+                "link_url": post.link_url,
                 "tags": post.tags,
                 "hub": hubs.get(post.hub_id),
                 "is_pinned": post.is_pinned,

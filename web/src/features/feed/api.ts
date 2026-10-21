@@ -77,6 +77,8 @@ export interface NewPost {
   body: string;
   poll_options?: string[];
   media_id?: string | null;
+  /** Ressource externe facultative (déjà normalisée par postSchema). */
+  link_url?: string;
   tags?: string[];
   hub_id?: string | null;
 }
@@ -86,7 +88,7 @@ export function useCreatePost() {
   return useMutation({
     mutationFn: (input: NewPost) => {
       const id = crypto.randomUUID();
-      const body = { id, ...input, poll_options: input.poll_options ?? [], tags: input.tags ?? [] };
+      const body = { id, ...input, poll_options: input.poll_options ?? [], tags: input.tags ?? [], link_url: input.link_url ?? '' };
       // Un post avec média exige le réseau (le fichier doit être envoyé d'abord).
       if (input.media_id) {
         return unwrap(api.POST('/api/feed/', { body })).then((result) => ({ queued: false as const, result }));
@@ -101,6 +103,7 @@ export function useCreatePost() {
           body: input.body,
           poll_options: body.poll_options,
           media_id: null,
+          link_url: body.link_url,
           tags: body.tags,
           hub_id: input.hub_id ?? null,
         },
@@ -151,7 +154,7 @@ export function useVote(post: Post) {
 export function useUpdatePost(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: { title: string; body: string; tags: string[] }) =>
+    mutationFn: (body: { title: string; body: string; tags: string[]; link_url?: string }) =>
       unwrap(api.PATCH('/api/feed/{post_id}/', { params: { path: { post_id: id } }, body })),
     onSuccess: (post) => replacePost(queryClient, post),
   });

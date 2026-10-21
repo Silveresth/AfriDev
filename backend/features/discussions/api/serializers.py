@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from core.serializers import AuthorSerializer
 from features.profiles import selectors as profile_selectors
+from features.reactions import selectors as reaction_selectors
 
 
 class CommentInputSerializer(serializers.Serializer):
@@ -17,6 +18,8 @@ class CommentOutputSerializer(serializers.Serializer):
     body = serializers.CharField()
     author = AuthorSerializer(allow_null=True)
     created_at = serializers.DateTimeField()
+    score = serializers.IntegerField(default=0)
+    viewer_vote = serializers.IntegerField(default=0, help_text="Vote du visiteur : -1, 0 ou 1.")
 
 
 class TargetCommentInputSerializer(serializers.Serializer):
@@ -32,11 +35,16 @@ class TargetCommentOutputSerializer(serializers.Serializer):
     body = serializers.CharField()
     author = AuthorSerializer(allow_null=True)
     created_at = serializers.DateTimeField()
+    score = serializers.IntegerField(default=0)
+    viewer_vote = serializers.IntegerField(default=0, help_text="Vote du visiteur : -1, 0 ou 1.")
 
 
-def present_target_comments(comments) -> list[dict]:
+def present_target_comments(comments, viewer_id=None) -> list[dict]:
     comments = list(comments)
     authors = profile_selectors.author_cards(user_ids={c.author_id for c in comments})
+    votes = reaction_selectors.comment_votes(
+        target_type="target_comment", comments=comments, viewer_id=viewer_id
+    )
     return [
         {
             "id": comment.id,
@@ -46,6 +54,7 @@ def present_target_comments(comments) -> list[dict]:
             "body": comment.body,
             "author": authors.get(comment.author_id),
             "created_at": comment.created_at,
+            **votes[comment.id],
         }
         for comment in comments
     ]
@@ -58,9 +67,12 @@ class SummaryOutputSerializer(serializers.Serializer):
     updated_at = serializers.DateTimeField(allow_null=True)
 
 
-def present_comments(comments) -> list[dict]:
+def present_comments(comments, viewer_id=None) -> list[dict]:
     comments = list(comments)
     authors = profile_selectors.author_cards(user_ids={c.author_id for c in comments})
+    votes = reaction_selectors.comment_votes(
+        target_type="comment", comments=comments, viewer_id=viewer_id
+    )
     return [
         {
             "id": comment.id,
@@ -69,6 +81,7 @@ def present_comments(comments) -> list[dict]:
             "body": comment.body,
             "author": authors.get(comment.author_id),
             "created_at": comment.created_at,
+            **votes[comment.id],
         }
         for comment in comments
     ]

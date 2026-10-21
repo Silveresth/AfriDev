@@ -101,3 +101,5 @@ class SnippetCommentSerializer(serializers.Serializer):
     updated_at = serializers.DateTimeField()
     parent_id = serializers.UUIDField(allow_null=True)
     author = AuthorSerializer(allow_null=True)
+    score = serializers.IntegerField(default=0)
+    viewer_vote = serializers.IntegerField(default=0, help_text="Vote du visiteur : -1, 0 ou 1.")

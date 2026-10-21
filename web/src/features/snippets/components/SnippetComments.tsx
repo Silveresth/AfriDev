@@ -4,11 +4,13 @@ import { MessageSquare, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import { CommentReactions } from '@/features/reactions';
 import { useSession } from '@/shared/session';
 import { Avatar, Button, Card, MentionText, MentionTextarea, Spinner, TimeAgo } from '@/shared/ui';
 import { cn } from '@/shared/lib';
 
 import {
+  commentKeys,
   type SnippetComment,
   useAddComment,
   useDeleteComment,
@@ -112,7 +114,14 @@ function SingleComment({
         <p className="whitespace-pre-wrap text-body-sm text-ink">
           <MentionText text={comment.body} />
         </p>
-        <div className="flex items-center gap-3 pt-0.5">
+        <div className="-ml-1.5 flex flex-wrap items-center gap-3 pt-0.5">
+          <CommentReactions
+            type="snippet_comment"
+            comment={comment}
+            listKey={commentKeys.all(snippetId)}
+            loginNext={`/snippets/${snippetId}`}
+            mine={isMine}
+          />
           {canReply ? (
             <button
               type="button"

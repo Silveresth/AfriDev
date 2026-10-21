@@ -21,6 +21,8 @@ class Post(BaseModel):
     poll_options = models.JSONField(default=list, blank=True)
     # Référence vers features.media, sans clé étrangère pour garder les features découplées.
     media_id = models.UUIDField(null=True, blank=True)
+    # Ressource externe facultative (article, dépôt, doc, vidéo) : la carte du post y mène.
+    link_url = models.URLField(max_length=500, blank=True, default="")
     tags = models.JSONField(default=list, blank=True)
     # Hub de rattachement (features.hubs), facultatif : référence sans clé étrangère.
     hub_id = models.UUIDField(null=True, blank=True, db_index=True)

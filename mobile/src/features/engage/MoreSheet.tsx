@@ -19,20 +19,32 @@ export interface MoreActions {
   onDelete?: () => void;
 }
 
-/** Menu « … » d'un contenu : signaler (motif en un geste), modifier, supprimer (après confirmation). */
-export function MoreSheet({ visible, onClose, report, onEdit, editLabel, onDelete }: MoreActions & { visible: boolean; onClose: () => void }) {
+/**
+ * Menu « … » d'un contenu : signaler (motif en un geste), modifier, supprimer (après confirmation).
+ * `reportOnly` : la feuille s'ouvre directement sur les motifs (bouton drapeau d'un commentaire).
+ */
+export function MoreSheet({
+  visible,
+  onClose,
+  report,
+  onEdit,
+  editLabel,
+  onDelete,
+  reportOnly = false,
+}: MoreActions & { visible: boolean; onClose: () => void; reportOnly?: boolean }) {
   const { t } = useT();
   const toast = useToast();
   const { isAuthenticated } = useSession();
   const send = useReport();
-  const [step, setStep] = useState<'menu' | 'report'>('menu');
+  const first = reportOnly ? 'report' : 'menu';
+  const [step, setStep] = useState<'menu' | 'report'>(first);
   // Action qui ouvre un écran : lancée une fois la feuille refermée (sinon l'écran reste dessous).
   const after = useRef<(() => void) | null>(null);
 
   const close = (then?: () => void) => {
     after.current = then ?? null;
     onClose();
-    setStep('menu');
+    setStep(first);
   };
   const runAfter = () => {
     const action = after.current;

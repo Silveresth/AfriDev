@@ -1,8 +1,11 @@
 """Écritures (création, mise à jour, publication). Seul point d'entrée en écriture."""
 
 import math
+import re
 from datetime import UTC, datetime
 
+from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
 from django.db import transaction
 from django.db.models import Count, F, Q, Sum
 
@@ -35,7 +38,33 @@ def ranks(*, score: int, created_at) -> tuple[float, float]:
 
 
 def _content_text(post: Post) -> str:
-    return f"{post.title}\n\n{post.body}".strip()
+    # Le lien fait partie du texte analysé par la modération (liens d'arnaque, hameçonnage).
+    return f"{post.title}\n\n{post.body}\n\n{post.link_url}".strip()
+
+
+_LINK_VALIDATOR = URLValidator(schemes=["http", "https"])
+
+
+def clean_link(url: str | None) -> str:
+    """Lien externe d'un post : vide, ou adresse http(s) complète sans identifiants."""
+    url = (url or "").strip()
+    if not url:
+        return ""
+    if not re.match(r"^https?://", url, re.IGNORECASE):
+        url = f"https://{url}"
+    if len(url) > 500:
+        raise DomainError("Lien trop long (500 caractères au plus).", code="invalid_link")
+    try:
+        _LINK_VALIDATOR(url)
+    except ValidationError:
+        raise DomainError(
+            "Lien invalide : indiquez une adresse web complète.", code="invalid_link"
+        ) from None
+    if "@" in url.split("/", 3)[2]:
+        raise DomainError(
+            "Lien invalide : identifiants interdits dans l'adresse.", code="invalid_link"
+        )
+    return url
 
 
 def _validate(
@@ -76,6 +105,7 @@ def create_post(
     tags: list | None = None,
     hub_id=None,
     post_id=None,
+    link_url: str = "",
 ) -> Post:
     """`post_id` : identifiant généré hors ligne par le client (rejouer l'envoi est sans effet)."""
     if post_id:
@@ -100,6 +130,7 @@ def create_post(
         body=body.strip(),
         poll_options=options,
         media_id=media_id or None,
+        link_url=clean_link(link_url),
         tags=normalize_tags(tags),
         hub_id=hub_services.require_hub(hub_id=hub_id, user=author),
     )
@@ -130,8 +161,10 @@ def update_post(
     body: str | None = None,
     tags=None,
     hub_id=...,
+    link_url: str | None = None,
 ) -> Post:
-    """hub_id : absent = inchangé, None = retirer du hub, UUID = déplacer dans ce hub."""
+    """hub_id : absent = inchangé, None = retirer du hub, UUID = déplacer dans ce hub.
+    link_url : None = inchangé, "" = retirer le lien."""
     if post.author_id != user.id and not user.is_staff:
         raise PermissionDeniedError("Seul l'auteur peut modifier ce post.")
     fields = []
@@ -141,6 +174,11 @@ def update_post(
     if body is not None and body.strip() != post.body:
         post.body = body.strip()
         fields.append("body")
+    if link_url is not None:
+        link = clean_link(link_url)
+        if link != post.link_url:
+            post.link_url = link
+            fields.append("link_url")
     if post.kind == Post.Kind.TEXT and not (post.title or post.body):
         raise DomainError("Le post est vide.", code="invalid_post")
     if tags is not None:
@@ -151,8 +189,8 @@ def update_post(
         fields.append("hub_id")
     if fields:
         post.save(update_fields=[*fields, "updated_at"])
-        if {"title", "body"} & set(fields):
-            text = f"{post.title}\n\n{post.body}".strip()
+        if {"title", "body", "link_url"} & set(fields):
+            text = _content_text(post)
             transaction.on_commit(lambda: post_edited.send(sender=Post, post_id=post.id, text=text))
     return post
 
@@ -284,6 +322,7 @@ def apply_offline_write(*, user, op: str, record_id, data: dict) -> None:
             media_id=data.get("media_id") or None,
             tags=data.get("tags"),
             hub_id=data.get("hub_id") or None,
+            link_url=data.get("link_url") or "",
         )
         return
     post = Post.objects.alive().filter(id=record_id).first()
@@ -296,6 +335,7 @@ def apply_offline_write(*, user, op: str, record_id, data: dict) -> None:
             title=data.get("title"),
             body=data.get("body"),
             tags=data.get("tags"),
+            link_url=data.get("link_url"),
         )
     elif op == "DELETE":
         delete_post(post=post, user=user)

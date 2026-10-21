@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Flag, Reply, SendHorizontal, Trash2, X } from 'lucide-react-native';
+import { Reply, SendHorizontal, Trash2, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
@@ -11,7 +11,8 @@ import { useSession } from '@/shared/session';
 import { radius, typography, useTheme } from '@/shared/theme';
 import { Button, ListFooter, MentionText, ProfileAvatar, Text, useMentions, useToast } from '@/shared/ui';
 
-import { REPORT_REASONS, type TargetComment, type TargetType, useReport, useTargetCommentActions, useTargetComments } from './api';
+import { type TargetComment, targetCommentsKey, type TargetType, useTargetCommentActions, useTargetComments } from './api';
+import { CommentActions } from './CommentActions';
 
 /** Discussion sous un projet ou une offre : commentaires, réponses, suppression, signalement. */
 export function TargetComments({ type, id, ownerId }: { type: TargetType; id: string; ownerId?: string | null }) {
@@ -21,7 +22,6 @@ export function TargetComments({ type, id, ownerId }: { type: TargetType; id: st
   const { user, isAuthenticated } = useSession();
   const comments = useTargetComments(type, id);
   const { send, remove } = useTargetCommentActions(type, id);
-  const report = useReport();
   const [body, setBody] = useState('');
   const [replyTo, setReplyTo] = useState<TargetComment | null>(null);
   const mentions = useMentions(body, setBody);
@@ -29,27 +29,11 @@ export function TargetComments({ type, id, ownerId }: { type: TargetType; id: st
   const roots = comments.items.filter((comment) => !comment.parent_id);
   const repliesOf = (parentId: string) => comments.items.filter((comment) => comment.parent_id === parentId);
 
-  const actions = (comment: TargetComment) => {
-    const mine = Boolean(user && (comment.author?.id === user.id || ownerId === user.id || user.is_staff));
-    if (mine) {
-      Alert.alert(t('act.delete_title'), undefined, [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.delete'), style: 'destructive', onPress: () => remove.mutate(comment.id, { onError: (e) => toast(errorMessage(e), 'error') }) },
-      ]);
-      return;
-    }
-    Alert.alert(t('act.report_title'), undefined, [
-      ...REPORT_REASONS.slice(0, 2).map((reason) => ({
-        text: t(`act.reason.${reason}`),
-        onPress: () =>
-          report.mutate(
-            { type: 'target_comment', id: comment.id, reason },
-            { onSuccess: () => toast(t('act.reported')), onError: (e) => toast(errorMessage(e), 'error') },
-          ),
-      })),
-      { text: t('common.cancel'), style: 'cancel' as const },
+  const confirmDelete = (comment: TargetComment) =>
+    Alert.alert(t('act.delete_title'), undefined, [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: () => remove.mutate(comment.id, { onError: (e) => toast(errorMessage(e), 'error') }) },
     ]);
-  };
 
   const row = (comment: TargetComment, nested = false) => {
     const name = comment.author?.display_name || comment.author?.username || t('member');
@@ -68,22 +52,24 @@ export function TargetComments({ type, id, ownerId }: { type: TargetType; id: st
             <MentionText text={comment.body} />
           </View>
           <View style={styles.tools}>
-            {isAuthenticated && !nested ? (
-              <Pressable hitSlop={8} onPress={() => setReplyTo(comment)} style={styles.tool}>
-                <Reply size={14} color={colors.inkFaint} />
-                <Text variant="caption" tone="faint">
-                  {t('dm.reply')}
-                </Text>
-              </Pressable>
-            ) : null}
-            {isAuthenticated && (canDelete || comment.author?.id !== user?.id) ? (
-              <Pressable hitSlop={8} onPress={() => actions(comment)} style={styles.tool}>
-                {canDelete ? <Trash2 size={14} color={colors.inkFaint} /> : <Flag size={14} color={colors.inkFaint} />}
-                <Text variant="caption" tone="faint">
-                  {canDelete ? t('common.delete') : t('feed.report')}
-                </Text>
-              </Pressable>
-            ) : null}
+            <CommentActions type="target_comment" comment={comment} listKey={targetCommentsKey(type, id)} authorId={comment.author?.id}>
+              {isAuthenticated && !nested ? (
+                <Pressable hitSlop={8} onPress={() => setReplyTo(comment)} style={styles.tool}>
+                  <Reply size={14} color={colors.inkFaint} />
+                  <Text variant="caption" tone="faint">
+                    {t('dm.reply')}
+                  </Text>
+                </Pressable>
+              ) : null}
+              {canDelete ? (
+                <Pressable hitSlop={8} onPress={() => confirmDelete(comment)} style={styles.tool}>
+                  <Trash2 size={14} color={colors.inkFaint} />
+                  <Text variant="caption" tone="faint">
+                    {t('common.delete')}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </CommentActions>
           </View>
           {!nested ? repliesOf(comment.id).map((reply) => row(reply, true)) : null}
         </View>
@@ -177,7 +163,7 @@ const styles = StyleSheet.create({
   comment: { flexDirection: 'row', gap: 10 },
   nested: { marginTop: 8 },
   bubble: { borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8, gap: 2 },
-  tools: { flexDirection: 'row', gap: 14, paddingTop: 4, paddingLeft: 4 },
+  tools: { paddingTop: 4, paddingLeft: 4 },
   tool: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   composer: { gap: 6, paddingTop: 4 },
   replying: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: 8, borderRadius: radius.sm },

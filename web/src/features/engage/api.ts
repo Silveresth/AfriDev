@@ -18,6 +18,8 @@ const targetKeys = {
   reaction: (type: ReactType, id: string) => ['reactions', type, id] as const,
 };
 
+export const targetCommentsKey = targetKeys.comments;
+
 /** Commentaires d'un projet ou d'une offre, du plus ancien au plus récent. */
 export function useTargetComments(type: TargetType, id: string) {
   return useInfiniteList(targetKeys.comments(type, id), (cursor) =>

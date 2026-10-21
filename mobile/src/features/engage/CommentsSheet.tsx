@@ -1,11 +1,12 @@
+import type { QueryKey } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { SendHorizontal } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 
-import { useComments, useSendComment } from '@/features/feed/api';
+import { feedKeys, useComments, useSendComment } from '@/features/feed/api';
 import { useAnswerActions, useAnswers } from '@/features/qa/api';
-import { useAddSnippetComment, useSnippetComments } from '@/features/snippets/api';
+import { snippetKeys, useAddSnippetComment, useSnippetComments } from '@/features/snippets/api';
 import { errorMessage, type Schemas } from '@/shared/api';
 import { useT } from '@/shared/i18n';
 import { timeAgo } from '@/shared/lib';
@@ -13,7 +14,8 @@ import { useSession } from '@/shared/session';
 import { radius, typography, useTheme } from '@/shared/theme';
 import { Button, ListFooter, MentionText, ProfileAvatar, Sheet, Text, useMentions } from '@/shared/ui';
 
-import { useTargetCommentActions, useTargetComments } from './api';
+import { type CommentTarget, targetCommentsKey, useTargetCommentActions, useTargetComments } from './api';
+import { CommentActions } from './CommentActions';
 
 export type ThreadKind = 'post' | 'snippet' | 'question' | 'project' | 'job';
 
@@ -22,6 +24,14 @@ interface Line {
   author: Schemas['Author'] | null;
   body: string;
   created_at: string;
+  score?: number;
+  viewer_vote?: number;
+}
+
+/** Votes et signalement des lignes (absent : réponses d'une question, qui ont leur écran). */
+interface LineReactions {
+  type: CommentTarget;
+  listKey: QueryKey;
 }
 
 interface ThreadProps {
@@ -34,6 +44,7 @@ interface ThreadProps {
   error: unknown;
   onSend: (body: string, done: () => void) => void;
   onSeeAll: () => void;
+  reactions?: LineReactions;
 }
 
 const DETAIL: Record<ThreadKind, (id: string) => string> = {
@@ -88,6 +99,7 @@ function TargetThread({ type, id, onSeeAll }: { type: 'project' | 'job'; id: str
       error={send.error}
       onSend={(body, done) => send.mutate({ body }, { onSuccess: done })}
       onSeeAll={onSeeAll}
+      reactions={{ type: 'target_comment', listKey: targetCommentsKey(type, id) }}
     />
   );
 }
@@ -107,6 +119,7 @@ function PostThread({ id, onSeeAll }: { id: string; onSeeAll: () => void }) {
       error={send.error}
       onSend={(body, done) => send.mutate({ body }, { onSuccess: done })}
       onSeeAll={onSeeAll}
+      reactions={{ type: 'comment', listKey: feedKeys.comments(id) }}
     />
   );
 }
@@ -126,6 +139,7 @@ function SnippetThread({ id, onSeeAll }: { id: string; onSeeAll: () => void }) {
       error={send.error}
       onSend={(body, done) => send.mutate(body, { onSuccess: done })}
       onSeeAll={onSeeAll}
+      reactions={{ type: 'snippet_comment', listKey: snippetKeys.comments(id) }}
     />
   );
 }
@@ -149,7 +163,7 @@ function AnswerThread({ id, onSeeAll }: { id: string; onSeeAll: () => void }) {
   );
 }
 
-function Thread({ title, lines, loading, empty, placeholder, sending, error, onSend, onSeeAll }: ThreadProps) {
+function Thread({ title, lines, loading, empty, placeholder, sending, error, onSend, onSeeAll, reactions }: ThreadProps) {
   const { colors } = useTheme();
   const { t } = useT();
   const { height } = useWindowDimensions();
@@ -175,7 +189,7 @@ function Thread({ title, lines, loading, empty, placeholder, sending, error, onS
         keyExtractor={(line) => line.id}
         style={{ maxHeight: height * 0.45 }}
         keyboardShouldPersistTaps="handled"
-        renderItem={({ item }) => <LineRow line={item} />}
+        renderItem={({ item }) => <LineRow line={item} reactions={reactions} />}
         ListEmptyComponent={
           loading ? (
             <ListFooter loading />
@@ -225,7 +239,7 @@ function Thread({ title, lines, loading, empty, placeholder, sending, error, onS
   );
 }
 
-function LineRow({ line }: { line: Line }) {
+function LineRow({ line, reactions }: { line: Line; reactions?: LineReactions }) {
   const { t } = useT();
   const name = line.author?.display_name || line.author?.username || t('member');
   return (
@@ -241,6 +255,7 @@ function LineRow({ line }: { line: Line }) {
           </Text>
         </Text>
         <MentionText text={line.body} numberOfLines={6} />
+        {reactions ? <CommentActions type={reactions.type} comment={line} listKey={reactions.listKey} authorId={line.author?.id} /> : null}
       </View>
     </View>
   );

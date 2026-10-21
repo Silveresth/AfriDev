@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { CodeReviewSection } from '@/features/assistant';
-import { MoreButton } from '@/features/engage';
+import { CommentActions, MoreButton } from '@/features/engage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { errorMessage } from '@/shared/api';
@@ -31,7 +31,7 @@ import {
   useToast,
 } from '@/shared/ui';
 
-import { type PublicSnippet, useAddSnippetComment, useDeleteSnippet, usePublicSnippet, useSnippetComments } from './api';
+import { type PublicSnippet, snippetKeys, useAddSnippetComment, useDeleteSnippet, usePublicSnippet, useSnippetComments } from './api';
 
 function Comments({ snippetId }: { snippetId: string }) {
   const { colors } = useTheme();
@@ -62,6 +62,7 @@ function Comments({ snippetId }: { snippetId: string }) {
                   {` · ${timeAgo(comment.created_at)}`}
                 </Text>
                 <MentionText text={comment.body} />
+                <CommentActions type="snippet_comment" comment={comment} listKey={snippetKeys.comments(snippetId)} authorId={comment.author?.id} />
               </View>
             </View>
           );

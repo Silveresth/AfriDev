@@ -12,6 +12,7 @@ from core.permissions import ReadOnlyOrAuthenticated
 from core.schema import CURSOR_PARAMETERS, paginated
 from features.hubs import selectors as hub_selectors
 from features.profiles import selectors as profile_selectors
+from features.reactions import selectors as reaction_selectors
 
 from .. import selectors, services
 from .serializers import (
@@ -209,6 +210,11 @@ class SnippetCommentListCreateView(APIView):
         page = paginator.paginate_queryset(comments_qs, request)
         author_ids = {c.author_id for c in page}
         authors = profile_selectors.author_cards(user_ids=author_ids)
+        votes = reaction_selectors.comment_votes(
+            target_type="snippet_comment",
+            comments=page,
+            viewer_id=request.user.id if request.user.is_authenticated else None,
+        )
         data = [
             {
                 "id": c.id,
@@ -217,6 +223,7 @@ class SnippetCommentListCreateView(APIView):
                 "updated_at": c.updated_at,
                 "parent_id": c.parent_id,
                 "author": authors.get(c.author_id),
+                **votes[c.id],
             }
             for c in page
         ]

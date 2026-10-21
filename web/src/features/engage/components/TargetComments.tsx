@@ -4,12 +4,12 @@ import { MessageSquare, Reply, Send, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
-import { ReportButton } from '@/features/moderation';
+import { CommentReactions } from '@/features/reactions';
 import { errorMessage } from '@/shared/api';
 import { useSession } from '@/shared/session';
 import { Avatar, Button, buttonClasses, Card, MentionText, MentionTextarea, Skeleton, TimeAgo, useToast } from '@/shared/ui';
 
-import { type TargetComment, type TargetType, useTargetCommentActions, useTargetComments } from '../api';
+import { type TargetComment, targetCommentsKey, type TargetType, useTargetCommentActions, useTargetComments } from '../api';
 
 /** Discussion complète sous un projet ou une offre d'emploi, avec réponses à un commentaire. */
 export function TargetComments({ type, id, ownerId }: { type: TargetType; id: string; ownerId?: string | null }) {
@@ -47,7 +47,14 @@ export function TargetComments({ type, id, ownerId }: { type: TargetType; id: st
                 <MentionText text={comment.body} />
               </p>
             </div>
-            <div className="mt-0.5 flex items-center gap-1 text-label-md text-ink-faint">
+            <div className="mt-0.5 flex flex-wrap items-center gap-1 text-label-md text-ink-faint">
+              <CommentReactions
+                type="target_comment"
+                comment={comment}
+                listKey={targetCommentsKey(type, id)}
+                loginNext={here}
+                mine={Boolean(user && comment.author?.id === user.id)}
+              />
               {isAuthenticated && !nested ? (
                 <button type="button" onClick={() => setReplyTo(comment)} className="flex items-center gap-1 rounded px-1.5 py-1 hover:bg-container hover:text-ink">
                   <Reply className="size-3.5" aria-hidden /> Répondre
@@ -64,8 +71,6 @@ export function TargetComments({ type, id, ownerId }: { type: TargetType; id: st
                 >
                   <Trash2 className="size-3.5" aria-hidden /> Supprimer
                 </button>
-              ) : user && comment.author?.id !== user.id ? (
-                <ReportButton targetType="target_comment" targetId={comment.id} compact />
               ) : null}
             </div>
           </div>

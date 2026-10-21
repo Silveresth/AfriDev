@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { BarChart3, ImagePlus, Plus, X } from 'lucide-react-native';
+import { linkDomain, normalizeLink } from '@afridev/validation';
+import { BarChart3, ImagePlus, Link2, Plus, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -32,6 +33,7 @@ export function ComposePostScreen() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [tags, setTags] = useState('');
+  const [link, setLink] = useState('');
   const [poll, setPoll] = useState<string[] | null>(null);
   const [picked, setPicked] = useState<Picked | null>(null);
   const [media, setMedia] = useState<MediaAsset | null>(null);
@@ -76,17 +78,21 @@ export function ComposePostScreen() {
     setTitle(existing.data.title);
     setBody(existing.data.body);
     setTags(existing.data.tags.join(', '));
+    setLink(existing.data.link_url ?? '');
     setLoaded(true);
   }, [existing.data, loaded]);
 
   const options = poll?.map((option) => option.trim()).filter(Boolean) ?? [];
   const pollValid = !poll || options.length >= 2;
-  const canPublish = title.trim().length >= 3 && (body.trim() || poll || media || editing) && pollValid && !saving && !uploading;
+  // Lien facultatif : '' si vide, null s'il n'est pas une adresse web valable.
+  const linkUrl = poll ? '' : normalizeLink(link);
+  const canPublish =
+    title.trim().length >= 3 && (body.trim() || poll || media || link.trim() || editing) && pollValid && linkUrl !== null && !saving && !uploading;
 
   const publish = () => {
     if (editing) {
       update.mutate(
-        { title: title.trim(), body: body.trim(), tags: parseTags(tags) },
+        { title: title.trim(), body: body.trim(), tags: parseTags(tags), link_url: linkUrl ?? '' },
         {
           onSuccess: () => {
             toast(t('modify.saved'));
@@ -103,6 +109,7 @@ export function ComposePostScreen() {
         tags: parseTags(tags),
         poll_options: poll ? options : undefined,
         media: media ? { id: media.id, kind: media.kind } : null,
+        link_url: linkUrl ?? '',
         hub_id: hubId ?? null,
       },
       { onSuccess: (post) => router.replace(`/post/${post.id}`) },
@@ -135,6 +142,22 @@ export function ComposePostScreen() {
           </View>
         ) : null}
         <TextField label={t('compose.title')} value={title} onChangeText={setTitle} placeholder={t('compose.title_ph')} maxLength={200} />
+        {poll ? null : (
+          <TextField
+            label={t('compose.link')}
+            icon={Link2}
+            value={link}
+            onChangeText={setLink}
+            placeholder="https://github.com/…"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            textContentType="URL"
+            maxLength={500}
+            error={link.trim() && linkUrl === null ? t('compose.link_invalid') : null}
+            hint={linkUrl ? t('compose.link_hint_set', { domain: linkDomain(linkUrl) }) : t('compose.link_hint')}
+          />
+        )}
         <TextField
           label={t('compose.text')}
           value={body}

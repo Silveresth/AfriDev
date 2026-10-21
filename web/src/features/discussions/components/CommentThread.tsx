@@ -5,6 +5,7 @@ import { Clock, MessageSquareReply, Send, Sparkles, Trash2 } from 'lucide-react'
 import Link from 'next/link';
 import { useState } from 'react';
 
+import { CommentReactions } from '@/features/reactions';
 import { errorMessage } from '@/shared/api';
 import { useAutosaveDraft } from '@/shared/drafts';
 import { cn } from '@/shared/lib';
@@ -166,7 +167,8 @@ function CommentItem({
         <div className="mt-1 text-body-md">
           <Markdown source={comment.body} />
         </div>
-        <div className="-ml-3 mt-1 flex">
+        <div className="-ml-1.5 mt-1 flex flex-wrap items-center gap-0.5">
+          <CommentReactions type="comment" comment={comment} listKey={discussionKeys.comments(postId)} loginNext={`/feed/${postId}`} mine={mine} />
           {onReply ? (
             <button type="button" onClick={onReply} className={cn(pillAction, replying && 'bg-container text-ink')}>
               <MessageSquareReply className="size-4" aria-hidden /> Répondre

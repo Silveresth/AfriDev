@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { ActionBar } from '@/features/engage';
 import { errorMessage } from '@/shared/api';
 import { useT } from '@/shared/i18n';
-import { plainText, timeAgo } from '@/shared/lib';
+import { openLink, plainText, timeAgo } from '@/shared/lib';
 import { useSession } from '@/shared/session';
 import { radius, useTheme } from '@/shared/theme';
 import { HubRoleBadge, PinnedBadge, ProfileAvatar, TagRow, Text, useToast } from '@/shared/ui';
@@ -14,6 +14,7 @@ import { HubRoleBadge, PinnedBadge, ProfileAvatar, TagRow, Text, useToast } from
 import { imageOf, type Post, useDeletePost, useScoreVote, videoOf } from './api';
 import { PostImage } from './PostImage';
 import { PostVideo } from './PostVideo';
+import { ResourceLink } from './ResourceLink';
 
 /** Ligne de communauté : « h/lome-dev » si le post est dans un hub, sinon l'auteur. */
 export function PostByline({ post, showHub = true }: { post: Post; showHub?: boolean }) {
@@ -56,7 +57,9 @@ export const PostRow = memo(function PostRow({ post, showHub = true }: { post: P
   const image = imageOf(post);
   const video = videoOf(post);
   const excerpt = plainText(post.body, 200);
-  const open = () => router.push(`/post/${post.id}`);
+  // Post « ressource » : la carte mène au lien (navigateur interne) ; la discussion reste
+  // accessible par les commentaires.
+  const open = () => (post.link_url ? void openLink(post.link_url) : router.push(`/post/${post.id}`));
 
   return (
     <Pressable
@@ -78,6 +81,7 @@ export const PostRow = memo(function PostRow({ post, showHub = true }: { post: P
           ) : null}
         </View>
       ) : null}
+      {post.link_url ? <ResourceLink url={post.link_url} /> : null}
       {image ? <PostImage media={image} variant="feed" recyclingKey={post.id} /> : null}
       {video ? <PostVideo media={video} /> : null}
       {post.kind === 'poll' ? (

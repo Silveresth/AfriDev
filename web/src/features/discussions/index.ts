@@ -1,2 +1,2 @@
 export { CommentThread } from './components/CommentThread';
-export { sendComment, useComments } from './api';
+export { discussionKeys, sendComment, useComments } from './api';

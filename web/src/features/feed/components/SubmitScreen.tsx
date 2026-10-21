@@ -1,7 +1,7 @@
 'use client';
 
-import { postSchema } from '@afridev/validation';
-import { BarChart3, Check, ImageIcon, Plus, Send, Type, Video, X } from 'lucide-react';
+import { linkDomain, normalizeLink, postSchema } from '@afridev/validation';
+import { BarChart3, Check, ImageIcon, Link2, Plus, Send, Type, Video, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRef, useState } from 'react';
 
@@ -24,9 +24,11 @@ interface Draft {
   body: string;
   options: string[];
   tags: string[];
+  /** Ressource externe facultative (article, dépôt, doc, vidéo). */
+  link: string;
 }
 
-const EMPTY: Draft = { mode: 'text', hub: null, title: '', body: '', options: ['', ''], tags: [] };
+const EMPTY: Draft = { mode: 'text', hub: null, title: '', body: '', options: ['', ''], tags: [], link: '' };
 
 /** Brouillon enregistré avant les hubs : son ancienne « communauté » redevient un tag. */
 function restore(saved: Partial<Draft> & { community?: string }): Draft {
@@ -56,6 +58,8 @@ export function SubmitScreen() {
   const [hubTouched, setHubTouched] = useState(false);
   const hub = draft.hub ?? (!hubTouched && presetHub.data ? toPickedHub(presetHub.data) : null);
   const kind: PostKind = draft.mode === 'poll' ? 'poll' : draft.mode === 'media' ? (media?.kind === 'video' ? 'short' : 'image') : 'text';
+  // Brouillon enregistré avant l'ajout du lien : `link` peut manquer.
+  const linkError = draft.mode !== 'poll' && normalizeLink(draft.link ?? '') === null ? 'Adresse invalide : collez un lien complet (https://…).' : null;
 
   async function onFile(file: File | undefined) {
     if (!file) return;
@@ -83,6 +87,7 @@ export function SubmitScreen() {
       body: draft.body,
       pollOptions: draft.mode === 'poll' ? draft.options.filter((option) => option.trim()) : [],
       mediaId: draft.mode === 'media' ? (media?.id ?? null) : null,
+      linkUrl: draft.mode === 'poll' ? '' : (draft.link ?? ''),
       tags: [...new Set(tags)],
     });
     if (!parsed.success) {
@@ -96,6 +101,7 @@ export function SubmitScreen() {
         body: parsed.data.body,
         poll_options: parsed.data.pollOptions,
         media_id: parsed.data.mediaId ?? null,
+        link_url: parsed.data.linkUrl,
         tags: parsed.data.tags,
         hub_id: hub?.id ?? null,
       });
@@ -218,6 +224,33 @@ export function SubmitScreen() {
         </div>
       ) : null}
 
+      {draft.mode !== 'poll' ? (
+        <Field
+          label="Lien vers une ressource (facultatif)"
+          htmlFor="post-link"
+          error={draft.link?.trim() ? linkError : null}
+          hint={
+            (draft.link?.trim() ? `La carte du post mènera à ${linkDomain(normalizeLink(draft.link) ?? '') || 'cette adresse'}.` : 'Article, dépôt GitHub, documentation, vidéo… La carte du post mènera à cette ressource.')
+          }
+        >
+          <div className="relative">
+            <Link2 className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-faint" aria-hidden />
+            <Input
+              id="post-link"
+              type="url"
+              inputMode="url"
+              autoComplete="url"
+              placeholder="https://github.com/…"
+              value={draft.link ?? ''}
+              maxLength={500}
+              aria-invalid={Boolean(linkError)}
+              onChange={(event) => set('link', event.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </Field>
+      ) : null}
+
       <MarkdownEditor
         label="Texte (facultatif)"
         value={draft.body}
@@ -246,7 +279,7 @@ export function SubmitScreen() {
         <Button
           onClick={publish}
           loading={create.isPending}
-          disabled={uploading || findings.length > 0 || !draft.title.trim() || (draft.mode === 'media' && !media)}
+          disabled={uploading || findings.length > 0 || !draft.title.trim() || Boolean(linkError) || (draft.mode === 'media' && !media)}
         >
           Publier <Send className="size-4" aria-hidden />
         </Button>

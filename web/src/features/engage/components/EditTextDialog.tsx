@@ -1,5 +1,6 @@
 'use client';
 
+import { normalizeLink } from '@afridev/validation';
 import { useState } from 'react';
 
 import { errorMessage } from '@/shared/api';
@@ -9,9 +10,11 @@ export interface TextContent {
   title: string;
   body: string;
   tags: string[];
+  /** Posts seulement : ressource externe (champ affiché si la valeur initiale est fournie). */
+  link_url?: string;
 }
 
-/** Modification d'un post ou d'une question : titre, texte, tags. */
+/** Modification d'un post ou d'une question : titre, texte, tags (et lien d'un post). */
 export function EditTextDialog({
   title,
   initial,
@@ -31,13 +34,16 @@ export function EditTextDialog({
   const [value, setValue] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasLink = initial.link_url !== undefined;
+  const link = hasLink ? normalizeLink(value.link_url ?? '') : '';
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (link === null) return;
     setSaving(true);
     setError(null);
     try {
-      await onSave({ ...value, title: value.title.trim(), body: value.body.trim() });
+      await onSave({ ...value, title: value.title.trim(), body: value.body.trim(), ...(hasLink ? { link_url: link } : {}) });
       toast('Modifications enregistrées.');
       onClose();
     } catch (e) {
@@ -53,6 +59,24 @@ export function EditTextDialog({
         <Field label="Titre" htmlFor="edit-title" counter={`${value.title.length}/200`}>
           <Input id="edit-title" autoFocus maxLength={200} value={value.title} onChange={(e) => setValue({ ...value, title: e.target.value })} />
         </Field>
+        {hasLink ? (
+          <Field
+            label="Lien vers une ressource (facultatif)"
+            htmlFor="edit-link"
+            error={link === null ? 'Adresse invalide : collez un lien complet (https://…).' : null}
+            hint="Vide : le post n'a plus de lien."
+          >
+            <Input
+              id="edit-link"
+              type="url"
+              inputMode="url"
+              placeholder="https://…"
+              maxLength={500}
+              value={value.link_url ?? ''}
+              onChange={(e) => setValue({ ...value, link_url: e.target.value })}
+            />
+          </Field>
+        ) : null}
         <Field label={bodyLabel} htmlFor="edit-body">
           <Textarea id="edit-body" maxLength={10000} value={value.body} onChange={(e) => setValue({ ...value, body: e.target.value })} className="min-h-48" />
         </Field>
@@ -68,7 +92,7 @@ export function EditTextDialog({
           <Button variant="outline" onClick={onClose}>
             Annuler
           </Button>
-          <Button type="submit" loading={saving} disabled={value.title.trim().length < minTitle}>
+          <Button type="submit" loading={saving} disabled={value.title.trim().length < minTitle || link === null}>
             Enregistrer
           </Button>
         </div>

@@ -22,6 +22,10 @@ from .serializers import (
 )
 
 
+def _viewer(request):
+    return request.user.id if request.user.is_authenticated else None
+
+
 class OldestFirstPagination(CursorPagination):
     ordering = "created_at"
 
@@ -33,7 +37,7 @@ class CommentListCreateView(APIView):
     def get(self, request, post_id):
         paginator = OldestFirstPagination()
         page = paginator.paginate_queryset(selectors.list_comments(post_id=post_id), request)
-        return paginator.get_paginated_response(present_comments(page))
+        return paginator.get_paginated_response(present_comments(page, _viewer(request)))
 
     @extend_schema(request=CommentInputSerializer, responses={201: CommentOutputSerializer})
     def post(self, request, post_id):
@@ -46,7 +50,9 @@ class CommentListCreateView(APIView):
             comment_id=values.pop("id", None),
             **values,
         )
-        return Response(present_comments([comment])[0], status=status.HTTP_201_CREATED)
+        return Response(
+            present_comments([comment], _viewer(request))[0], status=status.HTTP_201_CREATED
+        )
 
 
 class CommentDetailView(APIView):
@@ -79,7 +85,7 @@ class TargetCommentListCreateView(APIView):
         page = paginator.paginate_queryset(
             selectors.list_target_comments(target_type=target_type, target_id=target_id), request
         )
-        return paginator.get_paginated_response(present_target_comments(page))
+        return paginator.get_paginated_response(present_target_comments(page, _viewer(request)))
 
     @extend_schema(
         operation_id="discussions_target_comments_create",
@@ -98,7 +104,9 @@ class TargetCommentListCreateView(APIView):
             body=data.validated_data["body"],
             parent_id=data.validated_data.get("parent_id"),
         )
-        return Response(present_target_comments([comment])[0], status=status.HTTP_201_CREATED)
+        return Response(
+            present_target_comments([comment], _viewer(request))[0], status=status.HTTP_201_CREATED
+        )
 
 
 class TargetCommentDetailView(APIView):

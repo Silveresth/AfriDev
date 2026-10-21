@@ -28,6 +28,14 @@ def summaries(*, target_type: str, target_ids, viewer_id=None) -> dict:
     return result
 
 
+def comment_votes(*, target_type: str, comments, viewer_id=None) -> dict:
+    """{comment_id: {"score", "viewer_vote"}} pour une page de commentaires (2 requêtes)."""
+    found = summaries(
+        target_type=target_type, target_ids=[c.id for c in comments], viewer_id=viewer_id
+    )
+    return {pk: {"score": s["score"], "viewer_vote": s["viewer_vote"]} for pk, s in found.items()}
+
+
 def export_for_user(*, user_id) -> dict:
     """Données personnelles (export RGPD)."""
     return {

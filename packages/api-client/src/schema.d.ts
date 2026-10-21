@@ -2374,14 +2374,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description /api/reactions/<type>/<id>/ (question, snippet, projet, offre) : score (GET) et vote
-         *     (POST, 0 = retrait).
+         * @description /api/reactions/<type>/<id>/ (question, snippet, projet, offre, commentaires) : score (GET)
+         *     et vote (POST, 0 = retrait).
          */
         get: operations["reactions_summary"];
         put?: never;
         /**
-         * @description /api/reactions/<type>/<id>/ (question, snippet, projet, offre) : score (GET) et vote
-         *     (POST, 0 = retrait).
+         * @description /api/reactions/<type>/<id>/ (question, snippet, projet, offre, commentaires) : score (GET)
+         *     et vote (POST, 0 = retrait).
          */
         post: operations["reactions_vote"];
         delete?: never;
@@ -2943,6 +2943,13 @@ export interface components {
             author: components["schemas"]["Author"] | null;
             /** Format: date-time */
             created_at: string;
+            /** @default 0 */
+            score: number;
+            /**
+             * @description Vote du visiteur : -1, 0 ou 1.
+             * @default 0
+             */
+            viewer_vote: number;
         };
         /** @description Communauté = tag actif, avec le nombre de posts et de questions récents. */
         Community: {
@@ -4090,6 +4097,8 @@ export interface components {
         PatchedPostUpdateRequest: {
             title?: string;
             body?: string;
+            /** @description Vide = retirer le lien. */
+            link_url?: string;
             tags?: string[];
             /** Format: uuid */
             hub_id?: string | null;
@@ -4207,6 +4216,11 @@ export interface components {
             poll_options?: string[];
             /** Format: uuid */
             media_id?: string | null;
+            /**
+             * @description Ressource externe facultative (https://…) : la carte du post y mène.
+             * @default
+             */
+            link_url: string;
             tags?: string[];
             /**
              * Format: uuid
@@ -4233,6 +4247,8 @@ export interface components {
             /** Format: uuid */
             media_id: string | null;
             media: unknown;
+            /** @default  */
+            link_url: string;
             tags: string[];
             hub: components["schemas"]["HubSummary"] | null;
             /** @default false */
@@ -4660,6 +4676,13 @@ export interface components {
             /** Format: uuid */
             parent_id: string | null;
             author: components["schemas"]["Author"] | null;
+            /** @default 0 */
+            score: number;
+            /**
+             * @description Vote du visiteur : -1, 0 ou 1.
+             * @default 0
+             */
+            viewer_vote: number;
         };
         SnippetCommentInputRequest: {
             body: string;
@@ -4844,6 +4867,13 @@ export interface components {
             author: components["schemas"]["Author"] | null;
             /** Format: date-time */
             created_at: string;
+            /** @default 0 */
+            score: number;
+            /**
+             * @description Vote du visiteur : -1, 0 ou 1.
+             * @default 0
+             */
+            viewer_vote: number;
         };
         /**
          * @description * `fr` - Français
@@ -4875,9 +4905,10 @@ export interface components {
          *     * `hub` - Hub
          *     * `job` - Offre d'emploi
          *     * `target_comment` - Commentaire (projet ou offre)
+         *     * `snippet_comment` - Commentaire de snippet
          * @enum {string}
          */
-        TargetTypeEnum: "post" | "comment" | "question" | "answer" | "snippet" | "project" | "hub" | "job" | "target_comment";
+        TargetTypeEnum: "post" | "comment" | "question" | "answer" | "snippet" | "project" | "hub" | "job" | "target_comment" | "snippet_comment";
         TeamInputRequest: {
             /** Format: uuid */
             project_id: string;
@@ -8054,7 +8085,7 @@ export interface operations {
                 page_size?: number;
                 source?: "ai" | "member";
                 status?: "dismissed" | "hidden" | "open";
-                target_type?: "answer" | "comment" | "hub" | "job" | "post" | "project" | "question" | "snippet" | "target_comment";
+                target_type?: "answer" | "comment" | "hub" | "job" | "post" | "project" | "question" | "snippet" | "snippet_comment" | "target_comment";
             };
             header?: never;
             path?: never;

@@ -3,6 +3,7 @@
 from django.db import transaction
 
 from core.exceptions import DomainError, NotFoundError
+from features.discussions import selectors as discussion_selectors
 from features.jobs_events import selectors as jobs_selectors
 from features.projects import selectors as project_selectors
 from features.qa import selectors as qa_selectors
@@ -16,6 +17,9 @@ _EXISTS = {
     "snippet": lambda pk: snippet_selectors.get_public_snippet(snippet_id=pk) is not None,
     "project": lambda pk: project_selectors.get_project(project_id=pk) is not None,
     "job": lambda pk: jobs_selectors.get_job(job_id=pk) is not None,
+    "comment": lambda pk: discussion_selectors.get_comment(comment_id=pk) is not None,
+    "target_comment": lambda pk: discussion_selectors.get_target_comment(comment_id=pk) is not None,
+    "snippet_comment": lambda pk: snippet_selectors.get_comment(comment_id=pk) is not None,
 }
 
 

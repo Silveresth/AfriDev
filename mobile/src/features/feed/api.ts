@@ -161,6 +161,8 @@ export interface NewPost {
   hub_id?: string | null;
   /** Photo (post « image ») ou vidéo (post « short ») déjà envoyée. */
   media?: { id: string; kind: Media['kind'] } | null;
+  /** Ressource externe facultative, déjà normalisée (normalizeLink). */
+  link_url?: string;
 }
 
 function kindOf(input: NewPost) {
@@ -181,6 +183,7 @@ export function useCreatePost() {
             tags: input.tags,
             poll_options: input.media ? [] : (input.poll_options ?? []),
             media_id: input.media?.id ?? null,
+            link_url: input.link_url ?? '',
             hub_id: input.hub_id ?? null,
           },
         }),
@@ -193,7 +196,7 @@ export function useCreatePost() {
 export function useUpdatePost(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { title: string; body: string; tags: string[] }) =>
+    mutationFn: (input: { title: string; body: string; tags: string[]; link_url?: string }) =>
       unwrap(api.PATCH('/api/feed/{post_id}/', { params: { path: { post_id: id } }, body: input })),
     onSuccess: (post) => replacePost(queryClient, post),
   });

@@ -1,19 +1,20 @@
 'use client';
 
 import type { Schemas } from '@afridev/api-client';
-import { useQueryClient } from '@tanstack/react-query';
+import { type QueryKey, useQueryClient } from '@tanstack/react-query';
 import { Send } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
-import { sendComment, useComments } from '@/features/discussions';
+import { discussionKeys, sendComment, useComments } from '@/features/discussions';
 import { useAnswers, useCreateAnswer } from '@/features/qa';
-import { useAddComment, useSnippetComments } from '@/features/snippets';
+import { CommentReactions, type CommentTarget } from '@/features/reactions';
+import { snippetCommentKeys, useAddComment, useSnippetComments } from '@/features/snippets';
 import { errorMessage } from '@/shared/api';
 import { useSession } from '@/shared/session';
 import { Avatar, buttonClasses, Button, MentionText, MentionTextarea, Skeleton, TimeAgo } from '@/shared/ui';
 
-import { useTargetCommentActions, useTargetComments } from '../api';
+import { targetCommentsKey, useTargetCommentActions, useTargetComments } from '../api';
 
 export type ThreadKind = 'post' | 'snippet' | 'question' | 'project' | 'job';
 
@@ -22,6 +23,8 @@ interface Line {
   author: Schemas['Author'] | null;
   body: string;
   created_at: string;
+  score?: number;
+  viewer_vote?: number;
 }
 
 const PREVIEW = 3;
@@ -42,6 +45,7 @@ function TargetThread({ type, id, href }: { type: 'project' | 'job'; id: string;
       lines={comments.items}
       loading={comments.isPending}
       href={href}
+      reactions={{ type: 'target_comment', listKey: targetCommentsKey(type, id) }}
       empty="Aucun commentaire pour l'instant : lancez la discussion."
       placeholder="Écrire un commentaire…"
       onSend={async (body) => {
@@ -61,6 +65,7 @@ function PostThread({ id, href }: { id: string; href: string }) {
       href={href}
       empty="Aucun commentaire pour l'instant : lancez la discussion."
       placeholder="Écrire un commentaire…"
+      reactions={{ type: 'comment', listKey: discussionKeys.comments(id) }}
       onSend={async (body) => {
         await sendComment(id, body);
         void queryClient.invalidateQueries({ queryKey: ['discussions', id] });
@@ -79,6 +84,7 @@ function SnippetThread({ id, href }: { id: string; href: string }) {
       href={href}
       empty="Aucun commentaire pour l'instant : lancez la discussion."
       placeholder="Écrire un commentaire…"
+      reactions={{ type: 'snippet_comment', listKey: snippetCommentKeys.all(id) }}
       onSend={async (body) => {
         await add.mutateAsync({ body });
       }}
@@ -110,15 +116,18 @@ function Thread({
   empty,
   placeholder,
   onSend,
+  reactions,
 }: {
   lines: Line[];
   loading: boolean;
   href: string;
+  /** Votes et signalement des commentaires (absent : réponses d'une question). */
+  reactions?: { type: CommentTarget; listKey: QueryKey };
   empty: string;
   placeholder: string;
   onSend: (body: string) => Promise<void>;
 }) {
-  const { isAuthenticated } = useSession();
+  const { isAuthenticated, user } = useSession();
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -159,6 +168,17 @@ function Thread({
                   <p className="line-clamp-4 text-body-sm whitespace-pre-line text-ink">
                     <MentionText text={line.body} />
                   </p>
+                  {reactions ? (
+                    <div className="-ml-1.5 mt-0.5">
+                      <CommentReactions
+                        type={reactions.type}
+                        comment={line}
+                        listKey={reactions.listKey}
+                        loginNext={href}
+                        mine={Boolean(user && line.author?.id === user.id)}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </li>
             );

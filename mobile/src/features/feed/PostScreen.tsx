@@ -19,6 +19,7 @@ import { Poll } from './Poll';
 import { PostImage } from './PostImage';
 import { PostVideo } from './PostVideo';
 import { PostByline } from './PostRow';
+import { ResourceLink } from './ResourceLink';
 import { VoteCapsule } from './VoteCapsule';
 
 function PostBody({ post }: { post: Post }) {
@@ -31,6 +32,7 @@ function PostBody({ post }: { post: Post }) {
     <View style={[styles.post, { borderBottomColor: colors.line }]}>
       <PostByline post={post} />
       {post.title ? <Text variant="title">{post.title}</Text> : null}
+      {post.link_url ? <ResourceLink url={post.link_url} large /> : null}
       {post.body ? <Markdown source={post.body} /> : null}
       <TranslateBar text={[post.title, post.body].filter(Boolean).join('\n\n')} />
       {image ? <PostImage media={image} variant="detail" /> : null}
