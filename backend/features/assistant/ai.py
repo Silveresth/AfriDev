@@ -213,7 +213,9 @@ def profile_review(*, user_id) -> dict:
     }
 
 
-ASK_MIN_SCORE = 0.25
+# Plus strict que la réponse IA d'une question (0,25) : une source peu pertinente, citée dans
+# une discussion libre, fait plus de tort que pas de source du tout.
+ASK_MIN_SCORE = 0.45
 
 
 def ask(*, question: str, history: list[dict]) -> dict:
