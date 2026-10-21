@@ -107,7 +107,10 @@ def digest_facts(*, user_id) -> tuple[str, int]:
         reverse=True,
     )[:2]
     for card in popular:
-        facts.append(f"POST populaire : {card['title'] or card['excerpt'][:80]} — {card['url']}")
+        # Les candidats du fil portent le post complet (plus de titre ni d'extrait à plat).
+        post = card["post"]
+        label = post.title or post.body[:80] or "(sans titre)"
+        facts.append(f"POST populaire : {label} — /feed/{post.id}")
 
     unread = messaging_selectors.unread_conversation_count(user_id=user_id)
     if unread:
