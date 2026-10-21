@@ -8,3 +8,4 @@ export {
   uploadProfileImage,
 } from './upload';
 export { ImagePairField } from './ImagePairField';
+export { VideoPlayer, type VideoPlayerProps } from './video';

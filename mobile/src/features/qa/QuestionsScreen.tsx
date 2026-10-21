@@ -4,6 +4,7 @@ import { FlatList, RefreshControl, StyleSheet, TextInput, View } from 'react-nat
 
 import { CreateButton } from '@/shared/layout/CreateButton';
 import { useT } from '@/shared/i18n';
+import { LIST_TUNING } from '@/shared/lib';
 import { AppearItem } from '@/shared/motion';
 import { radius, typography, useTheme } from '@/shared/theme';
 import { Chips, EmptyState, ErrorState, Header, ListFooter, Loading } from '@/shared/ui';
@@ -50,6 +51,7 @@ export function QuestionsScreen() {
         <ErrorState error={questions.error} onRetry={() => void questions.refetch()} />
       ) : (
         <FlatList
+          {...LIST_TUNING}
           data={questions.items}
           keyExtractor={(question) => question.id}
           renderItem={({ item, index }) => (

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { Code2, type LucideIcon, MessageCircleQuestion, PenLine, Plus, UsersRound } from 'lucide-react-native';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
@@ -37,10 +37,21 @@ export function CreateButton({ href, params }: { href?: string; params?: Record<
   const [open, setOpen] = useState(false);
   const inHub = Boolean(params?.hubId);
   const choices = CHOICES.filter((choice) => !(inHub && choice.outsideHub));
+  // Écran ouvert une fois la feuille refermée : poussé pendant qu'elle est affichée, il passerait dessous.
+  const pending = useRef<string | null>(null);
 
   const go = (target: string) => {
+    if (!open) {
+      router.push({ pathname: target as never, params });
+      return;
+    }
+    pending.current = target;
     setOpen(false);
-    router.push({ pathname: target as never, params });
+  };
+  const openPending = () => {
+    const target = pending.current;
+    pending.current = null;
+    if (target) router.push({ pathname: target as never, params });
   };
 
   return (
@@ -59,7 +70,7 @@ export function CreateButton({ href, params }: { href?: string; params?: Record<
           <Plus size={26} color={colors.onPrimary} strokeWidth={2.4} />
         </PressableScale>
       </Animated.View>
-      <Sheet visible={open} onClose={() => setOpen(false)} title={t('create.label')}>
+      <Sheet visible={open} onClose={() => setOpen(false)} onHidden={openPending} title={t('create.label')}>
         {choices.map((choice) => (
           <PressableScale key={choice.href} onPress={() => go(choice.href)} scaleTo={0.99} style={styles.choice}>
             <View style={[styles.choiceIcon, { backgroundColor: colors.primarySoft }]}>

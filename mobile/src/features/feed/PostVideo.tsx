@@ -1,5 +1,4 @@
 import { Image } from 'expo-image';
-import { useVideoPlayer, VideoView } from 'expo-video';
 import { Loader2, Play } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -9,6 +8,7 @@ import { useDataSaver } from '@/shared/data-saver';
 import { useT } from '@/shared/i18n';
 import { radius, useTheme } from '@/shared/theme';
 import { Text } from '@/shared/ui';
+import { VideoPlayer } from '@/shared/video';
 
 import type { Media } from './api';
 
@@ -46,7 +46,7 @@ export function PostVideo({ media }: { media: Media }) {
       </View>
     );
   }
-  if (playing) return <Player uri={sourceOf(media)} style={frame} />;
+  if (playing) return <VideoPlayer uri={sourceOf(media)} style={frame} />;
   return (
     <Pressable
       onPress={() => setPlaying(true)}
@@ -69,11 +69,6 @@ export function PostVideo({ media }: { media: Media }) {
       ) : null}
     </Pressable>
   );
-}
-
-function Player({ uri, style }: { uri: string; style: object }) {
-  const player = useVideoPlayer(uri, (instance) => instance.play());
-  return <VideoView player={player} style={style} nativeControls allowsFullscreen allowsPictureInPicture contentFit="contain" />;
 }
 
 const styles = StyleSheet.create({

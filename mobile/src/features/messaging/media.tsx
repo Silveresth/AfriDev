@@ -8,39 +8,20 @@ import {
   useAudioRecorderState,
 } from 'expo-audio';
 import { Image } from 'expo-image';
-import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
-import * as ImagePicker from 'expo-image-picker';
-import { useVideoPlayer, VideoView } from 'expo-video';
 import { Mic, Pause, Play } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { absoluteUrl, type Schemas, uploadFromUri } from '@/shared/api';
+import { pickAndUploadMedia as pickAndUpload } from '@/shared/media';
 import { useTheme } from '@/shared/theme';
 import { Text } from '@/shared/ui';
+import { VideoPlayer } from '@/shared/video';
 
 type MediaAsset = Schemas['MediaOutput'];
 
-const MAX_IMAGE_SIDE = 1600;
-
 /** Photo ou vidéo de la galerie, envoyée vers le stockage objet ; renvoie l'id du média. */
 export async function pickAndUploadMedia(): Promise<string | null> {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted && !permission.accessPrivileges) throw new Error('Autorisez l’accès aux photos dans les réglages.');
-  const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 1, videoMaxDuration: 60 });
-  const asset = picked.canceled ? undefined : picked.assets[0];
-  if (!asset) return null;
-  if (asset.type === 'video') {
-    const media = await uploadFromUri(asset.uri, 'video', asset.mimeType ?? 'video/mp4', asset.fileName ?? 'video.mp4');
-    return media.id;
-  }
-  // Photo réduite et recompressée sur le téléphone avant l'envoi.
-  const context = ImageManipulator.manipulate(asset.uri);
-  if (Math.max(asset.width, asset.height) > MAX_IMAGE_SIDE) {
-    context.resize(asset.width >= asset.height ? { width: MAX_IMAGE_SIDE } : { height: MAX_IMAGE_SIDE });
-  }
-  const image = await (await context.renderAsync()).saveAsync({ compress: 0.8, format: SaveFormat.JPEG });
-  const media = await uploadFromUri(image.uri, 'image', 'image/jpeg', 'photo.jpg');
-  return media.id;
+  return (await pickAndUpload())?.id ?? null;
 }
 
 /** Enregistrement d'un message vocal (AAC / m4a), 2 minutes au plus. */
@@ -80,8 +61,7 @@ export function ChatMedia({ media, mine }: { media: MediaAsset; mine: boolean })
 }
 
 function VideoBubble({ uri }: { uri: string }) {
-  const player = useVideoPlayer(uri);
-  return <VideoView player={player} style={styles.video} nativeControls allowsFullscreen contentFit="contain" />;
+  return <VideoPlayer uri={uri} style={styles.video} autoPlay={false} compact />;
 }
 
 function VoiceBubble({ uri, mine }: { uri: string; mine: boolean }) {

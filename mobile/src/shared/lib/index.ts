@@ -6,6 +6,17 @@ import { type Key, t } from '@/shared/i18n';
 
 export { languageColor, longDate, monthYear, PROFILE_COLORS, type ProfileColor, profileColor, profileColorHex } from './colors';
 
+/**
+ * Réglages des longues listes de cartes (fil, hub, entraide, actus) : peu de lignes rendues au
+ * départ et une fenêtre courte, pour que le fil JS reste libre de répondre aux touchers.
+ */
+export const LIST_TUNING = {
+  initialNumToRender: 5,
+  maxToRenderPerBatch: 4,
+  updateCellsBatchingPeriod: 60,
+  windowSize: 7,
+} as const;
+
 const UNITS: [number, string][] = [
   [365 * 24 * 3600, 'time.y'],
   [30 * 24 * 3600, 'time.mo'],

@@ -1,12 +1,13 @@
 'use client';
 
 import { ImageIcon, Play } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { useDataSaver } from '@/shared/data-saver';
 import { cn, thumbhashToDataUrl } from '@/shared/lib';
 
 import { absoluteMediaUrl as absolute, type MediaAsset } from './upload';
+import { VideoPlayer } from './video';
 
 /**
  * Affichage économe d'un média :
@@ -54,7 +55,7 @@ export function MediaView({ media: raw, alt = '', className }: { media: MediaAss
     );
   }
 
-  if (media.kind === 'video') return <VideoPlayer media={media} placeholder={placeholder} className={className} />;
+  if (media.kind === 'video') return <PostVideo media={media} placeholder={placeholder} className={className} />;
   if (media.kind === 'audio') {
     return <audio controls preload="none" src={media.urls.opus ?? media.original_url} className="w-full" />;
   }
@@ -99,66 +100,21 @@ function displayRatio(width?: number | null, height?: number | null) {
   return { shown, fits: Math.abs(shown - natural) < 0.02 };
 }
 
-function VideoPlayer({ media, placeholder, className }: { media: MediaAsset; placeholder?: string; className?: string }) {
-  const { maxVideoHeight } = useDataSaver();
-  const [playing, setPlaying] = useState(false);
-  const video = useRef<HTMLVideoElement>(null);
-  const hls = media.urls.hls;
-  const poster = media.urls.poster ?? placeholder;
+/** Cadre d'une vidéo : son propre format, borné entre le portrait 9:16 et le paysage 16:9. */
+function videoRatio(width?: number | null, height?: number | null) {
+  const natural = width && height ? width / height : 9 / 16;
+  return String(Math.min(16 / 9, Math.max(9 / 16, natural)));
+}
 
-  useEffect(() => {
-    const element = video.current;
-    if (!playing || !element) return;
-    if (!hls || element.canPlayType('application/vnd.apple.mpegurl')) {
-      element.src = hls ?? media.original_url;
-      void element.play().catch(() => {});
-      return;
-    }
-    let destroy: (() => void) | undefined;
-    void import('hls.js').then(({ default: Hls }) => {
-      if (!Hls.isSupported()) {
-        element.src = media.original_url;
-        return;
-      }
-      const player = new Hls({ capLevelToPlayerSize: true, startLevel: 0 });
-      player.on(Hls.Events.MANIFEST_PARSED, () => {
-        // Plafonne la qualité selon le réglage « Qualité vidéo » et le réseau.
-        const allowed = player.levels.map((level, index) => ({ index, height: level.height })).filter((l) => l.height <= maxVideoHeight);
-        player.autoLevelCapping = allowed.length ? allowed[allowed.length - 1]!.index : 0;
-        void element.play().catch(() => {});
-      });
-      player.loadSource(hls);
-      player.attachMedia(element);
-      destroy = () => player.destroy();
-    });
-    return () => destroy?.();
-  }, [playing, hls, media.original_url, maxVideoHeight]);
-
+function PostVideo({ media, placeholder, className }: { media: MediaAsset; placeholder?: string; className?: string }) {
   return (
-    <div className={cn('relative overflow-hidden rounded border border-line bg-black', className)} style={{ aspectRatio: '9 / 16', maxHeight: 520 }}>
-      <video
-        ref={video}
-        poster={poster}
-        controls={playing}
-        playsInline
-        preload="none"
-        className="size-full object-contain"
-      />
-      {!playing ? (
-        <button
-          type="button"
-          onClick={() => setPlaying(true)}
-          className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/30 text-white"
-        >
-          <span className="flex size-14 items-center justify-center rounded-lg bg-primary">
-            <Play className="size-7" aria-hidden />
-          </span>
-          <span className="text-body-md font-semibold">Lire la vidéo</span>
-          <span className="font-mono text-label-sm text-white/80">
-            Pas de lecture automatique · {media.duration_seconds ? `${Math.round(media.duration_seconds)} s` : 'vidéo courte'}
-          </span>
-        </button>
-      ) : null}
-    </div>
+    <VideoPlayer
+      src={media.urls.mp4 ?? media.original_url}
+      hls={media.urls.hls}
+      poster={media.urls.poster ?? placeholder}
+      durationSeconds={media.duration_seconds}
+      aspectRatio={videoRatio(media.width, media.height)}
+      className={className}
+    />
   );
 }

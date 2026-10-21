@@ -100,7 +100,12 @@ export function useHomeFeed(filter: HomeFilter, scope: HomeScope) {
 /** Pouce levé (1), baissé (-1) ou retrait (0) : affiché tout de suite, corrigé par la réponse. */
 export function useScoreVote(post: Post) {
   const queryClient = useQueryClient();
+  const mutationKey = ['vote', 'post', post.id];
+  // Touchers rapprochés : seule la réponse du dernier vote s'applique (une réponse plus ancienne
+  // arrivée après coup ramènerait l'état précédent à l'écran).
+  const isLatest = () => queryClient.isMutating({ mutationKey }) <= 1;
   return useMutation({
+    mutationKey,
     mutationFn: (value: -1 | 0 | 1) =>
       unwrap(api.POST('/api/feed/{post_id}/score/', { params: { path: { post_id: post.id } }, body: { value } })),
     onMutate: (value) => {
@@ -116,8 +121,12 @@ export function useScoreVote(post: Post) {
         },
       });
     },
-    onSuccess: (updated) => replacePost(queryClient, updated),
-    onError: () => replacePost(queryClient, post),
+    onSuccess: (updated) => {
+      if (isLatest()) replacePost(queryClient, updated);
+    },
+    onError: () => {
+      if (isLatest()) replacePost(queryClient, post);
+    },
   });
 }
 
@@ -150,6 +159,13 @@ export interface NewPost {
   tags: string[];
   poll_options?: string[];
   hub_id?: string | null;
+  /** Photo (post « image ») ou vidéo (post « short ») déjà envoyée. */
+  media?: { id: string; kind: Media['kind'] } | null;
+}
+
+function kindOf(input: NewPost) {
+  if (input.media) return input.media.kind === 'video' ? 'short' : 'image';
+  return input.poll_options?.length ? 'poll' : 'text';
 }
 
 export function useCreatePost() {
@@ -159,11 +175,12 @@ export function useCreatePost() {
       unwrap(
         api.POST('/api/feed/', {
           body: {
-            kind: input.poll_options?.length ? 'poll' : 'text',
+            kind: kindOf(input),
             title: input.title,
             body: input.body,
             tags: input.tags,
-            poll_options: input.poll_options ?? [],
+            poll_options: input.media ? [] : (input.poll_options ?? []),
+            media_id: input.media?.id ?? null,
             hub_id: input.hub_id ?? null,
           },
         }),

@@ -36,21 +36,30 @@ export function Sheet({
   const progress = useSharedValue(0);
   const hiddenRef = useRef(onHidden);
   hiddenRef.current = onHidden;
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
 
   useEffect(() => {
     if (visible) {
       setMounted(true);
       progress.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) });
-    } else if (mounted) {
-      const hide = () => {
-        setMounted(false);
-        // Laisse le Modal natif se retirer avant de rendre la main.
-        setTimeout(() => hiddenRef.current?.(), 0);
-      };
-      progress.value = withTiming(0, { duration: 220, easing: Easing.in(Easing.quad) }, (done) => {
-        if (done) runOnJS(hide)();
-      });
+      return;
     }
+    if (!mounted) return;
+    // Le Modal est une fenêtre native au-dessus de toute l'appli : s'il restait monté (voile à
+    // opacité 0), plus aucun bouton ne répondrait. Il est donc retiré dès la fin de l'animation,
+    // même interrompue (navigation, appli en arrière-plan), et au plus tard par le minuteur.
+    let finished = false;
+    const hide = () => {
+      if (finished || visibleRef.current) return;
+      finished = true;
+      setMounted(false);
+      // Laisse le Modal natif se retirer avant de rendre la main.
+      setTimeout(() => hiddenRef.current?.(), 0);
+    };
+    progress.value = withTiming(0, { duration: 220, easing: Easing.in(Easing.quad) }, () => runOnJS(hide)());
+    const fallback = setTimeout(hide, 320);
+    return () => clearTimeout(fallback);
   }, [mounted, progress, visible]);
 
   const scrim = useAnimatedStyle(() => ({ opacity: progress.value }));

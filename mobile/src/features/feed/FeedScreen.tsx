@@ -8,14 +8,23 @@ import { useUnreadMessages } from '@/features/messaging';
 import { useUnreadCount } from '@/features/notifications';
 import { CreateButton } from '@/shared/layout/CreateButton';
 import { type Key, useT } from '@/shared/i18n';
+import { LIST_TUNING } from '@/shared/lib';
 import { AppearItem, haptic } from '@/shared/motion';
 import { useTheme } from '@/shared/theme';
 import { Chips, EmptyState, ErrorState, Header, IconButton, ListFooter, Loading, Text } from '@/shared/ui';
 
-import { type HomeFilter, type HomeScope, useHomeFeed } from './api';
+import { type HomeFilter, type HomeItem, type HomeScope, useHomeFeed } from './api';
 import { HomeRow } from './HomeRow';
 
 const FILTERS: HomeFilter[] = ['all', 'posts', 'questions', 'snippets', 'projects', 'jobs'];
+
+// Hors du composant : identités stables, la liste ne re-rend pas chaque ligne à chaque état.
+const keyOf = (item: HomeItem) => `${item.type}-${item.id}`;
+const renderRow = ({ item, index }: { item: HomeItem; index: number }) => (
+  <AppearItem index={index}>
+    <HomeRow item={item} />
+  </AppearItem>
+);
 
 /** Accueil : fil mixte « Pour vous » (classé selon vos préférences) ou « Abonnements ». */
 export function FeedScreen() {
@@ -76,13 +85,10 @@ export function FeedScreen() {
         <ErrorState error={feed.error} onRetry={() => void feed.refetch()} />
       ) : (
         <FlatList
+          {...LIST_TUNING}
           data={feed.items}
-          keyExtractor={(item) => `${item.type}-${item.id}`}
-          renderItem={({ item, index }) => (
-            <AppearItem index={index}>
-              <HomeRow item={item} />
-            </AppearItem>
-          )}
+          keyExtractor={keyOf}
+          renderItem={renderRow}
           ListHeaderComponent={scope === 'for_you' && filter === 'all' ? <DigestCard /> : null}
           onEndReached={feed.loadMore}
           onEndReachedThreshold={0.6}

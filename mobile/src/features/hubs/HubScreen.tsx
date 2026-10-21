@@ -9,7 +9,7 @@ import { QuestionRow, useQuestions } from '@/features/qa';
 import { type PublicSnippet, SnippetRow, useSnippetsByHub } from '@/features/snippets';
 import { absoluteUrl, errorMessage, type Schemas } from '@/shared/api';
 import { CreateButton } from '@/shared/layout/CreateButton';
-import { formatCount } from '@/shared/lib';
+import { formatCount, LIST_TUNING } from '@/shared/lib';
 import { type Key, useT } from '@/shared/i18n';
 import { MoreButton } from '@/features/engage';
 import { useRequireAuth, useSession } from '@/shared/session';
@@ -141,6 +141,7 @@ export function HubScreen() {
         }
       />
       <FlatList<Post | Question | PublicSnippet>
+        {...LIST_TUNING}
         data={list.items as (Post | Question | PublicSnippet)[]}
         keyExtractor={(item) => `${tab}-${item.id}`}
         renderItem={({ item }) =>

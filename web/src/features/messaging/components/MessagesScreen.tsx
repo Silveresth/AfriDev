@@ -36,7 +36,7 @@ import { translateText } from '@/features/translation';
 import { errorMessage } from '@/shared/api';
 import { useLang } from '@/shared/i18n';
 import { cn } from '@/shared/lib';
-import { absoluteMediaUrl, type MediaAsset, type MediaKind, MediaView, uploadMedia } from '@/shared/media';
+import { absoluteMediaUrl, type MediaAsset, type MediaKind, MediaView, uploadMedia, VideoPlayer } from '@/shared/media';
 import { RequireAuth, useSession } from '@/shared/session';
 import { Avatar, Button, Dialog, Menu, MenuItem, MenuSeparator, Skeleton, TimeAgo, useToast } from '@/shared/ui';
 
@@ -885,7 +885,7 @@ function ChatMedia({ media, mine }: { media: MediaAsset; mine: boolean }) {
   }
   if (media.kind === 'video') {
     if (media.status === 'ready' && media.urls.hls) return <MediaView media={media} className="w-72 max-w-full rounded-xl" />;
-    return <video controls preload="metadata" src={original} className="max-h-96 w-72 max-w-full rounded-xl bg-black" />;
+    return original ? <VideoPlayer src={original} aspectRatio="3 / 4" maxHeight={384} startImmediately className="w-72 max-w-full rounded-xl" /> : null;
   }
   const src = absoluteMediaUrl(media.urls.large) ?? original;
   return (

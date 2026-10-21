@@ -4,6 +4,7 @@ import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
 
 import { type Key, useT } from '@/shared/i18n';
+import { LIST_TUNING } from '@/shared/lib';
 import { AppearItem } from '@/shared/motion';
 import { useTheme } from '@/shared/theme';
 import { Chips, EmptyState, ErrorState, Header, IconButton, Loading, Text, TextField } from '@/shared/ui';
@@ -66,6 +67,7 @@ export function NewsScreen() {
         <ErrorState error={news.error} onRetry={() => void news.refetch()} />
       ) : (
         <FlatList
+          {...LIST_TUNING}
           data={news.data ?? []}
           keyExtractor={(item) => item.id}
           renderItem={({ item, index }) => (

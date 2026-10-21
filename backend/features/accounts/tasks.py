@@ -8,8 +8,9 @@ from django.core.mail import send_mail
 @shared_task(autoretry_for=(OSError,), retry_backoff=True, max_retries=3)
 def send_password_reset_email(email: str, link: str, code: str = "") -> None:
     in_app = (
-        f"Dans l'appli AfriDev, saisissez ce code (valable 15 minutes) :\n\n    {code}\n\n"
-        "Sur le site, ouvrez plutôt ce lien (valable 1 heure) :\n"
+        f"Saisissez ce code dans l'appli ou sur le site AfriDev (valable 15 minutes) :\n\n"
+        f"    {code}\n\n"
+        "Vous pouvez aussi ouvrir ce lien (valable 1 heure) :\n"
         if code
         else "Pour choisir un nouveau mot de passe, ouvrez ce lien (valable 1 heure) :\n"
     )

@@ -17,6 +17,8 @@ export const authApi = {
   usernameStatus: (username: string) =>
     unwrap(api.GET('/api/accounts/username-status/', { params: { query: { username } } })),
   requestPasswordReset: (email: string) => unwrap(api.POST('/api/accounts/password/reset/', { body: { email } })),
+  resetPasswordWithCode: (email: string, code: string, password: string) =>
+    unwrap(api.POST('/api/accounts/password/reset/code/', { body: { email, code, password } })),
   confirmPasswordReset: (uid: string, token: string, password: string) =>
     unwrap(api.POST('/api/accounts/password/reset/confirm/', { body: { uid, token, password } })),
   login: (identifier: string, password: string) =>

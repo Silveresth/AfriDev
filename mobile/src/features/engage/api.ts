@@ -61,7 +61,10 @@ export function useReaction(type: ReactType, id: string) {
     queryKey: key,
     queryFn: () => unwrap(api.GET('/api/reactions/{target_type}/{target_id}/', { params: { path: { target_type: type, target_id: id } } })),
   });
+  const mutationKey = ['vote', type, id];
+  const isLatest = () => queryClient.isMutating({ mutationKey }) <= 1;
   const vote = useMutation({
+    mutationKey,
     mutationFn: (value: -1 | 0 | 1) =>
       unwrap(api.POST('/api/reactions/{target_type}/{target_id}/', { params: { path: { target_type: type, target_id: id } }, body: { value } })),
     onMutate: (value) => {
@@ -69,8 +72,11 @@ export function useReaction(type: ReactType, id: string) {
       if (previous) queryClient.setQueryData(key, { ...previous, viewer_vote: value, score: previous.score - previous.viewer_vote + value });
       return { previous };
     },
-    onError: (_error, _value, context) => queryClient.setQueryData(key, context?.previous),
+    onError: (_error, _value, context) => {
+      if (isLatest()) queryClient.setQueryData(key, context?.previous);
+    },
     onSuccess: (data) => {
+      if (!isLatest()) return;
       queryClient.setQueryData(key, data);
       patchHomeStats(queryClient, id, { score: data.score, viewer_vote: data.viewer_vote });
     },
@@ -173,12 +179,20 @@ function patchHomeStats(queryClient: ReturnType<typeof useQueryClient>, id: stri
 /** Pouce levé / baissé sur une question, un snippet ou un projet : affiché tout de suite. */
 export function useCardVote(type: ReactType, id: string, stats: NonNullable<HomeItem['stats']>) {
   const queryClient = useQueryClient();
+  const mutationKey = ['vote', type, id];
+  // Seule la réponse du dernier vote s'applique (touchers rapprochés).
+  const isLatest = () => queryClient.isMutating({ mutationKey }) <= 1;
   return useMutation({
+    mutationKey,
     mutationFn: (value: -1 | 0 | 1) =>
       unwrap(api.POST('/api/reactions/{target_type}/{target_id}/', { params: { path: { target_type: type, target_id: id } }, body: { value } })),
     onMutate: (value) => patchHomeStats(queryClient, id, { viewer_vote: value, score: stats.score - stats.viewer_vote + value }),
-    onSuccess: (summary) => patchHomeStats(queryClient, id, { score: summary.score, viewer_vote: summary.viewer_vote }),
-    onError: () => patchHomeStats(queryClient, id, { score: stats.score, viewer_vote: stats.viewer_vote }),
+    onSuccess: (summary) => {
+      if (isLatest()) patchHomeStats(queryClient, id, { score: summary.score, viewer_vote: summary.viewer_vote });
+    },
+    onError: () => {
+      if (isLatest()) patchHomeStats(queryClient, id, { score: stats.score, viewer_vote: stats.viewer_vote });
+    },
   });
 }
 
