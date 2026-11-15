@@ -144,7 +144,7 @@ const compact = new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFra
 /** Aperçu du produit, dessiné en HTML (0 image téléchargée) : une question et la réponse de l'IA. */
 function ProductPreview() {
   return (
-    <div className="relative" aria-hidden>
+    <div className="relative min-w-0" aria-hidden>
       <div className="absolute -inset-6 -z-10 rounded-[2rem] bg-[radial-gradient(60%_60%_at_70%_30%,color-mix(in_oklab,var(--primary)_18%,transparent),transparent)]" />
       <div className="overflow-hidden rounded-2xl border border-line bg-card shadow-[var(--elev-raised)]">
         <div className="flex items-center gap-2 border-b border-line px-4 py-3">
@@ -168,7 +168,7 @@ function ProductPreview() {
             <p className="flex items-center gap-1.5 text-label-md font-semibold text-primary-ink">
               <Sparkles className="size-3.5" /> Première réponse de l’IA
             </p>
-            <pre className="overflow-hidden rounded-lg bg-[var(--code-bg)] p-3 font-mono text-[12px] leading-5 text-[var(--code-ink)]">
+            <pre className="overflow-x-auto rounded-lg bg-[var(--code-bg)] p-3 font-mono text-[12px] leading-5 text-[var(--code-ink)]">
               {[
                 'tx, created = Payment.objects.get_or_create(',
                 '    provider_ref=payload["id"],',
@@ -247,8 +247,8 @@ export function LandingScreen({ data }: { data: LandingData }) {
             className="pointer-events-none absolute inset-0 bg-[radial-gradient(var(--line-strong)_1px,transparent_1.2px)] [mask-image:linear-gradient(to_bottom,black,transparent)] bg-[length:22px_22px] opacity-60"
             aria-hidden
           />
-          <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pt-14 pb-16 sm:px-6 lg:grid-cols-[minmax(0,1fr)_28rem] lg:pt-20 lg:pb-24">
-            <div className="space-y-7">
+          <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 pt-14 pb-16 sm:px-6 lg:grid-cols-[minmax(0,1fr)_28rem] lg:pt-20 lg:pb-24">
+            <div className="min-w-0 space-y-7">
               <p className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-3 py-1 text-label-md font-semibold text-ink-muted">
                 <span className="size-2 rounded-full bg-secondary" aria-hidden /> Le réseau des développeur·ses africain·es
               </p>

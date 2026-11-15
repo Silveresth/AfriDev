@@ -40,10 +40,12 @@ export function LoginScreen({ initialMode = 'login' }: { initialMode?: AuthMode 
   }, [close]);
 
   const switchMode = (next: AuthMode) => {
+    // /login et /register ont chacun leur mode par défaut : on change de chemin (et non
+    // seulement de ?mode=), sinon « Se connecter » depuis /register ne fait rien.
     const params = new URLSearchParams(searchParams.toString());
-    if (next === 'register') params.set('mode', 'register');
-    else params.delete('mode');
-    router.replace(params.size ? `?${params}` : window.location.pathname);
+    params.delete('mode');
+    const path = next === 'register' ? '/register' : '/login';
+    router.replace(params.size ? `${path}?${params}` : path);
   };
 
   const onAuthenticated = (response: AuthResponse) => {
