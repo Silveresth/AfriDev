@@ -30,6 +30,8 @@ def github(monkeypatch):
     ]
     monkeypatch.setattr("integrations.github.get_repo", lambda owner, name: REPO)
     monkeypatch.setattr("integrations.github.list_good_first_issues", lambda owner, name: issues)
+    # Aucun appel réseau réel : sinon la CI tombe sur le quota de l'API GitHub (403).
+    monkeypatch.setattr("integrations.github.list_open_issues", lambda owner, name: [])
     return issues
 
 
