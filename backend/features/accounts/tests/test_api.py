@@ -32,7 +32,8 @@ def test_register_login_refresh_and_me(api_client):
 
 @pytest.mark.parametrize("password", ["kpalime-lome", "kpalime2024"])
 def test_register_enforces_the_rules_shown_in_the_form(api_client, password):
-    """Mêmes règles que la liste sous le champ : 8 caractères, un chiffre, une majuscule ou un symbole."""
+    """Mêmes règles que la liste sous le champ :
+    8 caractères, un chiffre, une majuscule ou un symbole."""
     response = api_client.post(
         "/api/accounts/register/",
         {"username": "kodjo", "email": "kodjo@example.com", "password": password},

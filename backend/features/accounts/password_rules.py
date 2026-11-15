@@ -14,7 +14,8 @@ class CompositionValidator:
         if not re.search(r"[A-Z]|[^A-Za-z0-9]", password or ""):
             errors.append(
                 ValidationError(
-                    "Ajoutez au moins une majuscule ou un symbole.", code="password_no_upper_or_symbol"
+                    "Ajoutez au moins une majuscule ou un symbole.",
+                    code="password_no_upper_or_symbol",
                 )
             )
         if errors:
