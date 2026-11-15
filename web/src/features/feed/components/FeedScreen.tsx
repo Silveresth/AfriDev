@@ -24,6 +24,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 
 import { useLang } from '@/shared/i18n';
+import { cn } from '@/shared/lib';
 import { ContextTabs, PageHeader, Toolbar, TwoColumns } from '@/shared/layout';
 import { useOutbox } from '@/shared/offline';
 import { useSession } from '@/shared/session';
@@ -44,7 +45,6 @@ import {
 import { type FeedSort, type HomeFilter, type HomeItem, type HomeScope, type PostKind, useFeed, useHomeFeed } from '../api';
 import { CommunityHeader } from './Communities';
 import { HomeCard } from './HomeCard';
-import { MobileHubsBar } from './MobileHubsBar';
 import { PostCard } from './PostCard';
 
 type KindFilter = 'all' | PostKind;
@@ -62,8 +62,9 @@ const FILTERS: Array<{ value: HomeFilter; label: string; icon: typeof Rows3 }> =
  * Accueil : un fil mixte (posts, entraide, snippets, projets, opportunités) classé selon vos
  * préférences, ou celui des membres que vous suivez. ?tag=… ouvre la communauté d/<tag>.
  * L'actu tech a sa page (/news) et sa colonne à droite.
+ * `lead` : affiché en tête du fil sur téléphone seulement (le résumé du jour, comme l'appli).
  */
-export function FeedScreen({ aside }: { aside?: React.ReactNode }) {
+export function FeedScreen({ aside, lead }: { aside?: React.ReactNode; lead?: React.ReactNode }) {
   const params = useSearchParams();
   const router = useRouter();
   const { isAuthenticated } = useSession();
@@ -77,14 +78,13 @@ export function FeedScreen({ aside }: { aside?: React.ReactNode }) {
 
   return (
     <TwoColumns aside={aside}>
-      <MobileHubsBar />
       {tag ? (
         <CommunityHeader tag={tag} />
       ) : (
         <PageHeader className="mb-2" icon={<Home aria-hidden />} title={t('nav.home')} description="Posts, entraide, code, projets et opportunités de la communauté." />
       )}
-      {!isAuthenticated && !tag ? <WelcomeCard /> : null}
-      {tag ? <TagFeed tag={tag} /> : <MixedFeed />}
+      {!isAuthenticated && !tag ? <WelcomeCard className="max-lg:hidden" /> : null}
+      {tag ? <TagFeed tag={tag} /> : <MixedFeed lead={lead} />}
     </TwoColumns>
   );
 }
@@ -93,7 +93,8 @@ function setParamOn(router: ReturnType<typeof useRouter>, params: URLSearchParam
   const next = new URLSearchParams(params);
   if (value) next.set(key, value);
   else next.delete(key);
-  router.replace(`/${next.size ? `?${next}` : ''}`, { scroll: false });
+  // Reste sur la page du fil (/feed) : « / » est désormais la page de présentation.
+  router.replace(`${window.location.pathname}${next.size ? `?${next}` : ''}`, { scroll: false });
 }
 
 function PendingPosts() {
@@ -114,7 +115,7 @@ function PendingPosts() {
   );
 }
 
-function MixedFeed() {
+function MixedFeed({ lead }: { lead?: React.ReactNode }) {
   const params = useSearchParams();
   const router = useRouter();
   const { isAuthenticated } = useSession();
@@ -123,8 +124,10 @@ function MixedFeed() {
   const scope: HomeScope = isAuthenticated && params.get('scope') === 'following' ? 'following' : 'for_you';
   const feed = useHomeFeed(filter, scope);
 
+  // Téléphone : onglets collés sous l'en-tête, pastilles, puis les lignes du fil sans espace
+  // (FeedScreen de l'appli). Ordinateur : blocs espacés de 16 px, comme avant.
   return (
-    <>
+    <div className="space-y-4 max-lg:-mt-4 max-lg:space-y-0">
       <ContextTabs<HomeScope>
         value={scope}
         onChange={(value) => setParamOn(router, params, 'scope', value === 'for_you' ? null : value)}
@@ -134,7 +137,8 @@ function MixedFeed() {
         ]}
         actions={
           isAuthenticated ? (
-            <ButtonLink href="/submit" size="sm" variant="primary">
+            // Téléphone : c'est le bouton rond « + ».
+            <ButtonLink href="/submit" size="sm" variant="primary" className="max-lg:hidden">
               <Plus className="size-4" aria-hidden /> Publier
             </ButtonLink>
           ) : null
@@ -145,6 +149,9 @@ function MixedFeed() {
         onChange={(value) => setParamOn(router, params, 'filter', value === 'all' ? null : value)}
         options={FILTERS.map((item) => ({ value: item.value, label: item.label, icon: <item.icon className="size-4" aria-hidden /> }))}
       />
+
+      {!isAuthenticated ? <WelcomeCard className="max-lg:my-4 lg:hidden" /> : null}
+      {lead && scope === 'for_you' && filter === 'all' ? <div className="max-lg:mt-4 lg:hidden">{lead}</div> : null}
 
       <PendingPosts />
 
@@ -176,7 +183,7 @@ function MixedFeed() {
             : 'Soyez le premier à partager une astuce avec la communauté.'}
         </EmptyState>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-3 max-lg:space-y-0">
           {feed.items.map((item) => (
             <li key={`${item.type}-${item.id}`}>
               <HomeEntry item={item} />
@@ -186,11 +193,11 @@ function MixedFeed() {
       )}
 
       {feed.hasNextPage ? (
-        <Button variant="ghost" className="mt-3 w-full" onClick={() => feed.fetchNextPage()} loading={feed.isFetchingNextPage}>
+        <Button variant="ghost" className="mt-3 w-full max-lg:mt-4" onClick={() => feed.fetchNextPage()} loading={feed.isFetchingNextPage}>
           {t('common.see_more')}
         </Button>
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -279,7 +286,7 @@ function TagFeed({ tag }: { tag: string }) {
           Soyez le premier à partager une astuce avec la communauté.
         </EmptyState>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-3 max-lg:space-y-0">
           {feed.items.map((post) => (
             <li key={post.id}>
               <PostCard post={post} community={false} />
@@ -297,10 +304,10 @@ function TagFeed({ tag }: { tag: string }) {
   );
 }
 
-function WelcomeCard() {
+function WelcomeCard({ className }: { className?: string }) {
   const { t } = useLang();
   return (
-    <section className="flex flex-col gap-4 rounded-2xl border border-line bg-card p-5 shadow-card sm:flex-row sm:items-center">
+    <section className={cn('flex flex-col gap-4 rounded-2xl border border-line bg-card p-5 shadow-card sm:flex-row sm:items-center', className)}>
       <LogoMark size={48} className="shrink-0" />
       <div className="min-w-0 flex-1 space-y-1">
         <h2 className="text-headline-md text-ink">{t('auth.features_headline')}</h2>

@@ -75,9 +75,10 @@ export const afterLogin = {
     }
   },
   take: (): string => {
-    const next = sessionStorage.getItem(NEXT_KEY) ?? '/';
+    // « / » est la page de présentation : un membre connecté va directement à son fil.
+    const next = sessionStorage.getItem(NEXT_KEY) ?? '/feed';
     sessionStorage.removeItem(NEXT_KEY);
-    return next && !next.startsWith('/login') ? next : '/';
+    return next && next !== '/' && !next.startsWith('/login') ? next : '/feed';
   },
 };
 

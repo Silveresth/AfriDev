@@ -200,7 +200,8 @@ export function FilterChips<T extends string>({
   options: Array<{ value: T; label: React.ReactNode; icon?: React.ReactNode }>;
 }) {
   return (
-    <div className="scrollbar-none flex gap-2 overflow-x-auto">
+    // Téléphone : rangée pleine largeur sous filet fin, pastilles sans icône (Chips de l'appli).
+    <div className="scrollbar-none flex gap-2 overflow-x-auto max-lg:-mx-4 max-lg:border-b max-lg:border-line max-lg:bg-app max-lg:px-4 max-lg:py-2.5">
       {options.map((option) => {
         const active = option.value === value;
         return (
@@ -210,8 +211,10 @@ export function FilterChips<T extends string>({
             aria-pressed={active}
             onClick={() => onChange(option.value)}
             className={cn(
-              'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-body-sm font-medium transition-colors',
-              active ? 'bg-ink text-card' : 'bg-card text-ink-muted ring-1 ring-line ring-inset hover:text-ink hover:ring-line-strong',
+              'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-body-sm font-medium transition-[color,background-color,box-shadow,transform] duration-200 max-lg:px-3.5 max-lg:text-[13px] max-lg:font-semibold max-lg:active:scale-[0.92] max-lg:[&_svg]:hidden',
+              active
+                ? 'bg-ink text-card max-lg:text-app'
+                : 'bg-card text-ink-muted ring-1 ring-line ring-inset hover:text-ink hover:ring-line-strong max-lg:bg-app max-lg:ring-line-strong',
             )}
           >
             {option.icon}

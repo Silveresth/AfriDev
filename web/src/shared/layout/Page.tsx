@@ -24,19 +24,26 @@ export function PageHeader({
   actions?: React.ReactNode;
   className?: string;
 }) {
+  // Téléphone : le titre est dans l'en-tête d'écran (comme l'appli) ; ici ne restent que les actions.
   return (
-    <header className={cn('mb-6 flex flex-wrap items-center gap-x-4 gap-y-3', className)}>
+    <header
+      className={cn(
+        'mb-6 flex flex-wrap items-center gap-x-4 gap-y-3',
+        actions ? 'max-lg:mb-4' : 'max-lg:mb-0',
+        className,
+      )}
+    >
       {icon ? (
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary-ink ring-1 ring-primary/15 [&_svg]:size-6">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary-ink ring-1 ring-primary/15 max-lg:hidden [&_svg]:size-6">
           {icon}
         </span>
       ) : null}
-      <div className="min-w-[14rem] flex-1 space-y-0.5">
+      <div className="min-w-[14rem] flex-1 space-y-0.5 max-lg:sr-only">
         {eyebrow ? <p className="text-body-sm font-medium text-primary-ink">{eyebrow}</p> : null}
         <h1 className="text-headline-xl text-ink">{title}</h1>
         {description ? <p className="max-w-2xl text-body-sm text-ink-muted">{description}</p> : null}
       </div>
-      {actions ? <div className="flex w-full shrink-0 flex-wrap gap-2 sm:w-auto">{actions}</div> : null}
+      {actions ? <div className="flex w-full shrink-0 flex-wrap gap-2 lg:w-auto">{actions}</div> : null}
     </header>
   );
 }
@@ -75,7 +82,9 @@ export function ContextTabs<T extends string>({
   return (
     <div
       className={cn(
-        'context-tabs sticky top-16 z-10 -mx-6 mb-5 flex items-center justify-between border-b border-line bg-surface/95 px-6 backdrop-blur-md transition-colors sm:-mx-8 sm:px-8 lg:-mx-10 lg:px-10',
+        // Téléphone : onglets « Pour vous / Abonnements » de l'appli, collés sous l'en-tête de 56 px.
+        'context-tabs sticky top-14 z-10 -mx-4 flex items-center justify-between border-b border-line bg-app px-3 transition-colors',
+        'lg:top-16 lg:-mx-10 lg:mb-5 lg:bg-surface/95 lg:px-10 lg:backdrop-blur-md',
         className,
       )}
     >
@@ -94,16 +103,16 @@ export function ContextTabs<T extends string>({
               aria-selected={active}
               onClick={() => onChange(option.value)}
               className={cn(
-                'group relative inline-flex h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-body-sm font-medium whitespace-nowrap transition-all duration-150',
+                'group relative inline-flex h-[42px] shrink-0 items-center gap-2 border-b-2 px-3 text-[13px] font-semibold whitespace-nowrap transition-all duration-150 lg:h-11 lg:text-body-sm lg:font-medium',
                 active
-                  ? 'border-primary text-ink font-bold'
-                  : 'border-transparent text-ink-muted hover:border-line-strong hover:text-ink',
+                  ? 'border-ink text-ink lg:border-primary lg:font-bold'
+                  : 'border-transparent text-ink-muted hover:text-ink lg:hover:border-line-strong',
               )}
             >
               {option.icon ? (
                 <span
                   className={cn(
-                    'transition-colors [&_svg]:size-4',
+                    'transition-colors max-lg:hidden [&_svg]:size-4',
                     active ? 'text-primary' : 'text-ink-faint group-hover:text-ink',
                   )}
                 >

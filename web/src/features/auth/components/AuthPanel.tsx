@@ -1,5 +1,6 @@
 'use client';
 
+import { isPasswordValid, PASSWORD_HINT, PASSWORD_RULES, passwordRulesPassed, USERNAME_HINT, USERNAME_PATTERN } from '@afridev/validation';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, AtSign, Check, Eye, EyeOff, Loader2, X } from 'lucide-react';
 import Link from 'next/link';
@@ -58,18 +59,27 @@ export function AuthPanel({
       </div>
 
       <div className="space-y-0.5">
-        <h1 className="text-headline-lg text-ink">{mode === 'login' ? 'Content de vous revoir' : 'Rejoindre AfriDev'}</h1>
+        <h1 className="text-headline-lg text-ink">{mode === 'login' ? 'Bon retour parmi nous' : 'Rejoignez la communauté'}</h1>
         <p className="text-body-sm text-ink-muted">
-          {mode === 'login' ? 'Reprenez là où vous vous étiez arrêté·e.' : 'Gratuit, sans publicité. Votre fil se règle juste après.'}
+          {mode === 'login'
+            ? 'Connectez-vous pour publier, voter et répondre.'
+            : 'Gratuit et sans publicité. Votre fil se règle juste après l’inscription.'}
         </p>
       </div>
 
-      <OAuthButtons />
+      <OAuthButtons mode={mode} />
 
-      <EmailForm mode={mode} onAuthenticated={onAuthenticated} />
+      <EmailForm key={mode} mode={mode} onAuthenticated={onAuthenticated} />
 
-      <p className="text-center text-label-md text-ink-faint">
-        En continuant, vous acceptez les conditions d&apos;utilisation et la politique de confidentialité d&apos;AfriDev.
+      <p className="text-center text-label-md text-ink-muted">
+        {mode === 'login' ? 'Pas encore de compte ?' : 'Déjà inscrit·e ?'}{' '}
+        <button
+          type="button"
+          onClick={() => onModeChange(mode === 'login' ? 'register' : 'login')}
+          className="font-semibold text-primary-ink hover:underline"
+        >
+          {mode === 'login' ? 'Créer un compte' : 'Se connecter'}
+        </button>
       </p>
     </div>
   );
@@ -79,7 +89,7 @@ export function AuthPanel({
  * Google et GitHub sont toujours proposés ; GitLab seulement s'il est configuré. Un fournisseur
  * pas encore activé sur le serveur (clés absentes du .env) le dit au clic au lieu de disparaître.
  */
-function OAuthButtons() {
+function OAuthButtons({ mode }: { mode: AuthMode }) {
   const providers = useOAuthProviders();
   const [pending, setPending] = useState<OAuthProvider | null>(null);
   const [unavailable, setUnavailable] = useState<string | null>(null);
@@ -98,7 +108,9 @@ function OAuthButtons() {
               disabled={pending !== null}
               onClick={() => {
                 if (providers.isSuccess && !configured.includes(provider)) {
-                  setUnavailable(`La connexion avec ${label} n'est pas encore activée. Utilisez votre e-mail pour le moment.`);
+                  setUnavailable(
+                    `${mode === 'login' ? 'La connexion' : 'L’inscription'} avec ${label} n’est pas encore activée sur ce serveur. Utilisez votre e-mail pour le moment.`,
+                  );
                   return;
                 }
                 setUnavailable(null);
@@ -120,7 +132,7 @@ function OAuthButtons() {
       ) : null}
       <div className="flex items-center gap-3 text-label-md text-ink-faint">
         <span className="h-px flex-1 bg-line" />
-        ou avec un e-mail
+        ou avec votre e-mail
         <span className="h-px flex-1 bg-line" />
       </div>
     </div>
@@ -168,9 +180,9 @@ function UsernameField({ value, onChange }: { value: string; onChange: (value: s
           id={id}
           required
           autoComplete="username"
-          pattern="[A-Za-z0-9_]{3,30}"
+          pattern={USERNAME_PATTERN.source.slice(1, -1)}
           maxLength={30}
-          placeholder="amadou_dev"
+          placeholder="amina_dev"
           value={value}
           onChange={(e) => onChange(e.target.value.replace(/\s/g, '_'))}
           aria-invalid={checked ? !checked.available : undefined}
@@ -200,23 +212,19 @@ function UsernameField({ value, onChange }: { value: string; onChange: (value: s
             ) : null}
           </span>
         ) : (
-          <span className="text-ink-faint">3 à 30 caractères : lettres, chiffres, _</span>
+          <span className="text-ink-faint">{USERNAME_HINT}</span>
         )}
       </p>
     </div>
   );
 }
 
-const RULES = [
-  { label: '8 caractères', test: (p: string) => p.length >= 8 },
-  { label: 'un chiffre', test: (p: string) => /\d/.test(p) },
-  { label: 'une majuscule ou un symbole', test: (p: string) => /[A-Z]|[^A-Za-z0-9]/.test(p) },
-];
+const RULES = PASSWORD_RULES;
 
 function PasswordField({ mode, value, onChange }: { mode: AuthMode; value: string; onChange: (value: string) => void }) {
   const id = useId();
   const [visible, setVisible] = useState(false);
-  const passed = RULES.filter((rule) => rule.test(value)).length;
+  const passed = passwordRulesPassed(value);
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
@@ -239,6 +247,7 @@ function PasswordField({ mode, value, onChange }: { mode: AuthMode; value: strin
           placeholder="••••••••"
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          aria-describedby={mode === 'register' ? `${id}-rules` : undefined}
           className={cn(FIELD, 'pr-11')}
         />
         <button
@@ -250,8 +259,9 @@ function PasswordField({ mode, value, onChange }: { mode: AuthMode; value: strin
           {visible ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
         </button>
       </div>
-      {mode === 'register' && value ? (
-        <div className="space-y-1.5 pt-0.5">
+      {/* Les règles sont visibles avant la saisie : ce sont exactement celles du serveur. */}
+      {mode === 'register' ? (
+        <div id={`${id}-rules`} className="space-y-1.5 pt-0.5">
           <div className="grid grid-cols-3 gap-1" aria-hidden>
             {RULES.map((_, index) => (
               <span
@@ -291,6 +301,10 @@ function EmailForm({ mode, onAuthenticated }: { mode: AuthMode; onAuthenticated:
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (mode === 'register' && !isPasswordValid(form.password)) {
+      setError(`Mot de passe trop faible : ${PASSWORD_HINT}.`);
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
@@ -318,7 +332,7 @@ function EmailForm({ mode, onAuthenticated }: { mode: AuthMode; onAuthenticated:
             id="auth-identifier"
             required
             autoComplete="username"
-            placeholder="amadou ou amadou@exemple.com"
+            placeholder="amina ou amina@exemple.com"
             value={form.identifier}
             onChange={(e) => set('identifier')(e.target.value)}
             className={FIELD}
@@ -336,11 +350,15 @@ function EmailForm({ mode, onAuthenticated }: { mode: AuthMode; onAuthenticated:
               type="email"
               required
               autoComplete="email"
-              placeholder="amadou@exemple.com"
+              placeholder="amina@exemple.com"
               value={form.email}
               onChange={(e) => set('email')(e.target.value)}
+              aria-describedby="auth-email-hint"
               className={FIELD}
             />
+            <p id="auth-email-hint" className="text-label-md text-ink-faint">
+              Un lien de confirmation vous sera envoyé à cette adresse.
+            </p>
           </div>
         </>
       )}

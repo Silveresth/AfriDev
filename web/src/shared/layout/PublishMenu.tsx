@@ -2,26 +2,23 @@
 
 import { Code2, FolderGit2, MessageCircleQuestion, PenSquare, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 import { useLang } from '@/shared/i18n';
 import { cn } from '@/shared/lib';
 import { Kbd, Menu, MenuItem } from '@/shared/ui';
 
-import { MobilePublishSheet } from './MobilePublishSheet';
 import { PUBLISH_ITEMS } from './nav';
 
 const ICONS = [PenSquare, MessageCircleQuestion, Code2, FolderGit2];
 
 /**
- * Bouton « Créer » adaptatif :
- * - Sur mobile : ouvre une Bottom Sheet tactile native façon iOS / Android.
- * - Sur desktop : menu déroulant accessible avec raccourci clavier « N ».
+ * Bouton « Créer » de l'en-tête (ordinateur) : menu déroulant, raccourci clavier « N ».
+ * Sur téléphone, c'est le bouton rond « + » de MobileChrome (comme l'appli mobile).
  */
-export function PublishMenu({ compact = false, className }: { compact?: boolean; className?: string }) {
+export function PublishMenu({ className }: { className?: string }) {
   const router = useRouter();
   const { t } = useLang();
-  const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -35,26 +32,6 @@ export function PublishMenu({ compact = false, className }: { compact?: boolean;
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [router]);
-
-  if (compact) {
-    return (
-      <>
-        <button
-          type="button"
-          onClick={() => setSheetOpen(true)}
-          aria-label={t('nav.publish')}
-          className={cn(
-            'group relative flex size-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-amber-500 text-on-primary shadow-lg shadow-primary/25 ring-2 ring-white/20 transition-all duration-200 active:scale-90 hover:brightness-110',
-            className,
-          )}
-        >
-          <span className="absolute -inset-0.5 rounded-2xl bg-gradient-to-tr from-primary to-amber-500 opacity-40 blur-xs transition group-hover:opacity-75" />
-          <Plus className="relative size-6 stroke-[2.5]" aria-hidden />
-        </button>
-        <MobilePublishSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
-      </>
-    );
-  }
 
   return (
     <Menu

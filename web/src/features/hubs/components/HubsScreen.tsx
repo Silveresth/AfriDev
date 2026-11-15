@@ -1,7 +1,7 @@
 'use client';
 
 import { Clock, Flame, Plus, UserRoundCheck, UsersRound } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 import { useDebounced } from '@/shared/hooks';
@@ -21,7 +21,14 @@ export function HubsScreen() {
   const router = useRouter();
   const [view, setView] = useState<View>('popular');
   const [query, setQuery] = useState('');
-  const [creating, setCreating] = useState(false);
+  const params = useSearchParams();
+  const [creating, setCreatingState] = useState(false);
+  // « /hubs?create=1 » (bouton « + » du téléphone, feuille « Créer ») ouvre directement la création.
+  const createParam = isAuthenticated && params.get('create') === '1';
+  const setCreating = (open: boolean) => {
+    setCreatingState(open);
+    if (!open && createParam) router.replace('/hubs', { scroll: false });
+  };
   const q = useDebounced(query.trim(), 300);
   const filters: HubFilters = view === 'mine' ? { mine: true, q: q || undefined } : { sort: view, q: q || undefined };
   const hubs = useHubs(filters, { enabled: view !== 'mine' || isAuthenticated });
@@ -33,7 +40,8 @@ export function HubsScreen() {
         title="Hubs"
         description="Des communautés autonomes par techno, par pays ou par passion : rejoignez celles qui vous ressemblent."
         actions={
-          <Button onClick={() => (isAuthenticated ? setCreating(true) : router.push('/login?next=/hubs'))}>
+          // Téléphone : le « + » de l'en-tête d'écran, comme l'appli.
+          <Button className="max-lg:hidden" onClick={() => (isAuthenticated ? setCreating(true) : router.push('/login?next=/hubs'))}>
             <Plus className="size-4" aria-hidden /> Créer un hub
           </Button>
         }
@@ -91,7 +99,7 @@ export function HubsScreen() {
           Voir plus de hubs
         </Button>
       ) : null}
-      <CreateHubDialog open={creating} onClose={() => setCreating(false)} />
+      <CreateHubDialog open={creating || createParam} onClose={() => setCreating(false)} />
     </PageContainer>
   );
 }

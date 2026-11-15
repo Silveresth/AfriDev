@@ -15,6 +15,8 @@
   --shell: #eeeef1;
   --shell-hover: #e2e2e7;
   --card: #ffffff;
+  /* Fond des écrans sur téléphone : identique à `background` de l'appli mobile (tokens.ts). */
+  --app: #ffffff;
   --container-low: #f6f6f7;
   --container: #f0f0f2;
   --container-high: #e7e7ea;
@@ -74,6 +76,7 @@
   --shell: #141417;
   --shell-hover: #202025;
   --card: #111113;
+  --app: #09090b;
   --container-low: #151518;
   --container: #1b1b1f;
   --container-high: #242429;
@@ -117,6 +120,7 @@
   --color-shell: var(--shell);
   --color-shell-hover: var(--shell-hover);
   --color-card: var(--card);
+  --color-app: var(--app);
   --color-container-low: var(--container-low);
   --color-container: var(--container);
   --color-container-high: var(--container-high);
@@ -373,6 +377,29 @@
 }
 @utility animate-step {
   animation: step-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Onglet du bas activé : petit saut de l'icône (même ressort que l'appli mobile). */
+@keyframes tab-pop {
+  30% {
+    transform: scale(0.82);
+  }
+  70% {
+    transform: scale(1.06);
+  }
+}
+@utility animate-tab-pop {
+  animation: tab-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Bouton rond « + » : simple fondu à l'apparition, comme l'appli. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@utility animate-fade-in {
+  animation: fade-in 200ms ease-out;
 }
 
 /* Tiroir du menu (téléphone) : glisse depuis la gauche. */

@@ -39,7 +39,7 @@ export function PostDetail({ id, initial }: { id: string; initial?: Post }) {
           type="button"
           aria-label="Retour"
           onClick={() => (window.history.length > 1 ? router.back() : router.push('/feed'))}
-          className={buttonClasses({ variant: 'outline', size: 'icon', className: 'hidden rounded-full sm:inline-flex' })}
+          className={buttonClasses({ variant: 'outline', size: 'icon', className: 'hidden rounded-full lg:inline-flex' })}
         >
           <ArrowLeft className="size-4" aria-hidden />
         </button>

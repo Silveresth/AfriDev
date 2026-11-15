@@ -8,7 +8,7 @@ import { COOKIE_SESSION, type Tokens } from '@afridev/api-client';
  * - le stockage local ne garde qu'un indicateur « session ouverte », sans valeur secrète, pour
  *   savoir au démarrage (et dans les autres onglets) que l'on est connecté.
  */
-const SESSION_FLAG = 'afridev.session';
+export const SESSION_FLAG = 'afridev.session';
 // Anciennes versions du site : jetons en clair dans localStorage, migrés puis effacés.
 const LEGACY_ACCESS_KEY = 'afridev.access';
 const LEGACY_REFRESH_KEY = 'afridev.refresh';

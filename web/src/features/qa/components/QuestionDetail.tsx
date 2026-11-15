@@ -58,7 +58,8 @@ export function QuestionDetail({ id, initial, aside }: { id: string; initial?: Q
     <TwoColumns aside={aside}>
       <Link
         href="/questions"
-        className="inline-flex h-8 w-fit items-center gap-1.5 rounded-full border border-line bg-card px-3 text-body-sm font-medium text-ink-muted shadow-card hover:text-ink"
+        // Téléphone : la flèche retour est dans l'en-tête d'écran.
+        className="inline-flex h-8 w-fit items-center gap-1.5 rounded-full border border-line bg-card px-3 text-body-sm font-medium text-ink-muted shadow-card hover:text-ink max-lg:hidden"
       >
         <ArrowLeft className="size-4" aria-hidden /> Q&amp;A
       </Link>

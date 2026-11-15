@@ -70,11 +70,47 @@ export const NAV_SECTIONS: NavSection[] = [
 const byHref = (href: string) => NAV_ITEMS.find((item) => item.href === href)!;
 
 /**
- * Barre d'onglets du téléphone : 4 rubriques + « Créer » au centre, à portée du pouce.
- * Sans session, « Profil » laisse sa place à « Actu tech ».
+ * Barre d'onglets du téléphone : les cinq onglets de l'appli mobile, dans le même ordre
+ * (mobile/src/app/(tabs)/_layout.tsx). « Créer » est le bouton rond des écrans de contenu.
  */
-export function mobileTabs(isAuthenticated: boolean): Array<NavItem | null> {
-  return [byHref('/feed'), byHref('/questions'), null, byHref('/hubs'), byHref(isAuthenticated ? '/profile' : '/news')];
+export const MOBILE_TABS: Array<{ item: NavItem; title: string; msgKey?: MessageKey }> = [
+  { item: byHref('/feed'), title: 'Accueil', msgKey: 'nav.home' },
+  { item: byHref('/news'), title: 'Actu tech', msgKey: 'nav.news' },
+  { item: byHref('/questions'), title: 'Q&A' },
+  { item: byHref('/hubs'), title: 'Hubs', msgKey: 'nav.hubs' },
+  { item: byHref('/profile'), title: 'Profil', msgKey: 'nav.profile' },
+];
+
+/** Titres des écrans empilés (flèche retour), comme les en-têtes de l'appli. */
+const STACK_TITLES: Array<[RegExp, string]> = [
+  [/^\/feed\/[^/]+/, 'Post'],
+  [/^\/questions\/new/, 'Poser une question'],
+  [/^\/questions\/[^/]+/, 'Question'],
+  [/^\/snippets\/new/, 'Nouveau snippet'],
+  [/^\/snippets\/[^/]+/, 'Snippet'],
+  [/^\/projects\/new/, 'Nouveau projet'],
+  [/^\/projects\/[^/]+/, 'Projet'],
+  [/^\/jobs\/[^/]+/, 'Offre'],
+  [/^\/submit/, 'Nouveau post'],
+  [/^\/notifications/, 'Notifications'],
+  [/^\/settings/, 'Réglages'],
+];
+
+/**
+ * Écran courant sur téléphone : onglet racine (grand titre, pas de retour) ou écran empilé
+ * (flèche retour + titre). `pathname` est déjà passé par navPath (ma page = « /profile »).
+ */
+export function mobileScreen(pathname: string): { tab: string | null; title: string } {
+  const tab = MOBILE_TABS.find(({ item }) => pathname === item.href || (item.href === '/feed' && pathname === '/'));
+  if (tab) return { tab: tab.item.href, title: tab.item.href === '/feed' ? 'AfriDev' : tab.title };
+  const user = /^\/u\/([^/]+)/.exec(pathname);
+  if (user) return { tab: null, title: `@${decodeURIComponent(user[1] ?? '')}` };
+  const hub = /^\/h\/([^/]+)/.exec(pathname);
+  if (hub) return { tab: null, title: `h/${decodeURIComponent(hub[1] ?? '')}` };
+  const stacked = STACK_TITLES.find(([pattern]) => pattern.test(pathname));
+  if (stacked) return { tab: null, title: stacked[1] };
+  const section = NAV_ITEMS.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+  return { tab: null, title: section?.label ?? 'AfriDev' };
 }
 
 export interface PublishItem {

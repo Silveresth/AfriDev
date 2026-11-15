@@ -1,5 +1,6 @@
 'use client';
 
+import { PASSWORD_HINT } from '@afridev/validation';
 import { ArrowLeft, KeyRound, MailCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -99,7 +100,7 @@ export function ForgotPasswordScreen() {
               onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
             />
           </Field>
-          <Field label="Nouveau mot de passe" htmlFor="code-new-password" hint="8 caractères minimum, dont un chiffre.">
+          <Field label="Nouveau mot de passe" htmlFor="code-new-password" hint={`${PASSWORD_HINT}.`}>
             <Input id="code-new-password" type="password" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </Field>
           <Field label="Confirmer" htmlFor="code-confirm-password">
@@ -190,7 +191,7 @@ export function ResetPasswordScreen() {
           }
         }}
       >
-        <Field label="Nouveau mot de passe" htmlFor="new-password" hint="8 caractères minimum, dont un chiffre.">
+        <Field label="Nouveau mot de passe" htmlFor="new-password" hint={`${PASSWORD_HINT}.`}>
           <Input id="new-password" type="password" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         <Field label="Confirmer" htmlFor="confirm-password">

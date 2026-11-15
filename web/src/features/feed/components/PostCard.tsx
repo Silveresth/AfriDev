@@ -107,7 +107,9 @@ export function PostCard({ post, detail = false, community: showCommunity = true
       onClick={detail ? undefined : (event) => openOnCardClick(event, openCard)}
       className={cn(
         'group rounded-2xl border border-line bg-card shadow-card',
-        !detail && 'cursor-pointer transition-colors hover:border-line-strong',
+        // Téléphone : ligne pleine largeur sous un filet fin (PostRow de l'appli), fond grisé au toucher.
+        'max-lg:-mx-4 max-lg:rounded-none max-lg:border-x-0 max-lg:border-t-0 max-lg:bg-app max-lg:shadow-none',
+        !detail && 'cursor-pointer transition-colors hover:border-line-strong max-lg:hover:border-line max-lg:active:bg-container-low',
       )}
     >
       <div className={cn('px-4 pt-4 sm:px-5', detail && 'sm:pt-5')}>

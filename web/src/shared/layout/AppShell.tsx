@@ -42,9 +42,11 @@ import {
 } from '@/shared/ui';
 
 import { modifierKeyLabel, openCommandPalette } from './command';
-import { isActive, mobileTabs, type NavItem, navPath, visibleNavItems } from './nav';
-import { PublishMenu } from './PublishMenu';
 import { AuthModal, type AuthModalMode } from '@/features/auth';
+
+import { CreateFab, MobileAppBar, MobileTabBar, useIsDesktop } from './MobileChrome';
+import { visibleNavItems } from './nav';
+import { PublishMenu } from './PublishMenu';
 import { useShellShortcuts, useSidebarCollapsed } from './shortcuts';
 import { SideNav } from './SideNav';
 
@@ -55,17 +57,21 @@ export { LOCAL_BUDGET } from './SideNav';
  * - en-tête fixe : logo, recherche instantanée (⌘K / Ctrl+K), « Créer », notifications, thème, compte ;
  * - colonne de gauche : membre, rubriques, hubs et état de la copie locale (repliable avec « [ ») ;
  * - colonne centrale (le fil) et colonne de droite (widgets) fournies par chaque page (TwoColumns) ;
- * - téléphone : menu latéral en tiroir et barre d'onglets en bas, à portée du pouce.
+ * - téléphone et tablette (< 1024 px) : le cadre de l'appli mobile (MobileChrome) — en-tête
+ *   d'écran, cinq onglets en bas, bouton rond « + » ; le tiroir garde les autres rubriques.
  */
 export function AppShell({
   children,
   notifications,
+  messages,
   communities,
   search,
 }: {
   children: React.ReactNode;
   /** Cloche et centre de notifications, fournis par features/notifications. */
   notifications?: React.ReactNode;
+  /** Bouton « Messages » avec son compteur (en-tête du téléphone), fourni par features/messaging. */
+  messages?: React.ReactNode;
   /** Hubs du menu latéral (mes hubs, ou les populaires), fournis par features/hubs. */
   communities?: React.ReactNode;
   /** Palette de recherche (⌘K), fournie par features/search. */
@@ -78,14 +84,15 @@ export function AppShell({
   const { t } = useLang();
   const openHelp = useCallback(() => setHelp(true), []);
   useShellShortcuts({ onToggleSidebar: toggleCollapsed, onHelp: openHelp });
-  
-  // Existing auth modal state already defined earlier
+  // La cloche ouvre un WebSocket : montée dans une seule des deux barres.
+  const desktop = useIsDesktop();
+
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
   const [authModalMode, setAuthModalMode] = useState<AuthModalMode>('login');
   const openAuthModal = (mode: AuthModalMode) => { setAuthModalMode(mode); setAuthModalOpen(true); };
 
   return (
-    <div className="min-h-dvh bg-shell">
+    <div className="min-h-dvh bg-app lg:bg-shell">
       <a
         href="#contenu"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2"
@@ -93,8 +100,19 @@ export function AppShell({
         {t('nav.skip_to_content')}
       </a>
       {/* En-tête et colonne de gauche partagent le même fond : un seul cadre, sans filet entre eux. */}
-      <header className="sticky top-0 z-30 bg-shell">
-        <TopBar notifications={notifications} onMenu={() => setDrawer(pathname)} onHelp={openHelp} openAuthModal={openAuthModal} />
+      <header className="sticky top-0 z-30 bg-app lg:bg-shell">
+        <div className="hidden lg:block">
+          <TopBar notifications={desktop ? notifications : null} onMenu={() => setDrawer(pathname)} onHelp={openHelp} openAuthModal={openAuthModal} />
+        </div>
+        <div className="lg:hidden">
+          <MobileAppBar
+            notifications={desktop ? null : notifications}
+            messages={messages}
+            themeToggle={<ThemeToggle className="inline-flex size-10 rounded-full text-ink hover:bg-transparent" />}
+            onMenu={() => setDrawer(pathname)}
+            onLogin={() => openAuthModal('login')}
+          />
+        </div>
       </header>
       <div className="mx-auto flex w-full max-w-[1440px]">
         <aside
@@ -107,13 +125,14 @@ export function AppShell({
         </aside>
         <div className="relative min-w-0 flex-1 lg:mr-3">
           {/* Coins arrondis de la feuille, gardés visibles sous l'en-tête pendant le défilement. */}
-          <div className="pointer-events-none sticky top-16 z-20 h-0" aria-hidden>
+          <div className="pointer-events-none sticky top-16 z-20 hidden h-0 lg:block" aria-hidden>
             <span className="absolute top-0 left-0 size-6 bg-[radial-gradient(circle_at_100%_100%,transparent_23.5px,var(--shell)_24px)]" />
             <span className="absolute top-0 right-0 size-6 bg-[radial-gradient(circle_at_0%_100%,transparent_23.5px,var(--shell)_24px)]" />
           </div>
+          {/* Téléphone : écran plein, fond uni et marges de 16 px, comme l'appli. */}
           <main
             id="contenu"
-            className="min-h-[calc(100dvh-4rem)] rounded-t-3xl bg-surface px-6 py-8 pb-28 sm:px-8 lg:px-10 lg:pb-12"
+            className="min-h-[calc(100dvh-3.5rem)] bg-app px-4 pt-4 pb-[calc(68px+env(safe-area-inset-bottom)+88px)] lg:min-h-[calc(100dvh-4rem)] lg:rounded-t-3xl lg:bg-surface lg:px-10 lg:py-8 lg:pb-12"
           >
             <EnablePushBanner />
             {children}
@@ -122,7 +141,8 @@ export function AppShell({
       </div>
       {drawer ? <Drawer communities={communities} onClose={() => setDrawer(null)} openAuthModal={openAuthModal} /> : null}
       {search}
-      <BottomNav openAuthModal={openAuthModal} />
+      <CreateFab onGuest={() => openAuthModal('login')} />
+      <MobileTabBar onGuestProfile={() => setDrawer(pathname)} />
       <ShortcutsDialog open={help} onClose={() => setHelp(false)} />
       <AuthModal open={authModalOpen} onClose={() => setAuthModalOpen(false)} initialMode={authModalMode} />
     </div>
@@ -513,72 +533,3 @@ function ShortcutRow({ keys, label }: { keys: string[]; label: string }) {
   );
 }
 
-function BottomNav({ openAuthModal }: { openAuthModal: (mode: AuthModalMode) => void }) {
-  const { isAuthenticated, profile } = useSession();
-  const { t } = useLang();
-  const pathname = navPath(usePathname(), profile?.username);
-  return (
-    <nav
-      aria-label="Navigation mobile"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-line/70 bg-surface/90 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_-4px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_24px_rgba(0,0,0,0.3)] lg:hidden"
-    >
-      <ul className="mx-auto flex h-15 max-w-lg items-center justify-around px-2">
-        {mobileTabs(isAuthenticated).map((item, index) =>
-          item ? (
-            <li key={item.href} className="flex flex-1 items-center justify-center">
-              <BottomTab item={item} active={isActive(pathname, item.href)} />
-            </li>
-          ) : (
-            <li key={`create-${index}`} className="flex shrink-0 items-center justify-center px-1">
-              {isAuthenticated ? (
-                <PublishMenu compact />
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => openAuthModal('login')}
-                  className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-amber-500 text-on-primary shadow-raised ring-2 ring-white/20 transition-transform active:scale-90 cursor-pointer"
-                  aria-label={t('auth.login')}
-                >
-                  <LogIn className="size-5" aria-hidden />
-                </button>
-              )}
-            </li>
-          ),
-        )}
-      </ul>
-    </nav>
-  );
-}
-
-/** Onglet du bas : pastille tactile avec micro-animations haptiques et badge actif. */
-function BottomTab({ item, active }: { item: NavItem; active: boolean }) {
-  const { t } = useLang();
-  const label = item.shortKey ? t(item.shortKey) : item.short;
-  return (
-    <Link
-      href={item.href}
-      aria-current={active ? 'page' : undefined}
-      className={cn(
-        'group relative flex w-full flex-col items-center justify-center py-1 text-center transition-all duration-150 active:scale-85 select-none',
-        active ? 'text-primary font-bold' : 'text-ink-faint hover:text-ink',
-      )}
-    >
-      <span
-        className={cn(
-          'relative flex h-7.5 w-12 items-center justify-center rounded-full transition-all duration-200',
-          active
-            ? 'bg-primary-soft text-primary-ink shadow-2xs scale-105'
-            : 'bg-transparent text-ink-muted group-hover:bg-container-low group-hover:text-ink',
-        )}
-      >
-        <item.icon className="size-4.5 stroke-[2.2]" aria-hidden />
-        {active ? (
-          <span className="absolute -top-1 size-1 rounded-full bg-primary animate-pulse" />
-        ) : null}
-      </span>
-      <span className="mt-0.5 block truncate text-[0.6875rem] leading-none tracking-tight">
-        {label}
-      </span>
-    </Link>
-  );
-}

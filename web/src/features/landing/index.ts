@@ -1,1 +1,1 @@
-export { LandingScreen } from './LandingScreen';
+export { type LandingData, LandingScreen } from './LandingScreen';

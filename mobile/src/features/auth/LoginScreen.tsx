@@ -1,6 +1,7 @@
+import { isPasswordValid, PASSWORD_RULES, passwordRulesPassed, USERNAME_PATTERN } from '@afridev/validation';
 import { router } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
-import { AtSign, Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react-native';
+import { AtSign, Check, Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -19,7 +20,6 @@ import {
   OAuthCancelled,
   type OAuthProvider,
   PROVIDER_LABELS,
-  passwordStrength,
   signInWithProvider,
   useOAuthProviders,
   useUsernameStatus,
@@ -28,7 +28,7 @@ import { GitHubLogo, GoogleLogo } from './ProviderLogos';
 
 type Mode = 'login' | 'register';
 
-const USERNAME = /^[A-Za-z0-9_]{3,30}$/;
+const USERNAME = USERNAME_PATTERN;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /** Onglets « Se connecter / Créer un compte », comme sur le site. */
@@ -60,22 +60,37 @@ function ModeSwitch({ mode, onChange }: { mode: Mode; onChange: (mode: Mode) => 
   );
 }
 
-/** Jauge de solidité du mot de passe : quatre segments. */
-function StrengthMeter({ password }: { password: string }) {
+const RULE_KEYS: Key[] = ['login.rule.length', 'login.rule.digit', 'login.rule.upper_symbol'];
+
+/**
+ * Règles du mot de passe, visibles avant la saisie : les mêmes que sur le site et que celles
+ * du serveur (packages/validation · PASSWORD_RULES).
+ */
+function PasswordRules({ password }: { password: string }) {
   const { colors } = useTheme();
   const { t } = useT();
-  const score = passwordStrength(password);
-  const tint = [colors.lineStrong, colors.danger, colors.tertiary, colors.secondary, colors.secondary][score] ?? colors.lineStrong;
+  const passed = passwordRulesPassed(password);
+  const tint = passed === 3 ? colors.secondary : passed === 2 ? colors.tertiary : colors.danger;
   return (
     <View style={styles.meter}>
       <View style={styles.segments}>
-        {[1, 2, 3, 4].map((step) => (
-          <View key={step} style={[styles.segment, { backgroundColor: score >= step ? tint : colors.container }]} />
+        {PASSWORD_RULES.map((_, index) => (
+          <View key={index} style={[styles.segment, { backgroundColor: index < passed ? tint : colors.container }]} />
         ))}
       </View>
-      <Text variant="caption" style={{ color: tint }}>
-        {t(`login.strength.${score}` as Key)}
-      </Text>
+      <View style={styles.rules}>
+        {PASSWORD_RULES.map((rule, index) => {
+          const ok = rule.test(password);
+          return (
+            <View key={rule.label} style={styles.rule}>
+              {ok ? <Check size={12} color={colors.secondaryInk} /> : <View style={[styles.dot, { backgroundColor: colors.inkFaint }]} />}
+              <Text variant="caption" tone={ok ? 'secondary' : 'faint'}>
+                {t(RULE_KEYS[index] ?? 'login.rule.length')}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -208,7 +223,7 @@ export function LoginScreen() {
       ? {
           username: USERNAME.test(username.trim()) ? null : t('login.err_username'),
           email: EMAIL.test(email.trim()) ? null : t('login.err_email'),
-          password: password.length >= 8 ? null : t('login.err_password_len'),
+          password: isPasswordValid(password) ? null : t('login.err_password_rules'),
         }
       : {
           identifier: identifier.trim() ? null : t('login.err_identifier'),
@@ -385,6 +400,7 @@ export function LoginScreen() {
                       autoComplete="email"
                       keyboardType="email-address"
                       textContentType="emailAddress"
+                      hint={t('login.email_hint')}
                       error={shown('email')}
                     />
                   </>
@@ -403,7 +419,7 @@ export function LoginScreen() {
                   onSubmitEditing={onSubmit}
                   error={shown('password')}
                 />
-                {mode === 'register' && password ? <StrengthMeter password={password} /> : null}
+                {mode === 'register' ? <PasswordRules password={password} /> : null}
                 {mode === 'login' ? (
                   <Pressable onPress={() => router.push('/forgot-password')} style={styles.forgot} hitSlop={8}>
                     <Text variant="small" tone="primary">
@@ -448,8 +464,11 @@ const styles = StyleSheet.create({
   divider: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   line: { flex: 1, height: StyleSheet.hairlineWidth * 2 },
   banner: { padding: 12, borderRadius: radius.md },
-  meter: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: -4 },
-  segments: { flex: 1, flexDirection: 'row', gap: 6 },
+  meter: { gap: 6, marginTop: -4 },
+  segments: { flexDirection: 'row', gap: 6 },
+  rules: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 2 },
+  rule: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  dot: { width: 4, height: 4, borderRadius: 2 },
   segment: { flex: 1, height: 4, borderRadius: 2 },
   mfaBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: radius.md },
   codeRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },

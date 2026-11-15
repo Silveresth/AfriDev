@@ -59,7 +59,8 @@ export function QuestionsScreen({ aside }: { aside?: React.ReactNode }) {
         title="Questions & réponses"
         description="Une première réponse de l'IA en quelques secondes, puis la communauté."
         actions={
-          <ButtonLink href={isAuthenticated ? '/questions/new' : '/login?next=/questions/new'} className="w-full sm:w-auto">
+          // Téléphone : le bouton rond « + » ouvre directement « Poser une question », comme l'appli.
+          <ButtonLink href={isAuthenticated ? '/questions/new' : '/login?next=/questions/new'} className="w-full max-lg:hidden sm:w-auto">
             <Plus className="size-4" aria-hidden /> Poser une question
           </ButtonLink>
         }

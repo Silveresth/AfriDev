@@ -9,7 +9,11 @@ export function Skeleton({ className }: { className?: string }) {
 
 export function CardSkeleton({ lines = 3 }: { lines?: number }) {
   return (
-    <div className="space-y-3 rounded-2xl border border-line bg-card p-4 shadow-card sm:p-5" aria-busy>
+    // Téléphone : ligne pleine largeur sous filet fin, comme le chargement des listes de l'appli.
+    <div
+      className="space-y-3 rounded-2xl border border-line bg-card p-4 shadow-card sm:p-5 max-lg:-mx-4 max-lg:rounded-none max-lg:border-x-0 max-lg:border-t-0 max-lg:bg-app max-lg:shadow-none max-lg:sm:p-4"
+      aria-busy
+    >
       <div className="flex items-center gap-3">
         <Skeleton className="size-8 rounded-full" />
         <div className="flex-1 space-y-2">

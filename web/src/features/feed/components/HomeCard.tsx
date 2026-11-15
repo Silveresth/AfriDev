@@ -59,7 +59,7 @@ export function HomeCard({ item }: { item: HomeItem }) {
         if (window.getSelection()?.toString()) return;
         router.push(card.url);
       }}
-      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-line bg-card shadow-card transition-all hover:border-line-strong hover:shadow-raised"
+      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-line bg-card shadow-card transition-all hover:border-line-strong hover:shadow-raised max-lg:-mx-4 max-lg:rounded-none max-lg:border-x-0 max-lg:border-t-0 max-lg:bg-app max-lg:shadow-none max-lg:hover:border-line max-lg:hover:shadow-none max-lg:active:bg-container-low"
     >
       <div className="space-y-3 p-4 pb-2 sm:p-5 sm:pb-2">
         <header className="flex items-center gap-2.5">
@@ -108,7 +108,7 @@ export function HomeCard({ item }: { item: HomeItem }) {
             </span>
           ) : null}
           {card.tags.slice(0, 4).map((tag) => (
-            <Tag key={tag} href={`/?tag=${encodeURIComponent(tag)}`}>
+            <Tag key={tag} href={`/feed?tag=${encodeURIComponent(tag)}`}>
               {tag}
             </Tag>
           ))}

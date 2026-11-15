@@ -102,6 +102,8 @@ AUTH_USER_MODEL = "accounts.User"
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    # Mêmes règles que la liste affichée sous le champ (site et appli).
+    {"NAME": "features.accounts.password_rules.CompositionValidator"},
 ]
 
 LANGUAGE_CODE = "fr"

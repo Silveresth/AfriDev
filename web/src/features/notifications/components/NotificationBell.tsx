@@ -69,13 +69,14 @@ export function NotificationBell() {
         aria-label={unread ? `Notifications : ${unread} non lues` : 'Notifications'}
         title="Notifications"
         className={cn(
-          'relative flex size-9 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-container hover:text-ink',
+          // Téléphone : bouton rond de 40 px et icône de 22 px, comme l'en-tête de l'appli.
+          'relative flex size-10 items-center justify-center rounded-full text-ink transition-colors active:bg-container lg:size-9 lg:rounded-lg lg:text-ink-muted lg:hover:bg-container lg:hover:text-ink',
           open && 'bg-container text-ink',
         )}
       >
-        <Bell key={ringing} className={cn('size-[18px]', ringing > 0 && 'animate-bell')} aria-hidden />
+        <Bell key={ringing} className={cn('size-[22px] lg:size-[18px]', ringing > 0 && 'animate-bell')} aria-hidden />
         {unread ? (
-          <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[0.625rem] leading-none font-bold text-on-primary tabular-nums ring-2 ring-card">
+          <span className="absolute top-1 right-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[0.625rem] leading-none font-bold text-on-primary tabular-nums ring-2 ring-app lg:top-1 lg:right-1 lg:h-4 lg:min-w-4 lg:ring-card">
             {unread > 99 ? '99+' : unread}
           </span>
         ) : null}

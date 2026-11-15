@@ -21,7 +21,7 @@ export function JobDetail({ id, initial }: { id: string; initial?: Job }) {
   const job = useJob(id, initial);
   return (
     <TwoColumns aside={<RecentJobsCard />}>
-      <Link href="/jobs" className="mb-3 inline-flex items-center gap-1.5 text-body-sm text-ink-muted hover:text-ink">
+      <Link href="/jobs" className="mb-3 inline-flex items-center gap-1.5 text-body-sm text-ink-muted hover:text-ink max-lg:hidden">
         <ArrowLeft className="size-4" aria-hidden /> Job Board
       </Link>
       {job.data ? (

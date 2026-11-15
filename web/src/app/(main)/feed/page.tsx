@@ -14,6 +14,7 @@ export default function FeedPage() {
   return (
     <Suspense fallback={<CardSkeleton />}>
       <FeedScreen
+        lead={<DigestCard />}
         aside={
           <>
             <DigestCard />
