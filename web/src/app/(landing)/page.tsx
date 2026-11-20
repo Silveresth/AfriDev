@@ -8,7 +8,7 @@ import { serverGet } from '@/shared/api/server';
 export const metadata: Metadata = {
   title: { absolute: 'AfriDev — Le réseau d’entraide des développeurs africains' },
   description:
-    'Questions et réponses avec l’IA, snippets hors ligne, projets open source africains et opportunités tech. Gratuit, sans publicité, pensé pour les petites connexions.',
+    'Bloqué sur du code ? Posez votre question et obtenez une réponse de la communauté et de l’IA. Snippets hors ligne, open source africain, offres tech. Gratuit, sans publicité, pensé pour les petites connexions.',
 };
 
 // Contenu public relu toutes les 5 minutes ; page servie même si l'API ne répond pas.
@@ -20,6 +20,12 @@ const REVALIDATE = 300;
  */
 const redirectMembers = `try{if(localStorage.getItem('${SESSION_FLAG}')&&!/[?&]apercu/.test(location.search))location.replace('/feed')}catch(e){}`;
 
+/**
+ * Apparitions au défilement : les blocs `[data-reveal]` ne sont masqués qu'une fois ce script exécuté
+ * (sans JavaScript tout reste visible) et réapparaissent si le script de la page n'a pas démarré à temps.
+ */
+const revealReady = `(function(d){d.classList.add('reveal-ready');setTimeout(function(){if(!window.__revealOn)d.classList.remove('reveal-ready')},4000)})(document.documentElement)`;
+
 export default async function LandingPage() {
   const [hubs, questions, projects] = await Promise.all([
     serverGet<Schemas['PaginatedHubOutputList']>('/api/hubs/?sort=popular&page_size=8', REVALIDATE),
@@ -28,7 +34,7 @@ export default async function LandingPage() {
   ]);
   return (
     <>
-      <script dangerouslySetInnerHTML={{ __html: redirectMembers }} />
+      <script dangerouslySetInnerHTML={{ __html: redirectMembers + ';' + revealReady }} />
       <LandingScreen
         data={{
           hubs: hubs?.results ?? [],
