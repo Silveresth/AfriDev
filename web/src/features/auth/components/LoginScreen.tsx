@@ -53,17 +53,17 @@ export function LoginScreen({ initialMode = 'login' }: { initialMode?: AuthMode 
   };
 
   return (
-    <div className="relative flex max-h-[94dvh] w-full overflow-hidden rounded-3xl border border-line bg-card shadow-2xl">
+    <div className="relative flex max-h-[94dvh] min-h-[min(42rem,94dvh)] w-full animate-pop overflow-hidden rounded-[1.75rem] border border-line bg-card shadow-[0_40px_100px_-30px_rgba(10,10,11,0.35)]">
       <button
         type="button"
         onClick={close}
         aria-label="Fermer"
-        className="absolute top-4 right-4 z-20 flex size-9 items-center justify-center rounded-full bg-container-low text-ink-muted transition-colors hover:bg-container hover:text-ink"
+        className="absolute top-4 right-4 z-20 flex size-9 items-center justify-center rounded-full bg-container-low text-ink-muted transition-colors hover:bg-container hover:text-ink md:bg-white/10 md:text-white/80 md:backdrop-blur md:hover:bg-white/20 md:hover:text-white"
       >
         <X className="size-4" aria-hidden />
       </button>
-      <AuthShowcase mode={mode} />
       <AuthPanel mode={mode} onModeChange={switchMode} onAuthenticated={onAuthenticated} />
+      <AuthShowcase mode={mode} />
     </div>
   );
 }

@@ -2,13 +2,13 @@
 
 import { isPasswordValid, PASSWORD_HINT, PASSWORD_RULES, passwordRulesPassed, USERNAME_HINT, USERNAME_PATTERN } from '@afridev/validation';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, AtSign, Check, Eye, EyeOff, Loader2, X } from 'lucide-react';
+import { AlertCircle, ArrowRight, AtSign, Check, Eye, EyeOff, Loader2, Mail, X } from 'lucide-react';
 import Link from 'next/link';
 import { useId, useState, useEffect } from 'react';
 
 import { errorMessage } from '@/shared/api';
 import { cn } from '@/shared/lib';
-import { Spinner } from '@/shared/ui';
+import { Logo, Spinner } from '@/shared/ui';
 
 import { authApi, type AuthResponse, type OAuthProvider, startOAuth, useOAuthProviders } from '../api';
 import { GitHubIcon, GitLabIcon, GoogleIcon } from './ProviderIcons';
@@ -22,7 +22,8 @@ const PROVIDERS: Record<OAuthProvider, { label: string; icon: typeof GoogleIcon 
 };
 
 const FIELD =
-  'h-10 w-full rounded-xl border border-line-strong bg-card px-3.5 text-body-sm text-ink placeholder:text-ink-faint transition-colors hover:border-ink/30 focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none aria-[invalid=true]:border-danger';
+  'h-11 w-full rounded-xl border border-line-strong bg-card px-3.5 text-body-md text-ink shadow-[var(--elev-card)] placeholder:text-ink-faint transition-[border-color,box-shadow] hover:border-ink/25 focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none aria-[invalid=true]:border-danger';
+const LABEL = 'block text-body-sm font-medium text-ink';
 
 /**
  * Formulaire de connexion / inscription partagé par la page /login et la fenêtre modale :
@@ -38,49 +39,39 @@ export function AuthPanel({
   onAuthenticated: (response: AuthResponse) => void;
 }) {
   return (
-    // Tient sans défilement dès ~600 px de haut ; en dessous seulement, la colonne défile.
-    <div className="flex min-h-0 flex-1 flex-col justify-center gap-4 overflow-y-auto p-5 sm:px-8 sm:py-7">
-      <div role="tablist" aria-label="Connexion ou inscription" className="mr-10 grid grid-cols-2 rounded-full bg-container p-1">
-        {(['login', 'register'] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            aria-selected={mode === value}
-            onClick={() => onModeChange(value)}
-            className={cn(
-              'h-9 rounded-full text-body-sm font-semibold transition-all',
-              mode === value ? 'bg-card text-ink shadow-[0_1px_2px_rgba(10,10,11,0.1)] ring-1 ring-line' : 'text-ink-muted hover:text-ink',
-            )}
-          >
-            {value === 'login' ? 'Se connecter' : 'Créer un compte'}
-          </button>
-        ))}
-      </div>
+    // Tient sans défilement dès ~640 px de haut ; en dessous seulement, la colonne défile.
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-5 sm:px-10 sm:py-7">
+      <Link href="/" aria-label="AfriDev, accueil" className="self-start">
+        <Logo />
+      </Link>
 
-      <div className="space-y-0.5">
-        <h1 className="text-headline-lg text-ink">{mode === 'login' ? 'Bon retour parmi nous' : 'Rejoignez la communauté'}</h1>
-        <p className="text-body-sm text-ink-muted">
-          {mode === 'login'
-            ? 'Connectez-vous pour publier, voter et répondre.'
-            : 'Gratuit et sans publicité. Votre fil se règle juste après l’inscription.'}
+      <div className="mx-auto my-auto w-full max-w-[25rem] space-y-6 pt-7 pb-2">
+        <div key={`title-${mode}`} className="space-y-1.5">
+          <h1 className="animate-step text-[1.75rem] leading-9 font-bold tracking-[-0.03em] text-ink">
+            {mode === 'login' ? 'Content de vous revoir' : 'Créez votre compte'}
+          </h1>
+          <p className="animate-step text-body-md text-ink-muted" style={{ animationDelay: '40ms' }}>
+            {mode === 'login'
+              ? 'Connectez-vous pour publier, voter et répondre.'
+              : 'Moins d’une minute, gratuit et sans publicité.'}
+          </p>
+        </div>
+
+        <OAuthButtons mode={mode} />
+
+        <EmailForm key={mode} mode={mode} onAuthenticated={onAuthenticated} />
+
+        <p className="text-center text-body-sm text-ink-muted">
+          {mode === 'login' ? 'Pas encore de compte ?' : 'Déjà inscrit·e ?'}{' '}
+          <button
+            type="button"
+            onClick={() => onModeChange(mode === 'login' ? 'register' : 'login')}
+            className="font-semibold text-primary-ink underline-offset-4 hover:underline"
+          >
+            {mode === 'login' ? 'Créer un compte' : 'Se connecter'}
+          </button>
         </p>
       </div>
-
-      <OAuthButtons mode={mode} />
-
-      <EmailForm key={mode} mode={mode} onAuthenticated={onAuthenticated} />
-
-      <p className="text-center text-label-md text-ink-muted">
-        {mode === 'login' ? 'Pas encore de compte ?' : 'Déjà inscrit·e ?'}{' '}
-        <button
-          type="button"
-          onClick={() => onModeChange(mode === 'login' ? 'register' : 'login')}
-          className="font-semibold text-primary-ink hover:underline"
-        >
-          {mode === 'login' ? 'Créer un compte' : 'Se connecter'}
-        </button>
-      </p>
     </div>
   );
 }
@@ -117,7 +108,7 @@ function OAuthButtons({ mode }: { mode: AuthMode }) {
                 setPending(provider);
                 startOAuth(provider);
               }}
-              className="flex h-10 items-center justify-center gap-2 rounded-full border border-line-strong bg-card px-3 text-body-sm font-semibold text-ink transition-colors hover:border-ink/30 hover:bg-container-low disabled:opacity-60"
+              className="flex h-11 items-center justify-center gap-2.5 rounded-xl border border-line-strong bg-card px-3 text-body-sm font-semibold text-ink shadow-[var(--elev-card)] transition-[border-color,background-color,transform] hover:border-ink/25 hover:bg-container-low active:scale-[0.98] disabled:opacity-60"
             >
               {pending === provider ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Icon />}
               {label}
@@ -130,9 +121,9 @@ function OAuthButtons({ mode }: { mode: AuthMode }) {
           {unavailable}
         </p>
       ) : null}
-      <div className="flex items-center gap-3 text-label-md text-ink-faint">
+      <div className="flex items-center gap-3 pt-1 text-label-md font-medium text-ink-faint uppercase tracking-[0.08em]">
         <span className="h-px flex-1 bg-line" />
-        ou avec votre e-mail
+        ou
         <span className="h-px flex-1 bg-line" />
       </div>
     </div>
@@ -171,7 +162,7 @@ function UsernameField({ value, onChange }: { value: string; onChange: (value: s
   const checked = debounced.length >= 3 && debounced === value.trim() ? status.data : undefined;
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-body-sm font-semibold text-ink">
+      <label htmlFor={id} className={LABEL}>
         Nom d&apos;utilisateur
       </label>
       <div className="relative">
@@ -228,7 +219,7 @@ function PasswordField({ mode, value, onChange }: { mode: AuthMode; value: strin
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <label htmlFor={id} className="block text-body-sm font-semibold text-ink">
+        <label htmlFor={id} className={LABEL}>
           Mot de passe
         </label>
         {mode === 'login' ? (
@@ -321,41 +312,47 @@ function EmailForm({ mode, onAuthenticated }: { mode: AuthMode; onAuthenticated:
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3" noValidate={false}>
+    <form onSubmit={submit} className="space-y-4" noValidate={false}>
       {error ? <ErrorBox message={error} /> : null}
       {mode === 'login' ? (
         <div className="space-y-1.5">
-          <label htmlFor="auth-identifier" className="block text-body-sm font-semibold text-ink">
+          <label htmlFor="auth-identifier" className={LABEL}>
             Nom d&apos;utilisateur ou e-mail
           </label>
-          <input
-            id="auth-identifier"
-            required
-            autoComplete="username"
-            placeholder="amina ou amina@exemple.com"
-            value={form.identifier}
-            onChange={(e) => set('identifier')(e.target.value)}
-            className={FIELD}
-          />
+          <div className="relative">
+            <AtSign className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-ink-faint" aria-hidden />
+            <input
+              id="auth-identifier"
+              required
+              autoComplete="username"
+              placeholder="amina ou amina@exemple.com"
+              value={form.identifier}
+              onChange={(e) => set('identifier')(e.target.value)}
+              className={cn(FIELD, 'pl-9')}
+            />
+          </div>
         </div>
       ) : (
         <>
           <UsernameField value={form.username} onChange={set('username')} />
           <div className="space-y-1.5">
-            <label htmlFor="auth-email" className="block text-body-sm font-semibold text-ink">
+            <label htmlFor="auth-email" className={LABEL}>
               E-mail
             </label>
-            <input
-              id="auth-email"
-              type="email"
-              required
-              autoComplete="email"
-              placeholder="amina@exemple.com"
-              value={form.email}
-              onChange={(e) => set('email')(e.target.value)}
-              aria-describedby="auth-email-hint"
-              className={FIELD}
-            />
+            <div className="relative">
+              <Mail className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-ink-faint" aria-hidden />
+              <input
+                id="auth-email"
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="amina@exemple.com"
+                value={form.email}
+                onChange={(e) => set('email')(e.target.value)}
+                aria-describedby="auth-email-hint"
+                className={cn(FIELD, 'pl-9')}
+              />
+            </div>
             <p id="auth-email-hint" className="text-label-md text-ink-faint">
               Un lien de confirmation vous sera envoyé à cette adresse.
             </p>
@@ -366,9 +363,16 @@ function EmailForm({ mode, onAuthenticated }: { mode: AuthMode; onAuthenticated:
       <button
         type="submit"
         disabled={loading}
-        className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 text-body-sm font-bold text-on-primary shadow-sm transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
+        className="group mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-body-md font-semibold text-on-primary shadow-[0_10px_24px_-10px_var(--primary)] transition-[background-color,transform,box-shadow] hover:bg-primary-hover hover:shadow-[0_14px_30px_-10px_var(--primary)] active:scale-[0.99] disabled:opacity-60"
       >
-        {loading ? <Spinner className="size-4" /> : mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
+        {loading ? (
+          <Spinner className="size-4" />
+        ) : (
+          <>
+            {mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+          </>
+        )}
       </button>
     </form>
   );

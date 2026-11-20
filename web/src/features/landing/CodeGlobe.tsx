@@ -193,7 +193,11 @@ function rgba(hex: string, alpha: number) {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
-function readColors() {
+/** Palette sombre fixe (jetons du thème sombre), pour un globe posé sur un panneau toujours sombre. */
+const DARK_COLORS = { primary: '#d4572a', secondary: '#23874f', land: '#7a7a83', rim: '#34343b', dark: true };
+
+function readColors(forceDark = false) {
+  if (forceDark) return DARK_COLORS;
   const css = getComputedStyle(document.documentElement);
   const get = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
   return {
@@ -205,7 +209,7 @@ function readColors() {
   };
 }
 
-export function CodeGlobe({ className }: { className?: string }) {
+export function CodeGlobe({ className, forceDark = false }: { className?: string; forceDark?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -216,7 +220,7 @@ export function CodeGlobe({ className }: { className?: string }) {
     const dots = landDots();
     const cities = CITIES.map(([lon, lat, h], index) => ({ v: toVec(lon, lat), h, phase: index * 0.83 }));
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let colors = readColors();
+    let colors = readColors(forceDark);
     let size = 0;
     let dpr = 1;
     let sprites: HTMLCanvasElement[] = [];
@@ -427,7 +431,7 @@ export function CodeGlobe({ className }: { className?: string }) {
     document.addEventListener('visibilitychange', onVisibility);
     // Thème clair/sombre : on relit les couleurs et on redessine les caractères.
     const themeObserver = new MutationObserver(() => {
-      colors = readColors();
+      colors = readColors(forceDark);
       buildSprites(Math.max(7, size / 60) * dpr);
       draw(performance.now());
     });
@@ -440,7 +444,7 @@ export function CodeGlobe({ className }: { className?: string }) {
       themeObserver.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, []);
+  }, [forceDark]);
 
   return <canvas ref={canvasRef} className={className} aria-hidden />;
 }

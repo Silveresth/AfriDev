@@ -46,18 +46,18 @@ export function AuthModal({ open, onClose, initialMode = 'login' }: { open: bool
         aria-modal="true"
         aria-label={mode === 'login' ? 'Connexion' : 'Inscription'}
         onClick={(event) => event.stopPropagation()}
-        className="animate-pop relative flex max-h-[92dvh] w-full max-w-4xl overflow-hidden rounded-3xl border border-line bg-card shadow-2xl"
+        className="animate-pop relative flex max-h-[92dvh] min-h-[min(40rem,92dvh)] w-full max-w-5xl overflow-hidden rounded-[1.75rem] border border-line bg-card shadow-2xl"
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Fermer"
-          className="absolute top-4 right-4 z-20 flex size-9 items-center justify-center rounded-full bg-container-low text-ink-muted transition-colors hover:bg-container hover:text-ink"
+          className="absolute top-4 right-4 z-20 flex size-9 items-center justify-center rounded-full bg-container-low text-ink-muted transition-colors hover:bg-container hover:text-ink md:bg-white/10 md:text-white/80 md:backdrop-blur md:hover:bg-white/20 md:hover:text-white"
         >
           <X className="size-4" aria-hidden />
         </button>
-        <AuthShowcase mode={mode} />
         <AuthPanel mode={mode} onModeChange={setMode} onAuthenticated={onAuthenticated} />
+        <AuthShowcase mode={mode} />
       </div>
     </div>
   );
